@@ -13,6 +13,7 @@
 
 #include "smsd/search_types.hpp"
 #include "smsd/smiles_parser.hpp"
+#include "smsd/query_smarts.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -102,6 +103,10 @@ inline MolGraph Match::toGraph(const MolGraph& query) const {
     }
     graph.ringCountsComputed_ = true;
     return graph;
+}
+
+inline std::string Match::toSmarts(const MolGraph& query, const ChemOptions& chemistry) const {
+    return toQuerySMARTS(toGraph(query), chemistry);
 }
 
 inline std::string Match::toSmiles(const MolGraph& g) const {

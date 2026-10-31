@@ -11,6 +11,7 @@
 
 #include "smsd/mol_graph.hpp"
 #include "smsd/ring_finder.hpp"
+#include "smsd/relevant_cycle_families.hpp"
 #include "smsd/substructure.hpp"
 #include "smsd/mcs.hpp"
 #include "smsd/similarity_screen.hpp"

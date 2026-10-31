@@ -712,14 +712,31 @@ inline MolGraph buildMolGraphFromParsedMol(
         }
         return false;
     };
+    // An end that carries two like hydrogens, drawn or implicit, has no E/Z. Unlabelled
+    // hydrogens are alike; drawn isotopes are alike only with the same mass number.
+    auto hasLikeHydrogens = [&](int end, int other) {
+        int unlabelled = graph.hydrogenCount[end];
+        std::vector<int> labelled;
+        for (int neighbor : graph.neighbors[end]) {
+            if (neighbor == other || graph.atomicNum[neighbor] != 1 || graph.formalCharge[neighbor] != 0
+                || graph.neighbors[neighbor].size() != 1) continue;
+            if (graph.massNumber[neighbor] == 0) ++unlabelled;
+            else labelled.push_back(graph.massNumber[neighbor]);
+        }
+        if (unlabelled >= 2) return true;
+        std::sort(labelled.begin(), labelled.end());
+        return std::adjacent_find(labelled.begin(), labelled.end()) != labelled.end();
+    };
     for (const auto& bond : bonds) {
         if (bond.order != 2 || bond.stereo == 3) continue;
         int firstLigand = -1, secondLigand = -1;
         for (int neighbor : graph.neighbors[bond.from]) if (neighbor != bond.to) { firstLigand = neighbor; break; }
         for (int neighbor : graph.neighbors[bond.to]) if (neighbor != bond.from) { secondLigand = neighbor; break; }
         if (firstLigand < 0 || secondLigand < 0) continue;
-        // Small aromatic rings do not acquire E/Z tags from their drawing.
-        if (graph.bondAromatic(bond.from, bond.to) && hasSmallRing(bond.from, bond.to)) continue;
+        if (hasLikeHydrogens(bond.from, bond.to) || hasLikeHydrogens(bond.to, bond.from)) continue;
+        // A double bond in a ring of fewer than eight atoms has its geometry fixed by the ring,
+        // so its drawing gives no E/Z, aromatic or not.
+        if (hasSmallRing(bond.from, bond.to)) continue;
         const int configuration = mol_detail::doubleBondGeometry(atoms, bond.from, bond.to, firstLigand, secondLigand);
         if (configuration == 0) continue;
         graph.hasDbStereo = true;

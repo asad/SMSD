@@ -58,12 +58,12 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.directory.mkdir()
         self.checkout = self.root / "checkout"
         self.sources = {**WHEELS.SOURCES,
-            "pyproject.toml": b'[project]\nname = "smsd"\nversion = "7.2.0"\nrequires-python = ">=3.10"\n[tool.scikit-build]\nsdist.exclude = ["packaging/**"]\n',
+            "pyproject.toml": b'[project]\nname = "smsd"\nversion = "7.2.0"\nrequires-python = ">=3.12"\n[tool.scikit-build]\nsdist.exclude = ["packaging/**"]\n',
             "pom.xml": b'<project xmlns="http://maven.apache.org/POM/4.0.0"><version>7.2.0</version></project>',
             "java/pom.xml": b'<project xmlns="http://maven.apache.org/POM/4.0.0"><version>7.2.0</version></project>',
             "cpp/CMakeLists.txt": b'project(smsd VERSION 7.2.0 LANGUAGES CXX)\n',
             "python/README.md": b'Fixture package description\n',
-            "PKG-INFO": b'Name: smsd\nVersion: 7.2.0\nRequires-Python: >=3.10\n\nFixture package description\n',
+            "PKG-INFO": b'Name: smsd\nVersion: 7.2.0\nRequires-Python: >=3.12\n\nFixture package description\n',
         }
         for name in ("cpp/include/smsd/mcs.hpp", "cpp/bindings/pybind11/smsd_bindings.cpp",
                      "python/tests/test_smsd.py", "python/tests/test_aromaticity_parity.py",
@@ -147,9 +147,23 @@ class ReleaseManifestsTest(unittest.TestCase):
         for target in BUILD.BUILD_IDENTIFIERS.values():
             self.wheel(target["platform"], target["python_version"], target["architecture"])
 
+    def lean_validation(self):
+        validation = {"source_commit": SHA, "sdist_sha256": self.source["sdist_sha256"],
+                      **{field: "passed" for field in BUILD.SHARED_VALIDATION_CHECKS}}
+        path = self.root / "shared-validation.json"
+        path.write_text(json.dumps(validation))
+        return path, validation
+
+    def lean_wheel(self, validation):
+        wheel, path = self.wheel()
+        identifier = BUILD.wheel_target(wheel.name, self.source["version"])
+        path.unlink()
+        BUILD.record_build(self.source, wheel, path.parent, "cibuildwheel", identifier, validation)
+        return wheel, path
+
     def cuda_wheel(self, changes=None):
         root = "packaging/smsd-cuda/"
-        files = {"pyproject.toml": b'[project]\nname="smsd-cuda"\nversion="7.2.0"\nrequires-python=">=3.10"\ndependencies=["smsd==7.2.0", "nvidia-cuda-runtime-cu12>=12.8,<13"]\n',
+        files = {"pyproject.toml": b'[project]\nname="smsd-cuda"\nversion="7.2.0"\nrequires-python=">=3.12"\ndependencies=["smsd==7.2.0", "nvidia-cuda-runtime-cu12>=12.8,<13"]\n',
                  "README.md": b"CUDA package description\n", "LICENSE": b"CUDA licence\n", "NOTICE": b"CUDA notice\n",
                  "python/smsd_cuda/__init__.py": b'__version__ = "7.2.0"\n__smsd_version__ = "7.2.0"\n'}
         self.cuda_sources = {root + name: data for name, data in files.items()}
@@ -161,7 +175,7 @@ class ReleaseManifestsTest(unittest.TestCase):
         binary = bytearray(64); binary[:6] = b"\x7fELF\x02\x01"; binary[18:20] = b"\x3e\x00"
         entries = {"smsd_cuda/__init__.py": files["python/smsd_cuda/__init__.py"],
                    "smsd_cuda/libsmsd_cuda_screen.so": bytes(binary),
-                   prefix + "METADATA": b"Metadata-Version: 2.4\nName: smsd-cuda\nVersion: 7.2.0\nRequires-Python: >=3.10\nRequires-Dist: smsd==7.2.0\nRequires-Dist: nvidia-cuda-runtime-cu12<13,>=12.8\n\n" + files["README.md"],
+                   prefix + "METADATA": b"Metadata-Version: 2.4\nName: smsd-cuda\nVersion: 7.2.0\nRequires-Python: >=3.12\nRequires-Dist: smsd==7.2.0\nRequires-Dist: nvidia-cuda-runtime-cu12<13,>=12.8\n\n" + files["README.md"],
                    prefix + "WHEEL": b"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-manylinux_2_34_x86_64\n",
                    prefix + "licenses/LICENSE": files["LICENSE"], prefix + "licenses/NOTICE": files["NOTICE"]}
         entries.update(changes or {})
@@ -347,11 +361,121 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.collect()
         result = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
         self.assertTrue(result["complete"])
-        self.assertEqual(len(result["wheels"]), 20)
+        self.assertEqual(len(result["wheels"]), 16)
         self.assertEqual({entry["build_identifier"] for entry in result["wheels"]}, set(self.targets))
-        self.assertEqual({entry["python_version"] for entry in result["wheels"]}, {"3.10", "3.11", "3.12", "3.13", "3.14"})
+        self.assertEqual({entry["python_version"] for entry in result["wheels"]}, {"3.12", "3.13", "3.14", "3.15"})
         GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
         self.assertNotIn(str(self.root), json.dumps(result))
+
+    def test_lean_collector_keeps_shared_checks_and_each_wheel_smoke_distinct(self):
+        validation_path, validation = self.lean_validation()
+        self.all_wheels()
+        for path in self.proofs:
+            proof = json.loads(path.read_text())
+            path.unlink()
+            BUILD.record_build(self.source, path.parent / proof["wheel"], path.parent,
+                               "cibuildwheel", proof["build_identifier"], validation)
+        self.collect("--lean-validation", str(validation_path))
+        result = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
+        self.assertEqual(result["schema_version"], 3)
+        self.assertTrue(result["complete"])
+        self.assertEqual(len(result["wheels"]), 16)
+        self.assertEqual(result["shared_validation"], validation)
+        self.assertEqual(result["shared_validation_sha256"], BUILD.proof_digest(validation))
+        for entry in result["wheels"]:
+            self.assertEqual(entry["platform_recipe_checks"], "passed")
+            self.assertEqual(entry["installed_wheel_smoke"], "passed")
+            self.assertNotIn("native_debug_tests", entry)
+            self.assertNotIn("installed_wheel_tests", entry["build_provenance"])
+        self.assertNotIn(str(self.root), json.dumps(result))
+        for path in self.proofs:
+            path.unlink()
+        validation_path.unlink()
+        before = (self.directory / "WHEEL_MANIFEST.json").read_bytes()
+        self.collect("--check-only")
+        self.assertEqual((self.directory / "WHEEL_MANIFEST.json").read_bytes(), before)
+        with self.assertRaisesRegex(ValueError, "Unexpected wheel manifest schema"):
+            GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
+
+    def test_lean_validation_rejects_stale_failed_or_private_fields(self):
+        _, validation = self.lean_validation()
+        changes = [("source_commit", "0" * 40), ("sdist_sha256", "0" * 64),
+                   ("private_log", "/private/test.log")]
+        changes.extend((field, "failed") for field in BUILD.SHARED_VALIDATION_CHECKS)
+        for field, value in changes:
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    BUILD.checked_shared_validation(self.source, {**validation, field: value})
+        for field in validation:
+            with self.subTest(missing=field):
+                with self.assertRaises(ValueError):
+                    BUILD.checked_shared_validation(self.source, {key: value for key, value in validation.items() if key != field})
+
+    def test_lean_collector_rejects_stale_or_unpassed_wheel_checks(self):
+        validation_path, validation = self.lean_validation()
+        wheel, path = self.lean_wheel(validation)
+        original = json.loads(path.read_text())
+        for field, value in (("shared_validation_sha256", "0" * 64),
+                             ("platform_recipe_checks", "failed"), ("installed_wheel_smoke", None),
+                             ("native_debug_tests", "passed"), ("installed_wheel_tests", "passed"),
+                             ("wheel_sha256", "0" * 64)):
+            with self.subTest(field=field):
+                path.write_text(json.dumps({**original, field: value}))
+                with self.assertRaises(ValueError):
+                    self.collect("--allow-incomplete", "--lean-validation", str(validation_path))
+        self.assertFalse((self.directory / wheel.name).exists())
+        self.assertFalse((self.directory / "WHEEL_MANIFEST.json").exists())
+
+    def test_lean_receipt_needs_matching_shared_validation(self):
+        validation_path, validation = self.lean_validation()
+        self.lean_wheel(validation)
+        with self.assertRaisesRegex(ValueError, "requires shared frozen validation"):
+            self.collect("--allow-incomplete")
+        validation_path.write_text(json.dumps({**validation, "source_commit": "0" * 40}))
+        with self.assertRaisesRegex(ValueError, "source identity"):
+            self.collect("--allow-incomplete", "--lean-validation", str(validation_path))
+
+    def test_lean_checks_follow_the_actual_build_system(self):
+        validation_path, validation = self.lean_validation()
+        wheel, path = self.wheel()
+        identifier = BUILD.wheel_target(wheel.name, self.source["version"])
+        for build_system, check, forbidden in (("cibuildwheel", "platform_recipe_checks", "installed_wheel_identity"),
+                                                ("local", "installed_wheel_identity", "platform_recipe_checks")):
+            with self.subTest(build_system=build_system):
+                path.unlink()
+                BUILD.record_build(self.source, wheel, path.parent, build_system, identifier, validation)
+                proof = json.loads(path.read_text())
+                entry = BUILD.wheel_entry(wheel, identifier, self.source, proof, validation)
+                self.assertEqual(entry[check], "passed")
+                self.assertEqual(entry["installed_wheel_smoke"], "passed")
+                self.assertNotIn(forbidden, entry)
+                for field in (forbidden, "native_debug_tests", "installed_wheel_tests"):
+                    with self.subTest(contradictory=field):
+                        with self.assertRaises(ValueError):
+                            BUILD.wheel_entry(wheel, identifier, self.source, {**proof, field: "passed"}, validation)
+                with self.assertRaises(ValueError):
+                    BUILD.wheel_entry(wheel, identifier, self.source, {key: value for key, value in proof.items() if key != check}, validation)
+        self.collect("--allow-incomplete", "--lean-validation", str(validation_path))
+        manifest = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
+        self.assertEqual(manifest["wheels"][0]["installed_wheel_identity"], "passed")
+        self.assertNotIn("platform_recipe_checks", manifest["wheels"][0]["build_provenance"])
+        self.collect("--allow-incomplete", "--check-only")
+
+    def test_lean_manifest_rejects_changed_shared_digest_and_legacy_proof(self):
+        validation_path, validation = self.lean_validation()
+        self.lean_wheel(validation)
+        self.collect("--allow-incomplete", "--lean-validation", str(validation_path))
+        path = self.directory / "WHEEL_MANIFEST.json"
+        original = json.loads(path.read_text())
+        changed = {**original, "shared_validation_sha256": "0" * 64}
+        path.write_text(json.dumps(changed))
+        with self.assertRaisesRegex(ValueError, "digest"):
+            self.collect("--allow-incomplete", "--check-only")
+        changed = json.loads(json.dumps(original))
+        changed["wheels"][0]["build_provenance"].pop("validation_mode")
+        path.write_text(json.dumps(changed))
+        with self.assertRaises(ValueError):
+            self.collect("--allow-incomplete", "--check-only")
 
     def test_collector_rejects_mismatched_or_unpassed_receipts(self):
         wheel, proof = self.wheel()
@@ -359,7 +483,7 @@ class ReleaseManifestsTest(unittest.TestCase):
         for field, value in (("wheel_sha256", "0" * 64), ("source_commit", "0" * 40),
                              ("sdist_sha256", "0" * 64), ("release_ref", "v7.2.0"),
                              ("native_debug_tests", "not run"), ("installed_wheel_tests", None),
-                             ("build_identifier", "cp314-win_amd64"), ("python_version", "3.10"),
+                             ("build_identifier", "cp314-win_amd64"), ("python_version", "3.12"),
                              ("architecture", "aarch64"), ("platform", "linux")):
             with self.subTest(field=field):
                 proof.write_text(json.dumps({**original, field: value}))
@@ -413,7 +537,7 @@ class ReleaseManifestsTest(unittest.TestCase):
             GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
 
     def test_one_missing_interpreter_is_incomplete_even_with_every_platform(self):
-        missing = "cp310-manylinux_aarch64"
+        missing = "cp312-manylinux_aarch64"
         for identifier, target in BUILD.BUILD_IDENTIFIERS.items():
             if identifier != missing:
                 self.wheel(target["platform"], target["python_version"], target["architecture"])
@@ -429,7 +553,7 @@ class ReleaseManifestsTest(unittest.TestCase):
                 "assets": [{"name": path.name, "state": "uploaded", "size": path.stat().st_size,
                             "digest": "sha256:" + BUILD.sha256(path)} for path in self.directory.iterdir()]}
 
-    def test_publish_selects_twenty_cpu_wheels_without_uploading_the_separate_cuda_package(self):
+    def test_publish_selects_sixteen_cpu_wheels_without_uploading_the_separate_cuda_package(self):
         self.all_wheels()
         self.collect()
         metadata = self.published_metadata()
@@ -438,9 +562,9 @@ class ReleaseManifestsTest(unittest.TestCase):
         version, selected, targets = GATE.selected_assets(metadata, "v7.2.0")
         self.assertEqual(version, "7.2.0")
         self.assertEqual(set(targets), set(BUILD.BUILD_IDENTIFIERS))
-        self.assertEqual(len(selected), 24)
+        self.assertEqual(len(selected), 20)
         self.assertNotIn(cuda, selected)
-        metadata["assets"] = [row for row in metadata["assets"] if row["name"] != targets["cp310-win_amd64"]]
+        metadata["assets"] = [row for row in metadata["assets"] if row["name"] != targets["cp312-win_amd64"]]
         with self.assertRaisesRegex(ValueError, "Missing release wheels"):
             GATE.selected_assets(metadata, "v7.2.0")
 
@@ -477,7 +601,7 @@ class ReleaseManifestsTest(unittest.TestCase):
     def test_cuda_wheel_rejects_changed_metadata_source_binary_and_record(self):
         prefix = "smsd_cuda-7.2.0.dist-info/"
         changes = [{"smsd_cuda/__init__.py": b"changed\n"}, {"smsd_cuda/libsmsd_cuda_screen.so": b"not an ELF library"},
-                   {prefix + "METADATA": b"Name: smsd-cuda\nVersion: 7.2.1\nRequires-Python: >=3.10\n\nwrong description\n"},
+                   {prefix + "METADATA": b"Name: smsd-cuda\nVersion: 7.2.1\nRequires-Python: >=3.12\n\nwrong description\n"},
                    {prefix + "WHEEL": b"Root-Is-Purelib: true\nTag: py3-none-any\n"},
                    {prefix + "licenses/LICENSE": b"changed licence"}, {prefix + "RECORD": b"invalid record\n"},
                    {"../unexpected.py": b"unsafe\n"}]
@@ -590,7 +714,7 @@ class ReleaseManifestsTest(unittest.TestCase):
                 exec(compile(textwrap.dedent(snippet), "workflow-cuda-selection", "exec"), {})
             git.assert_not_called()
 
-    def test_staged_upload_requires_the_twenty_targets_and_original_sdist(self):
+    def test_staged_upload_requires_the_sixteen_targets_and_original_sdist(self):
         self.all_wheels()
         self.collect()
         directory = self.root / "upload"
@@ -603,7 +727,7 @@ class ReleaseManifestsTest(unittest.TestCase):
                                       "files": {name: BUILD.sha256(directory / name) for name in names}}))
         args = types.SimpleNamespace(receipt_file=receipt, dist_dir=directory)
         GATE.verify_staged(args)
-        (directory / self.targets["cp310-manylinux_aarch64"]).unlink()
+        (directory / self.targets["cp312-manylinux_aarch64"]).unlink()
         with self.assertRaises(ValueError):
             GATE.verify_staged(args)
 
@@ -671,24 +795,43 @@ class ReleaseManifestsTest(unittest.TestCase):
                 BUILD.build(args)
         self.assertFalse((args.output_dir / "wheel-build-provenance.json").exists())
 
-    def test_linux_aarch64_python310_build_keeps_the_requested_target(self):
+    def test_lean_build_runs_recipe_and_smoke_without_full_suite_overrides(self):
         args = self.build_args()
-        args.platform, args.arch, args.python_version = "linux", "aarch64", "3.10"
+        args.lean_validation, validation = self.lean_validation()
         def successful(command, **kwargs):
-            self.assertEqual(command[command.index("--only") + 1], "cp310-manylinux_aarch64")
+            environment = kwargs["env"]
+            self.assertNotIn("check_native_wheel_build", environment["CIBW_BEFORE_BUILD"])
+            self.assertIn("cmake==4.4.3", environment["CIBW_BEFORE_BUILD"])
+            self.assertIn("check_python_wheel.py", environment["CIBW_TEST_COMMAND"])
+            self.assertNotIn("pytest", environment["CIBW_TEST_COMMAND"])
+            self.assertNotIn("CIBW_TEST_SKIP", environment)
+            WHEELS.make_wheel(args.output_dir, family="macos", repaired=False, sources=self.sources)
+        with mock.patch.object(BUILD.importlib.metadata, "version", return_value="4.2.1"), mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.subprocess, "run", side_effect=successful):
+            BUILD.build(args)
+        proof = json.loads((args.output_dir / "wheel-build-provenance.json").read_text())
+        self.assertEqual(proof["shared_validation_sha256"], BUILD.proof_digest(validation))
+        self.assertEqual(proof["installed_wheel_smoke"], "passed")
+        self.assertNotIn("native_debug_tests", proof)
+        self.assertNotIn("installed_wheel_tests", proof)
+
+    def test_linux_aarch64_python312_build_keeps_the_requested_target(self):
+        args = self.build_args()
+        args.platform, args.arch, args.python_version = "linux", "aarch64", "3.12"
+        def successful(command, **kwargs):
+            self.assertEqual(command[command.index("--only") + 1], "cp312-manylinux_aarch64")
             self.assertNotIn("CIBW_TEST_SKIP", kwargs["env"])
-            WHEELS.make_wheel(args.output_dir, family="linux", architecture="aarch64", python_version="3.10",
+            WHEELS.make_wheel(args.output_dir, family="linux", architecture="aarch64", python_version="3.12",
                               repaired=False, sources=self.sources)
         with mock.patch.object(BUILD.importlib.metadata, "version", return_value="4.2.1"), mock.patch.object(BUILD.subprocess, "run", side_effect=successful):
             BUILD.build(args)
         proof = json.loads((args.output_dir / "wheel-build-provenance.json").read_text())
         self.assertEqual((proof["build_identifier"], proof["architecture"], proof["python_version"]),
-                         ("cp310-manylinux_aarch64", "aarch64", "3.10"))
+                         ("cp312-manylinux_aarch64", "aarch64", "3.12"))
         self.assertEqual(proof["sdist_sha256"], self.source["sdist_sha256"])
 
     def test_build_rejects_another_python_output_without_a_success_receipt(self):
         args = self.build_args()
-        args.python_version = "3.10"
+        args.python_version = "3.12"
         def wrong_target(command, **kwargs):
             WHEELS.make_wheel(args.output_dir, family="macos", python_version="3.14", repaired=False, sources=self.sources)
         with mock.patch.object(BUILD.importlib.metadata, "version", return_value="4.2.1"), mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.subprocess, "run", side_effect=wrong_target):
@@ -696,18 +839,18 @@ class ReleaseManifestsTest(unittest.TestCase):
                 BUILD.build(args)
         self.assertFalse((args.output_dir / "wheel-build-provenance.json").exists())
 
-    def test_workflow_builds_all_twenty_targets_from_the_one_source_artifact(self):
+    def test_workflow_builds_all_sixteen_targets_from_the_one_source_artifact(self):
         workflow = (SCRIPTS.parent / ".github/workflows/python-publish.yml").read_text()
         snippet = workflow.split("          python - <<'PY'\n", 1)[1].split("          PY\n", 1)[0]
         output = self.root / "matrix-output"
         with mock.patch.dict(os.environ, {"RELEASE_REF": SHA, "BUILD_TARGET": "all", "PUBLISH": "false", "GITHUB_OUTPUT": str(output)}), mock.patch.object(subprocess, "check_output", return_value=SHA + "\n"):
             exec(compile(textwrap.dedent(snippet), "workflow-matrix", "exec"), {})
         matrix = json.loads(output.read_text().removeprefix("value="))["include"]
-        self.assertEqual(len(matrix), 20)
+        self.assertEqual(len(matrix), 16)
         self.assertEqual({(row["platform"], row["arch"], row["python"]) for row in matrix},
                          {(platform, architecture, version) for platform, architecture in
                           (("windows", "AMD64"), ("linux", "x86_64"), ("linux", "aarch64"), ("macos", "arm64"))
-                          for version in ("3.10", "3.11", "3.12", "3.13", "3.14")})
+                          for version in ("3.12", "3.13", "3.14", "3.15")})
         self.assertIn("name: python-release-source", workflow)
         self.assertIn('--python-version "$WHEEL_PYTHON_VERSION"', workflow)
 
@@ -787,6 +930,32 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.assertNotIn("cibuildwheel", proof)
         self.assertNotIn(str(self.root), json.dumps(proof))
         self.collect("--allow-incomplete")
+
+    def test_lean_local_check_runs_smoke_and_wheel_identity_only(self):
+        args = self.local_args()
+        args.lean_validation, validation = self.lean_validation()
+        args.native_test_dir = None
+        with mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.platform, "machine", return_value="arm64"), mock.patch.object(BUILD, "run_native_debug_tests") as native, mock.patch.object(BUILD.subprocess, "run") as run, mock.patch.object(BUILD, "verify_installed_wheel") as installed:
+            BUILD.verify_local(args)
+        native.assert_not_called()
+        run.assert_called_once()
+        self.assertIn("check_python_wheel.py", run.call_args.args[0][1])
+        installed.assert_called_once_with(args.wheel)
+        proof = json.loads((args.wheel.parent / "wheel-build-provenance.json").read_text())
+        self.assertEqual(proof["shared_validation_sha256"], BUILD.proof_digest(validation))
+        self.assertEqual(proof["installed_wheel_identity"], "passed")
+        self.assertEqual(proof["installed_wheel_smoke"], "passed")
+        self.assertNotIn("platform_recipe_checks", proof)
+        self.assertNotIn("native_debug_tests", proof)
+
+    def test_failed_lean_smoke_never_records_passed(self):
+        args = self.local_args()
+        args.lean_validation, _ = self.lean_validation()
+        with mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.platform, "machine", return_value="arm64"), mock.patch.object(BUILD.subprocess, "run", side_effect=subprocess.CalledProcessError(1, ["smoke"])), mock.patch.object(BUILD, "verify_installed_wheel") as installed:
+            with self.assertRaises(subprocess.CalledProcessError):
+                BUILD.verify_local(args)
+        installed.assert_not_called()
+        self.assertFalse((args.wheel.parent / "wheel-build-provenance.json").exists())
 
     def test_failed_local_gate_never_records_passed(self):
         args = self.local_args()

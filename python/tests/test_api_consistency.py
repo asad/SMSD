@@ -307,5 +307,8 @@ def test_chem_options_aromaticity_model_is_deprecated():
         assert options.aromaticity_model == smsd.AromaticityModel.DAYLIGHT_LIKE
     with pytest.warns(DeprecationWarning):
         options.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE
+    graph = smsd.parse_smiles("C1=CC=CC=C1")
+    assert smsd.perceive_aromaticity(graph, model=smsd.AromaticityModel.DAYLIGHT_LIKE) is graph
+    assert all(graph.aromatic)
     for name in ("default", "strict", "pharma", "compat-fmcs", "compat-substruct", "reaction"):
         assert isinstance(smsd.ChemOptions.profile(name), smsd.ChemOptions)

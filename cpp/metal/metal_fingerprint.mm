@@ -246,6 +246,19 @@ int fingerprintScreen(void* handle, int32_t numQueries, const uint64_t* queryWor
         require(command.status == MTLCommandBufferStatusCompleted, "Metal fingerprint command failed");
         const auto* selected = static_cast<const int32_t*>(resident.selected.value.contents);
         require(selected != nullptr, "Metal fingerprint result storage is unavailable");
+        if (hits != nullptr && hitCapacity >= pairs
+                && pairs <= std::numeric_limits<size_t>::max() / sizeof(smsd_fingerprint_hit)) {
+            size_t output = 0;
+            hitOffsets[0] = 0;
+            for (int32_t query = 0; query < numQueries; ++query) {
+                for (int32_t target = 0; target < resident.targets; ++target) {
+                    const int32_t common = selected[static_cast<size_t>(query) * resident.targets + target];
+                    if (common >= 0) hits[output++] = {target, common};
+                }
+                hitOffsets[query + 1] = output;
+            }
+            return;
+        }
         std::vector<uint64_t> offsets(static_cast<size_t>(numQueries) + 1, 0);
         for (int32_t query = 0; query < numQueries; ++query) {
             offsets[query + 1] = offsets[query];

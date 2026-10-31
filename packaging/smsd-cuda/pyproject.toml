@@ -5,16 +5,16 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "smsd-cuda"
 # Always the smsd version it serves, which the build checks against the SMSD sources.
-version = "8.0.3"
-description = "NVIDIA CUDA fingerprint and similarity-bound screening for SMSD Pro"
+version = "8.1.0"
+description = "NVIDIA CUDA fingerprint screening and GPU pre-screens for SMSD Pro"
 readme = "README.md"
-license = {text = "Apache-2.0"}
-requires-python = ">=3.10"
+license = {text = "Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception"}
+requires-python = ">=3.12"
 authors = [
     {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
 ]
 dependencies = [
-    "smsd==8.0.3",
+    "smsd==8.1.0",
     "nvidia-cuda-runtime-cu12>=12.8,<13",
 ]
 classifiers = [
@@ -25,11 +25,10 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 keywords = ["cheminformatics", "similarity", "screening", "cuda", "gpu"]
@@ -45,3 +44,6 @@ wheel.packages = ["python/smsd_cuda"]
 wheel.py-api = "py3"
 wheel.license-files = ["LICENSE", "NOTICE"]
 minimum-version = "0.10"
+
+[tool.scikit-build.cmake.define]
+SMSD_CUDA_BINARY_MMA_PROTOTYPE = "OFF"

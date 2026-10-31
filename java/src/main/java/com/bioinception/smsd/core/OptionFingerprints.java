@@ -349,10 +349,16 @@ final class OptionFingerprints {
 
   // ---- Terms ----
 
+  /** The complete minimum basis shared with numeric SMARTS ring membership. */
+  private static int[][] requireCompleteRingBasis(MolGraph graph) {
+    if (graph.ringsTruncated()) throw new RingBasisUnavailableException();
+    return graph.numericRingBasis();
+  }
+
   /** The smallest SSSR ring through each atom, as a class: 0 for an acyclic atom, else the size up to the cap. */
   static int[] ringSizeClasses(MolGraph g, int cap) {
     int[] classes = new int[g.n];
-    for (int[] ring : g.computeRings())
+    for (int[] ring : requireCompleteRingBasis(g))
       for (int atom : ring)
         if (classes[atom] == 0 || ring.length < classes[atom]) classes[atom] = ring.length;
     for (int atom = 0; atom < g.n; atom++) classes[atom] = Math.min(classes[atom], cap);
@@ -379,7 +385,7 @@ final class OptionFingerprints {
         // A double bond in a ring of fewer than eight atoms has its geometry fixed by the ring and
         // carries no configuration, whatever marks the input wrote on it.
         Set<Long> smallRingBonds = new HashSet<>();
-        for (int[] ring : g.computeRings()) {
+        for (int[] ring : requireCompleteRingBasis(g)) {
           if (ring.length >= 8) continue;
           for (int k = 0; k < ring.length; k++) {
             int a = ring[k], b = ring[(k + 1) % ring.length];
@@ -741,14 +747,26 @@ final class OptionFingerprints {
   }
 
   /**
+   * Refuses a key that a stopped search left undecided. A search on a graph without an exact
+   * ring basis stops before its first match when the pattern counts ring memberships; any other
+   * stop is the embedding limit, reached only after that many matches.
+   */
+  private static IllegalStateException undecided(SearchResult result, MolGraph g) {
+    if (result.matches().isEmpty() && g.ringsTruncated()) return new RingBasisUnavailableException();
+    return new IllegalStateException("a substructure key matched more than 100000 embeddings before its count was settled");
+  }
+
+  /**
    * How many distinct atom sets a SMARTS pattern matches, or whether it matches at all when
-   * {@code atMost} is one. Beyond the embedding limit the count is settled only when it has reached
-   * {@code atMost}; otherwise the key is reported as an error rather than guessed.
+   * {@code atMost} is one. Every match found is a proved embedding, so a stopped search still
+   * settles a key whose count has reached {@code atMost}; a key it leaves below that is reported
+   * as an error rather than guessed.
    */
   private static int keyMatches(Substructure query, MolGraph g, int atMost) {
     if (atMost <= 1) {
       SearchResult first = query.match(g);
       requireSettled(first);
+      if (first.status() == SearchResult.Status.LimitReached && !first.found()) throw undecided(first, g);
       return first.found() ? 1 : 0;
     }
     SearchResult all = query.matchAll(g, KEY_MATCH_LIMIT);
@@ -759,14 +777,13 @@ final class OptionFingerprints {
       java.util.Collections.sort(atoms);
       distinct.add(atoms);
     }
-    if (all.status() == SearchResult.Status.LimitReached && distinct.size() < atMost)
-      throw new IllegalStateException("a substructure key matched more than 100000 embeddings before its count was settled");
+    if (all.status() == SearchResult.Status.LimitReached && distinct.size() < atMost) throw undecided(all, g);
     return distinct.size();
   }
 
   private static int aromaticRingCount(MolGraph g) {
     int count = 0;
-    for (int[] ring : g.computeRings()) {
+    for (int[] ring : requireCompleteRingBasis(g)) {
       boolean aromatic = ring.length > 0;
       for (int k = 0; k < ring.length && aromatic; k++) aromatic = g.bondAromatic(ring[k], ring[(k + 1) % ring.length]);
       if (aromatic) count++;

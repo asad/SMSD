@@ -171,7 +171,17 @@ inline size_t expressionNodes(const BondExpr& expression) {
     return nodes;
 }
 
-/** parseSMARTS() of one pattern level, adding its atoms and nodes, and those of its recursive SMARTS, to the totals. */
+/** One immutable recursive payload and its expanded parser costs. */
+struct CompiledRecursivePattern {
+    std::shared_ptr<const SmartsQuery> query;
+    size_t atoms;
+    size_t nodes;
+};
+
+using RecursivePatterns = std::map<std::pair<std::string, int>, CompiledRecursivePattern>;
+
+inline SmartsQuery parsePattern(const std::string& smarts, int maxRecursionDepth, size_t& atoms, size_t& nodes,
+                               RecursivePatterns& recursivePatterns);
 inline SmartsQuery parsePattern(const std::string& smarts, int maxRecursionDepth, size_t& atoms, size_t& nodes);
 
 } // namespace smarts_detail
@@ -193,6 +203,13 @@ inline SmartsQuery parseSMARTS(const std::string& smarts, int maxRecursionDepth)
 
 inline SmartsQuery smarts_detail::parsePattern(const std::string& smarts, int maxRecursionDepth,
                                                size_t& atoms, size_t& nodes) {
+    RecursivePatterns recursivePatterns;
+    return parsePattern(smarts, maxRecursionDepth, atoms, nodes, recursivePatterns);
+}
+
+inline SmartsQuery smarts_detail::parsePattern(const std::string& smarts, int maxRecursionDepth,
+                                               size_t& atoms, size_t& nodes,
+                                               RecursivePatterns& recursivePatterns) {
     if (smarts.empty()) return SmartsQuery{};
 
     // Guard against unbounded recursive SMARTS nesting by tracking actual
@@ -256,9 +273,27 @@ inline SmartsQuery smarts_detail::parsePattern(const std::string& smarts, int ma
     query.buildAdjacency();
     parser.normaliseChirality(query.atoms, query.neighbors);
     std::function<void(smarts_detail::AtomExpr&)> compileRecursive = [&](smarts_detail::AtomExpr& expression) {
-        if (expression.primType == smarts_detail::AtomPrimType::RECURSIVE)
-            expression.cachedRecursive = std::make_shared<SmartsQuery>(
-                parsePattern(expression.recursiveSmarts, maxRecursionDepth, atoms, nodes));
+        if (expression.primType == smarts_detail::AtomPrimType::RECURSIVE) {
+            const auto key = std::make_pair(expression.recursiveSmarts, maxRecursionDepth);
+            const auto found = recursivePatterns.find(key);
+            if (found != recursivePatterns.end()) {
+                const auto& compiled = found->second;
+                atoms += compiled.atoms;
+                nodes += compiled.nodes;
+                if (atoms > static_cast<size_t>(MAX_ATOMS))
+                    throw std::invalid_argument("SMARTS exceeds the maximum of " + std::to_string(MAX_ATOMS) + " atoms");
+                if (nodes > MAX_SMARTS_EXPRESSION_NODES)
+                    throw std::invalid_argument("SMARTS exceeds the maximum of "
+                        + std::to_string(MAX_SMARTS_EXPRESSION_NODES) + " expression nodes");
+                expression.cachedRecursive = compiled.query;
+            } else {
+                const size_t initialAtoms = atoms, initialNodes = nodes;
+                expression.cachedRecursive = std::make_shared<SmartsQuery>(
+                    parsePattern(expression.recursiveSmarts, maxRecursionDepth, atoms, nodes, recursivePatterns));
+                recursivePatterns.emplace(key, CompiledRecursivePattern{
+                    expression.cachedRecursive, atoms - initialAtoms, nodes - initialNodes});
+            }
+        }
         for (auto& child : expression.children) compileRecursive(child);
     };
     for (auto& atom : query.atoms) compileRecursive(atom.expr);

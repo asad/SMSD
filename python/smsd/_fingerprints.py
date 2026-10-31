@@ -70,6 +70,12 @@ def topological_torsion(mol, fp_size=2048):
 
     Returns:
         list[int]: Sorted list of set bit positions.
+
+    Example::
+
+        >>> import smsd
+        >>> bits = smsd.topological_torsion("CCCC", fp_size=128)
+        >>> assert bits and all(0 <= bit < 128 for bit in bits)
     """
     _checked_int(fp_size, "fp_size", 1)
     return _smsd.topological_torsion(_ensure_mol(mol), fp_size)
@@ -134,7 +140,8 @@ def fingerprints(mols, *, kind="mcs", path_length=7, fp_size=2048, radius=2, opt
     Each result is the one :func:`fingerprint` gives for that molecule with the
     same arguments, in input order, whatever the thread count. SMILES strings
     are parsed natively, and the first molecule that fails raises the error
-    :func:`fingerprint` gives for it.
+    :func:`fingerprint` gives for it. A refusal (an unavailable exact ring basis
+    or an unsettled key search) additionally identifies its zero-based input index.
 
     Args:
         mols: Iterable of MolGraph objects, SMILES strings or RDKit molecules.
@@ -228,6 +235,11 @@ def overlap_coefficient(fp1, fp2, fp_size=2048):
 
     Returns:
         float: Overlap coefficient in [0.0, 1.0].
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.overlap_coefficient([1, 3], [1, 3, 8]) == 1.0
     """
     if fp1 is None or fp2 is None:
         return 0.0
@@ -253,6 +265,11 @@ def tanimoto_coefficient(fp1, fp2, fp_size=2048):
 
     Returns:
         float: Tanimoto similarity in [0.0, 1.0].
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.tanimoto_coefficient([1, 3], [3, 5]) == 1 / 3
     """
     if fp1 is None or fp2 is None:
         return 0.0
@@ -263,6 +280,14 @@ def overlapCoefficient(fp1, fp2, fp_size=2048):
     """Deprecated alias of :func:`overlap_coefficient`.
 
     Use :func:`overlap_coefficient`.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     coefficient = smsd.overlapCoefficient([1], [1, 3])
+        >>> assert coefficient == 1.0
     """
     _deprecated("overlapCoefficient", "overlap_coefficient")
     return overlap_coefficient(fp1, fp2, fp_size)
@@ -274,6 +299,11 @@ def count_overlap_coefficient(fp1, fp2):
     Generalisation of the binary overlap coefficient for integer count
     fingerprints (e.g. ECFP counts, topological torsion counts), given as
     (position, count) pairs.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.count_overlap_coefficient([(1, 2)], [(1, 2), (3, 1)]) == 1.0
     """
     a = _counts(fp1)
     b = _counts(fp2)
@@ -289,6 +319,11 @@ def count_tanimoto_coefficient(fp1, fp2):
 
     The standard count-based fingerprint similarity metric, for count
     fingerprints given as (position, count) pairs.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.count_tanimoto_coefficient([(1, 2)], [(1, 1), (3, 1)]) == 1 / 3
     """
     a = _counts(fp1)
     b = _counts(fp2)
@@ -304,6 +339,14 @@ def count_overlapCoefficient(fp1, fp2):
     """Deprecated alias of :func:`count_overlap_coefficient`.
 
     Use :func:`count_overlap_coefficient`.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     coefficient = smsd.count_overlapCoefficient([(1, 2)], [(1, 2), (3, 1)])
+        >>> assert coefficient == 1.0
     """
     _deprecated("count_overlapCoefficient", "count_overlap_coefficient")
     return count_overlap_coefficient(fp1, fp2)
@@ -331,6 +374,11 @@ def count_dice(fp1, fp2):
 
     Accepts dense count vectors of equal length, (position, count) pairs or
     ``{position: count}`` dictionaries.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.count_dice({1: 2}, {1: 1, 3: 1}) == 0.5
     """
     return _smsd.count_dice(*_dense_pair(fp1, fp2))
 
@@ -340,6 +388,11 @@ def count_cosine(fp1, fp2):
 
     Accepts dense count vectors of equal length, (position, count) pairs or
     ``{position: count}`` dictionaries.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.count_cosine({1: 2}, {1: 1}) == 1.0
     """
     return _smsd.count_cosine(*_dense_pair(fp1, fp2))
 

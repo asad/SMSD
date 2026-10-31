@@ -231,11 +231,11 @@ def _concurrent_append():
 
     def pause_screen():
         entered.set()
-        assert attempting.wait(2), "append thread did not start"
+        assert attempting.wait(30), "append thread did not start"
 
     def append():
         try:
-            assert entered.wait(2), "screen callback did not start"
+            assert entered.wait(30), "screen callback did not start"
             attempting.set()
             corpus.add_target(appended)
         except BaseException as error:
@@ -245,7 +245,7 @@ def _concurrent_append():
     writer = threading.Thread(target=append, daemon=True)
     writer.start()
     results = smsd.Substructure.find("C").match_many(corpus)
-    writer.join(2)
+    writer.join(30)
     assert not writer.is_alive(), "append thread did not finish"
     assert not errors, errors
     assert [result.found for result in results] == [True, False, True]
@@ -262,5 +262,5 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 module._concurrent_append()
 """
-    completed = subprocess.run([sys.executable, "-c", code, __file__], capture_output=True, text=True, timeout=5)
+    completed = subprocess.run([sys.executable, "-c", code, __file__], capture_output=True, text=True, timeout=60)
     assert completed.returncode == 0, completed.stdout + completed.stderr

@@ -34,6 +34,17 @@
     && (defined(__GNUC__) || defined(__clang__))
 #  define SMSD_BITOPS_BUILTINS 1
 #endif
+// On x86-64 the baseline instruction set has no population count, so unless the build enables
+// it, GCC and Clang count bits in software. popcountWords and popcountWordPairs are therefore
+// also compiled for the POPCNT instruction and use it when the processor reports it, which is
+// checked once per process; other processors run the portable loop. Builds that already enable
+// the instruction, MSVC and other targets have one copy only.
+#if defined(SMSD_BITOPS_BUILTINS) && defined(__x86_64__) && !defined(__POPCNT__) && !defined(_MSC_VER) \
+    && !defined(__CUDACC__) && defined(__has_attribute)
+#  if __has_attribute(target)
+#    define SMSD_BITOPS_POPCNT_DISPATCH 1
+#  endif
+#endif
 
 #if defined(__ARM_NEON)
 #  include <arm_neon.h>
@@ -85,6 +96,80 @@ inline int ctz64(uint64_t x) noexcept {
 #else
     return ctz64_portable(x);
 #endif
+}
+
+// =========================================================================
+// Word loops
+// =========================================================================
+
+#if defined(SMSD_BITOPS_POPCNT_DISPATCH)
+namespace detail {
+
+/// True when the processor has the POPCNT instruction (CPUID leaf 1, ECX bit 23); read once.
+inline bool hasPopcntInstruction() noexcept {
+    static const bool present = [] {
+        unsigned eax = 1, ebx = 0, ecx = 0, edx = 0;
+        __asm__("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+        return (ecx & (1u << 23)) != 0;
+    }();
+    return present;
+}
+
+/// popcountWords compiled for the POPCNT instruction; call only when hasPopcntInstruction().
+__attribute__((target("popcnt")))
+inline int64_t popcountWordsPopcnt(const uint64_t* words, size_t count) noexcept {
+    int64_t bits = 0;
+    for (size_t i = 0; i < count; ++i) bits += __builtin_popcountll(words[i]);
+    return bits;
+}
+
+/// popcountWordPairs compiled for the POPCNT instruction; call only when hasPopcntInstruction().
+__attribute__((target("popcnt")))
+inline void popcountWordPairsPopcnt(const uint64_t* a, const uint64_t* b, size_t count,
+                                    int64_t& common, int64_t& first, int64_t& second) noexcept {
+    int64_t both = 0, inA = 0, inB = 0;
+    for (size_t i = 0; i < count; ++i) {
+        both += __builtin_popcountll(a[i] & b[i]);
+        inA  += __builtin_popcountll(a[i]);
+        inB  += __builtin_popcountll(b[i]);
+    }
+    common += both;
+    first  += inA;
+    second += inB;
+}
+
+} // namespace detail
+#endif
+
+/// Number of set bits in `count` consecutive words.
+inline int64_t popcountWords(const uint64_t* words, size_t count) noexcept {
+#if defined(SMSD_BITOPS_POPCNT_DISPATCH)
+    if (detail::hasPopcntInstruction()) return detail::popcountWordsPopcnt(words, count);
+#endif
+    int64_t bits = 0;
+    for (size_t i = 0; i < count; ++i) bits += popcount64(words[i]);
+    return bits;
+}
+
+/// Adds the set bits of a[i] & b[i], of a[i] and of b[i] over `count` words to common, first
+/// and second respectively.
+inline void popcountWordPairs(const uint64_t* a, const uint64_t* b, size_t count,
+                              int64_t& common, int64_t& first, int64_t& second) noexcept {
+#if defined(SMSD_BITOPS_POPCNT_DISPATCH)
+    if (detail::hasPopcntInstruction()) {
+        detail::popcountWordPairsPopcnt(a, b, count, common, first, second);
+        return;
+    }
+#endif
+    int64_t both = 0, inA = 0, inB = 0;
+    for (size_t i = 0; i < count; ++i) {
+        both += popcount64(a[i] & b[i]);
+        inA  += popcount64(a[i]);
+        inB  += popcount64(b[i]);
+    }
+    common += both;
+    first  += inA;
+    second += inB;
 }
 
 // =========================================================================

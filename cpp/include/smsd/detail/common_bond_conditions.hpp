@@ -43,11 +43,11 @@ namespace common_bond_detail {
  * union, so each set of bonds holds a largest one, found by taking off bonds on no whole ring
  * until none is left (keepWholeRings()). A stereo centre is met once at most two of its ligands
  * are selected, or its ligands agree; a stereo double bond once it is left out, or one end keeps
- * no selected ligand, or its ligands agree. Taking bonds away never breaks either, and every
- * other condition holds of a selection once it holds of a smaller one. So each best selection is
- * the largest whole-ring part of the common bonds less a least set of bonds that resolves the
- * conflicts, and select() tries these sets depth first, one conflict at a time, each resolved in
- * every least way.
+ * no selected ligand, or its ligands agree. Taking bonds away preserves their relative parity
+ * when, at each corresponding query/target endpoint pair, both have at most two substituents or
+ * either has at most one. The conflicts are then
+ * resolved one at a time in every least way. Crowded configured ends can change their first
+ * selected ligand and reverse that parity, so their selections are checked as general subsets.
  */
 class CommonBondConditions {
     /** A stereo centre or double bond whose selected ligands disagree. */
@@ -298,8 +298,8 @@ public:
         bestBonds_ = -1;
         room_ = room;
         if (chirality_ || bondStereo_) {
-            findConflicts();
-            resolve(0, 0);
+            if (findConflicts()) selectSubsets();
+            else resolve(0, 0);
         } else {
             leaf();
         }
@@ -311,9 +311,10 @@ public:
 private:
     const std::vector<int>& mapping() const { return *mapping_; }
 
-    /** The conflicts of the selection: the centres first, by query atom, then the double bonds. */
-    void findConflicts() {
+    /** Collects stereo conflicts and whether a crowded end needs general subset selection. */
+    bool findConflicts() {
         conflicts_.clear();
+        bool crowded = false;
         const auto& mapped = mapping();
         if (chirality_)
             for (int atom = 0; atom < query_.atomCount; ++atom)
@@ -333,10 +334,45 @@ private:
             for (int index = 0; index < commonCount_; ++index) {
                 const int bond = commonBonds_[index];
                 const int first = query_.bondFirst[bond], second = query_.bondSecond[bond];
-                if (!selected_[bond] || !doubleBondDisagrees(first, second, selected_)) continue;
+                if (!selected_[bond]) continue;
+                if (queryGraph_.dbStereo(first, second) != 0
+                    && targetGraph_.dbStereo(mapped[first], mapped[second]) != 0)
+                    for (int end : {first, second}) {
+                        const size_t queryDegree = queryGraph_.neighbors[end].size();
+                        const size_t targetDegree = targetGraph_.neighbors[mapped[end]].size();
+                        if (std::min(queryDegree, targetDegree) > 2 && std::max(queryDegree, targetDegree) > 3)
+                            crowded = true;
+                    }
+                if (!doubleBondDisagrees(first, second, selected_)) continue;
                 conflicts_.push_back(Conflict{false, first, second, bond, endLigands(first, second), endLigands(second, first)});
             }
         clock_.tick(query_.atomCount + static_cast<int64_t>(conflicts_.size()));
+        return crowded;
+    }
+
+    /** Checks every optional common-bond subset when deleting a ligand can reverse stereo. */
+    void selectSubsets() {
+        std::vector<int> optional;
+        optional.reserve(static_cast<size_t>(commonCount_));
+        for (int index = 0; index < commonCount_; ++index) {
+            const int bond = commonBonds_[index];
+            if (selected_[bond] && !required(bond)) optional.push_back(bond);
+        }
+        clock_.tick(commonCount_);
+        int dropped = 0;
+        while (leastBonds_ <= upperBonds_) {
+            clock_.tick();
+            if (upperBonds_ - dropped >= leastBonds_) leaf();
+            size_t position = 0;
+            while (position < optional.size() && !selected_[optional[position]]) {
+                selected_[optional[position++]] = 1;
+                --dropped;
+            }
+            if (position == optional.size()) break;
+            selected_[optional[position]] = 0;
+            ++dropped;
+        }
+        for (int bond : optional) selected_[bond] = 1;
     }
 
     /** The selected bonds that give end `end` of the double bond to `other` a ligand: those to its other neighbours, in ascending order. */

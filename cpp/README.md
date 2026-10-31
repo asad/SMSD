@@ -18,6 +18,15 @@ the API reference. The
 [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
 lists the release packages.
 
+## Version 8.1.0
+
+The header archive `smsd-cpp-8.1.0-headers.tar.gz` is on the
+[GitHub releases page](https://github.com/asad/SMSD/releases). The
+[SMARTS export guide](../docs/SMARTS_EXPORT.md) describes the selected common
+graph and its export limits. `MCS::matchWithSmarts(target)` retains the prepared
+chemistry and returns the ordinary result beside its pattern; stereo,
+tautomer-aware, complete-ring and strict ring-fusion export are rejected.
+
 ## Quick start
 
 Save this program as `example.cpp` in the repository root:
@@ -76,6 +85,7 @@ ctest --test-dir build/cpp --build-config Debug --output-on-failure
 | --- | --- | --- |
 | `SMSD_BUILD_TESTS` | `ON` | Builds the native test suites |
 | `SMSD_HEADER_CHECK_WERROR` | `OFF` | Makes warnings errors in the header self-containment test (`-Werror`, or `/WX` with MSVC) |
+| `SMSD_BUILD_EXAMPLES` | `OFF` | Builds the C++ example programs, such as the [Metal screening example](examples/metal_fingerprint_screen.cpp) |
 | `SMSD_BUILD_OPENMP` | `ON` | Uses OpenMP, when found, for batch fingerprint and screening operations; without it they run sequentially |
 | `SMSD_BUILD_PYTHON` | `OFF` | Builds the Python extension; requires Python development headers and pybind11 |
 | `SMSD_WITH_RDKIT` | `OFF` | Builds the `smsd_rdkit` adapter; requires an RDKit development installation and C++20 |
@@ -88,7 +98,7 @@ rules are under [Optional native
 adapter](../docs/CPP.md#optional-native-adapter). The native CUDA and Metal
 libraries are not part of the installed header package; use them from the same
 CMake source build. [Metal fingerprint screening](../docs/CPP.md#optional-metal-fingerprint-screening)
-requires explicit opt-in; automatic selection is disabled. Python CPU/OpenMP
+runs only when requested explicitly. Python CPU/OpenMP
 wheels use the separate optional `smsd-cuda` package for NVIDIA CUDA screening;
 macOS Python wheels use the CPU.
 
@@ -108,7 +118,7 @@ program as `example/main.cpp` and this file as `example/CMakeLists.txt`:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 project(smsd_example LANGUAGES CXX)
-find_package(smsd 8.0.3 CONFIG REQUIRED)
+find_package(smsd 8.1.0 CONFIG REQUIRED)
 add_executable(smsd_example main.cpp)
 target_link_libraries(smsd_example PRIVATE smsd::smsd)
 ```
@@ -123,7 +133,7 @@ cmake --build build/example --config Release
 
 Run `build/example/smsd_example` on macOS or Linux, or
 `build/example/Release/smsd_example.exe` with a Visual Studio generator. The
-package uses same-major-version compatibility, so `find_package(smsd 8.0.3)`
+package uses same-major-version compatibility, so `find_package(smsd 8.1.0)`
 accepts any later 8.x installation.
 
 ## Documentation

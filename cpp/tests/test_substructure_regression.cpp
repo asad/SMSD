@@ -5,6 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #include "test_support.hpp"
+#include "timing_allowance.hpp"
 #include "smsd/substructure.hpp"
 #include "smsd/smiles_parser.hpp"
 #include <chrono>
@@ -165,10 +166,10 @@ static void countScreens() {
 // which still makes them dear, cannot hold the search past its deadline.
 static void twinScans() {
     constexpr int atoms = 16000;
-#if defined(__OPTIMIZE__) || (defined(_MSC_VER) && !defined(_DEBUG))
+#if !defined(SMSD_TEST_SANITISED) && (defined(__OPTIMIZE__) || (defined(_MSC_VER) && !defined(_DEBUG)))
     constexpr int64_t timeout = 30, margin = 120;
 #else
-    // An unoptimised build scans the isolated atoms about twenty times more slowly; a quadratic
+    // An unoptimised or sanitised build scans the isolated atoms about twenty times more slowly; a quadratic
     // scan of 16,000 atoms would still take several seconds, so the bound keeps its meaning.
     constexpr int64_t timeout = 1000, margin = 1000;
 #endif
@@ -336,7 +337,7 @@ static void sparseInducedTimeout() {
     require(result.status == smsd::SearchStatus::TimedOut && !result.complete,
         "an induced search of 32000 isolated atoms must stop at its time limit");
     // Comparing each candidate with every query atom would take about 500 ms here.
-    require(result.elapsedMillis < 350, "the induced search took " + std::to_string(result.elapsedMillis) + " ms for a 100 ms limit");
+    require(result.elapsedMillis < smsd_test::timingAllowance(350), "the induced search took " + std::to_string(result.elapsedMillis) + " ms for a 100 ms limit");
 }
 
 // An induced SMARTS search compares each candidate with the fewer of the mapped atoms and its
@@ -372,18 +373,18 @@ static void sparseInducedSmartsTimeout() {
         require(result.status == smsd::SearchStatus::TimedOut && !result.complete,
             "an induced SMARTS search of 10000 isolated atoms must stop at its time limit");
         // Comparing each candidate with every pattern atom would take about 650 ms here.
-        require(result.elapsedMillis < 350, "the induced SMARTS search took " + std::to_string(result.elapsedMillis)
+        require(result.elapsedMillis < smsd_test::timingAllowance(350), "the induced SMARTS search took " + std::to_string(result.elapsedMillis)
             + " ms for a 100 ms limit");
     }
     {
         options.timeoutMs = 30;
         const auto result = smsd::Substructure::smarts(starSmarts(9999)).withOptions(options).match(star(9999));
-        require(result.elapsedMillis < 150 && (result.status == smsd::SearchStatus::TimedOut || !result.matches.empty()),
+        require(result.elapsedMillis < smsd_test::timingAllowance(150) && (result.status == smsd::SearchStatus::TimedOut || !result.matches.empty()),
             "an induced star SMARTS took " + std::to_string(result.elapsedMillis) + " ms for a 30 ms limit");
     }
     {
         // Leaves read only their own neighbour, so a large star embeds well within its limit.
-        options.timeoutMs = 10000;
+        options.timeoutMs = smsd_test::timingAllowance(10000);
         const auto result = smsd::Substructure::smarts(starSmarts(3000)).withOptions(options).match(star(3000));
         require(result.status == smsd::SearchStatus::Completed && result.matches.size() == 1
             && result.matches.front().atomMapping.size() == 3001 && result.matches.front().bondMapping.size() == 3000,

@@ -485,6 +485,9 @@ private:
         for (int atom = 0; atom < graph.n; ++atom)
             for (int other : graph.neighbors[atom]) {
                 if (other < 0 || other >= graph.n || other == atom || seen[other] == atom + 1) return false;
+                if (graph.bondOrder(atom, other) != graph.bondOrder(other, atom)
+                    || graph.bondAromatic(atom, other) != graph.bondAromatic(other, atom)
+                    || graph.bondInRing(atom, other) != graph.bondInRing(other, atom)) return false;
                 seen[other] = atom + 1;
                 ++listedStart[other + 1];
             }

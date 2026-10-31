@@ -62,6 +62,7 @@ namespace search_detail {
 
 inline std::shared_ptr<const MolGraph> ownQuery(const MolGraph& query) {
     const std::lock_guard<std::recursive_mutex> lock(query.lazyCacheMutex());
+    validateSearchGraphStorage(query);
     return std::make_shared<const MolGraph>(query);
 }
 
@@ -193,14 +194,14 @@ inline std::optional<SearchResult> commonAtomSearch(const MolGraph& query, const
 
 inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph& target,
                                           const MCSOptions& options, size_t limit, bool all,
-                                          const Match* required, Budget& budget) {
+                                          const Match* required, Budget& budget, bool allowInjectiveBound = true) {
     Collector collector(&options, limit, all);
     if (budget.stopped()) return collector.finish(budget, false, false);
     if (options.objective == MCSObjective::MCES) return commonBondSearch(query, target, options, limit, all, required, budget);
     if (commonAtomSearchApplies(options, limit, all, required))
         if (auto result = commonAtomSearch(query, target, options, budget)) return std::move(*result);
     if (all) {
-        const auto optimum = commonSubgraphOriented(query, target, options, 1, false, required, budget);
+        const auto optimum = commonSubgraphOriented(query, target, options, 1, false, required, budget, false);
         for (const auto& match : optimum.matches) collector.remember(match);
         if (optimum.optimal) collector.markOptimumKnown();
         if (budget.stopped()) return collector.finish(budget, optimum.optimal, false);
@@ -209,7 +210,8 @@ inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph
     std::pair<bool, bool> proof;
     if (!all && !required && query.n > 0 && query.n <= target.n) {
         const QueryView view(query);
-        VertexSearch full(view, target, options.chemistry, &options, true, false, budget, collector, -1, nullptr, false, 2048);
+        VertexSearch full(view, target, options.chemistry, &options, true, false, budget, collector, -1, nullptr, false, 2048,
+                          true, false, allowInjectiveBound && !all);
         const auto fullProof = full.run();
         if (!all && collector.hasMatch()
             && collector.best().atoms == query.n
@@ -218,9 +220,19 @@ inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph
         if (fullProof.second && options.atomWeights.empty()
             && collector.best().atoms == query.n - 1) {
             int64_t degreeSum = 0, minimumDegree = query.n;
+            SpareVectors<int>::Lease seenLease(static_cast<size_t>(query.n), -1);
+            auto& seen = seenLease.items;
+            size_t work = 0;
             for (int atom = 0; atom < query.n; ++atom) {
-                if ((atom & 255) == 0 && budget.stopped()) break;
-                const auto degree = static_cast<int64_t>(query.neighbors[atom].size());
+                if (budget.stopped()) break;
+                int64_t degree = 0;
+                for (int neighbor : query.neighbors[atom]) {
+                    if ((work++ & 255u) == 0 && budget.stopped()) break;
+                    if (neighbor != atom && seen[neighbor] != atom) {
+                        seen[neighbor] = atom;
+                        ++degree;
+                    }
+                }
                 degreeSum += degree;
                 minimumDegree = std::min(minimumDegree, degree);
             }
@@ -230,24 +242,26 @@ inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph
         }
     }
     const QueryView view(query);
-    VertexSearch search(view, target, options.chemistry, &options, true, all, budget, collector, -1, required);
+    VertexSearch search(view, target, options.chemistry, &options, true, all, budget, collector, -1, required,
+                        true, 0, true, allowInjectiveBound && !all, allowInjectiveBound && !all);
     proof = search.run();
     return collector.finish(budget, proof.first, proof.second);
 }
 
-/** Whether the chemistry relies on an exhaustive set of relevant cycles. */
+/**
+ * Whether proof needs a complete ring source: the relevant cycles for completeRingsOnly,
+ * and the ring-count perception for STRICT fusion.
+ */
 inline bool needsRingProof(const ChemOptions& chemistry) {
     return chemistry.completeRingsOnly || chemistry.ringFusionMode == ChemOptions::RingFusionMode::STRICT;
 }
 
 /** Whether the ring set used by the chemistry was truncated. */
 inline bool ringProofTruncated(const MolGraph& graph, const ChemOptions& chemistry) {
-    if (chemistry.completeRingsOnly) {
-        bool truncated = false;
-        (void)recentRelevantCycles(graph, &truncated);
-        return truncated;
-    }
-    return chemistry.ringFusionMode == ChemOptions::RingFusionMode::STRICT && ringsTruncated(graph);
+    bool truncated = false;
+    if (chemistry.completeRingsOnly) (void)recentRelevantCycles(graph, &truncated);
+    return truncated || (chemistry.ringFusionMode == ChemOptions::RingFusionMode::STRICT
+                         && graph.ringCountsTruncated());
 }
 
 /** Retain the search results without claiming proof from truncated ring perception. */
@@ -283,6 +297,8 @@ inline bool completeAtomTopology(const MolGraph& graph, Budget& budget) {
 inline SearchResult commonSubgraph(const MolGraph& query, const MolGraph& target,
                                   const MCSOptions& options, size_t limit, bool all, const Match* required = nullptr,
                                   Budget* sharedBudget = nullptr) {
+    validateSearchGraphShape(query);
+    validateSearchGraphShape(target);
     validateOptions(options, query.n);
     for (int atom : options.excludedTargetAtoms)
         if (atom < 0 || atom >= target.n) throw std::out_of_range("Excluded target atom index out of range");
@@ -290,6 +306,11 @@ inline SearchResult commonSubgraph(const MolGraph& query, const MolGraph& target
     Budget& budget = sharedBudget ? *sharedBudget : localBudget;
     RecursiveScope recursiveScope(budget);
     if (budget.stopped()) {
+        Collector collector(&options, limit, all);
+        return collector.finish(budget, false, false);
+    }
+    if (!validateSearchGraphStorage(query, [&budget] { return budget.stoppedSampled(); })
+        || !validateSearchGraphStorage(target, [&budget] { return budget.stoppedSampled(); })) {
         Collector collector(&options, limit, all);
         return collector.finish(budget, false, false);
     }
@@ -344,7 +365,8 @@ inline SearchResult commonSubgraph(const MolGraph& query, const MolGraph& target
  * the query. An embedding maps query atoms one to one onto target atoms of their element with
  * at least as many neighbours, so a shortfall proves that none exists.
  */
-inline bool atomCountsAdmitEmbedding(const MolGraph& query, const MolGraph& target, const ChemOptions& chemistry) {
+inline bool atomCountsAdmitEmbedding(const MolGraph& query, const MolGraph& target,
+                                    const ChemOptions& chemistry, Budget& budget) {
     if (!chemistry.matchAtomType) return true;
     // Degrees from the last bin up share it, which keeps the test necessary. Queries with more
     // elements than slots are not screened.
@@ -353,7 +375,11 @@ inline bool atomCountsAdmitEmbedding(const MolGraph& query, const MolGraph& targ
     slot.fill(-1);
     std::array<std::array<int, 2 * degrees>, slots> counts;
     int used = 0;
+    SpareVectors<int>::Lease seenLease(static_cast<size_t>(query.n), -1);
+    auto& seen = seenLease.items;
+    size_t work = 0;
     for (int atom = 0; atom < query.n; ++atom) {
+        if ((atom & 255) == 0 && budget.stopped()) return false;
         const int element = query.atomicNum[atom];
         if (element < 0 || element >= elements) return true;
         if (slot[element] < 0) {
@@ -361,12 +387,21 @@ inline bool atomCountsAdmitEmbedding(const MolGraph& query, const MolGraph& targ
             counts[used].fill(0);
             slot[element] = static_cast<int8_t>(used++);
         }
-        ++counts[slot[element]][std::min(static_cast<int>(query.neighbors[atom].size()), degrees - 1)];
+        int degree = 0;
+        for (int neighbor : query.neighbors[atom]) {
+            if ((work++ & 255u) == 0 && budget.stopped()) return false;
+            if (neighbor != atom && seen[neighbor] != atom) {
+                seen[neighbor] = atom;
+                ++degree;
+            }
+        }
+        ++counts[slot[element]][std::min(degree, degrees - 1)];
     }
     for (int atom = 0; atom < target.n; ++atom) {
+        if ((atom & 255) == 0 && budget.stopped()) return false;
         const int element = target.atomicNum[atom];
         if (element >= 0 && element < elements && slot[element] >= 0)
-            ++counts[slot[element]][degrees + std::min(static_cast<int>(target.neighbors[atom].size()), degrees - 1)];
+            ++counts[slot[element]][degrees + std::min(target.neighbors[atom].size(), static_cast<size_t>(degrees - 1))];
     }
     for (int index = 0; index < used; ++index) {
         int queryAtoms = 0, targetAtoms = 0;
@@ -382,13 +417,29 @@ inline bool atomCountsAdmitEmbedding(const MolGraph& query, const MolGraph& targ
 inline SearchResult patternSubstructure(const SmartsQuery& pattern, const MolGraph& target,
                                         const SubstructureOptions& options, size_t limit, bool all,
                                         Budget* sharedBudget, const PatternPlan* plan) {
+    validateSearchGraphShape(target);
     Budget localBudget(options, pattern.atomCount(), target.n, false);
     Budget& budget = sharedBudget ? *sharedBudget : localBudget;
     RecursiveScope recursiveScope(budget);
     Collector collector(nullptr, limit, all);
     if (budget.stopped()) return collector.finish(budget, false, false);
+    if (!validateSearchGraphStorage(target, [&budget] { return budget.stoppedSampled(); }))
+        return collector.finish(budget, false, false);
     std::optional<PatternPlan> localPlan;
     if (!plan) plan = &localPlan.emplace(pattern);
+    if (pattern.atomCount() <= target.n && plan->numericRingMembership()) {
+        if (!plan->elementsAvailable(target, budget)) {
+            const bool stopped = budget.stopped();
+            return collector.finish(budget, !stopped, !stopped);
+        }
+        const bool incomplete = smsd::ringsTruncated(target);
+        if (budget.stopped()) return collector.finish(budget, false, false);
+        if (incomplete) {
+            auto result = collector.finish(budget, false, false);
+            result.status = SearchStatus::LimitReached;
+            return result;
+        }
+    }
     prepare(nullptr, target, options.chemistry);
     thread_local RecursiveMemo::Pool reusablePool;
     RecursiveMemo::Pool transientPool;
@@ -400,7 +451,10 @@ inline SearchResult patternSubstructure(const SmartsQuery& pattern, const MolGra
     const PatternWorkspace::Hold hold(workspace);
     PatternSearch search(pattern, *plan, target, options.chemistry, options.induced, all, limit, budget, workspace);
     const auto proof = search.run();
-    return search.finish(proof.first, proof.second);
+    auto result = search.finish(proof.first, proof.second);
+    if (!search.ringIndependentProof())
+        qualifyRingProof(result, target, target, options.chemistry);
+    return result;
 }
 
 /**
@@ -413,22 +467,29 @@ inline SearchResult substructure(const MolGraph* query, const SmartsQuery* patte
                                 const PatternPlan* plan = nullptr, bool queryPrepared = false,
                                 bool screenedOut = false) {
     if (!query) return patternSubstructure(*pattern, target, options, limit, all, sharedBudget, plan);
+    validateSearchGraphShape(*query);
+    validateSearchGraphShape(target);
     const QueryView view(*query);
     Budget localBudget(options, view.size(), target.n, false);
     Budget& budget = sharedBudget ? *sharedBudget : localBudget;
     RecursiveScope recursiveScope(budget);
     Collector collector(nullptr, limit, all);
     if (budget.stopped()) return collector.finish(budget, false, false);
+    if (!validateSearchGraphStorage(*query, [&budget] { return budget.stoppedSampled(); })
+        || !validateSearchGraphStorage(target, [&budget] { return budget.stoppedSampled(); }))
+        return collector.finish(budget, false, false);
     // The atom counts reject a pair before any ring perception, which they do not read.
     if (screenedOut || (query && ((view.size() > target.n && target.n >= 0)
-        || !atomCountsAdmitEmbedding(*query, target, options.chemistry)))) {
+        || !atomCountsAdmitEmbedding(*query, target, options.chemistry, budget)))) {
         const bool completed = !budget.stopped();
         return collector.finish(budget, completed, completed);
     }
     prepare(queryPrepared ? nullptr : query, target, options.chemistry);
     VertexSearch search(view, target, options.chemistry, nullptr, options.induced, all, budget, collector);
     const auto proof = search.run();
-    return collector.finish(budget, proof.first, proof.second);
+    auto result = collector.finish(budget, proof.first, proof.second);
+    qualifyRingProof(result, *query, target, options.chemistry);
+    return result;
 }
 
 } // namespace search_detail

@@ -135,7 +135,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
                 self.assertEqual(self.check(family=family, repaired=False), "cp314-" + tag)
 
     def test_every_release_interpreter_and_architecture_has_matching_native_abi(self):
-        for version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
+        for version in ("3.12", "3.13", "3.14", "3.15"):
             for family, architecture, tag in (("windows", "x86_64", "win_amd64"),
                                                ("linux", "x86_64", "manylinux_x86_64"),
                                                ("linux", "aarch64", "manylinux_aarch64"),
@@ -153,9 +153,9 @@ class CollectReleaseWheelsTest(unittest.TestCase):
             self.check(family="linux", architecture="aarch64", repaired=False,
                        changes={"smsd/_smsd.cpython-314-aarch64-linux-gnu.so": bytes(binary)})
 
-    def test_python310_wheel_rejects_a_python314_extension(self):
+    def test_python312_wheel_rejects_a_python314_extension(self):
         with self.assertRaisesRegex(ValueError, "Native extension does not match"):
-            self.check(python_version="3.10", changes={"smsd/_smsd.cp310-win_amd64.pyd": None,
+            self.check(python_version="3.12", changes={"smsd/_smsd.cp312-win_amd64.pyd": None,
                        "smsd/_smsd.cp314-win_amd64.pyd": b"MZ"})
 
     def test_missing_or_changed_c_abi_header_is_rejected(self):

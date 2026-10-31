@@ -1,0 +1,63 @@
+{
+  "description": "Stereo kept by sub-structure extraction and R-group decomposition, read by the C++, Java and Python tests. Atom indices follow the SMILES. In 'expected' an atom that lost a neighbour keeps the hydrogen count it had, as extractSubgraph and extract_subgraph give it; in 'capped' the lost neighbours are replaced by hydrogen, as the Java fragments give it. Both carry the same stereo, and 'stereo' says whether any is kept.",
+  "subgraphs": [
+    {
+      "name": "tetrahedral centre kept with all its neighbours",
+      "smiles": "N[C@@H](C)C(=O)O",
+      "atoms": [0, 1, 2, 3, 4],
+      "expected": "N[C@@H](C)[C]=O",
+      "capped": "N[C@@H](C)C=O",
+      "stereo": true
+    },
+    {
+      "name": "tetrahedral centre kept under a new atom order",
+      "smiles": "N[C@@H](C)C(=O)O",
+      "atoms": [3, 4, 1, 0, 2],
+      "expected": "N[C@@H](C)[C]=O",
+      "capped": "N[C@@H](C)C=O",
+      "stereo": true
+    },
+    {
+      "name": "tetrahedral centre dropped when a neighbour is cut",
+      "smiles": "N[C@](C)(O)CC",
+      "atoms": [0, 1, 2, 4, 5],
+      "expected": "N[C](C)CC",
+      "capped": "NC(C)CC",
+      "stereo": false
+    },
+    {
+      "name": "double bond kept with both reference neighbours",
+      "smiles": "OC/C=C/CN",
+      "atoms": [1, 2, 3, 4],
+      "expected": "[CH2]/C=C/[CH2]",
+      "capped": "C/C=C/C",
+      "stereo": true
+    },
+    {
+      "name": "double bond kept under a new atom order",
+      "smiles": "OC/C=C\\CN",
+      "atoms": [4, 3, 2, 1],
+      "expected": "[CH2]/C=C\\[CH2]",
+      "capped": "C/C=C\\C",
+      "stereo": true
+    },
+    {
+      "name": "double bond dropped when a reference neighbour is cut",
+      "smiles": "F/C(C)=C/C",
+      "atoms": [1, 2, 3, 4],
+      "expected": "C[C]=CC",
+      "capped": "CC=CC",
+      "stereo": false
+    }
+  ],
+  "rgroups": [
+    {
+      "name": "chiral and E substituents on a benzene core",
+      "core": "c1ccccc1",
+      "smiles": "C[C@@H](CC)Oc1ccc(C/C=C/C)cc1",
+      "expected": ["C[C@@H](CC)[O]", "[CH2]/C=C/C"],
+      "capped": ["C[C@@H](CC)O", "C/C=C/C"],
+      "stereo": true
+    }
+  ]
+}

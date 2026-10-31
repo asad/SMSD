@@ -1,0 +1,65 @@
+{% set version = smsd_version %}
+
+package:
+  name: smsd-cuda
+  version: {{ version }}
+
+source:
+  url: {{ smsd_source_url | string | tojson }}
+  sha256: "{{ smsd_source_sha256 }}"
+
+build:
+  number: 0
+  skip: true  # [not linux64 or py<312 or cuda_compiler_version != "12.8"]
+  script: '"{{ PYTHON }}" "{{ RECIPE_DIR }}/build.py"'
+  binary_relocation: true
+  rpaths:
+    - lib/
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+    - {{ compiler('cuda') }}
+    - {{ stdlib('c') }}
+    - cmake >=3.18
+    - ninja
+  host:
+    - python
+    - pip
+    - scikit-build-core >=0.10,<2
+    - cuda-version {{ cuda_compiler_version }}
+    - cuda-cudart-dev
+    - cuda-cccl
+  run:
+    - {{ pin_compatible('python', max_pin='x.x') }}
+    - smsd =={{ version }}
+    - cuda-version >=12.8,<13
+    - cuda-cudart
+
+test:
+  imports:
+    - smsd_cuda
+  requires:
+    - pip
+  commands:
+    - python -m pip check
+
+about:
+  home: https://github.com/asad/SMSD
+  license: Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception
+  license_file:
+    - packaging/smsd-cuda/LICENSE
+    - packaging/smsd-cuda/NOTICE
+    - packaging/smsd-cuda/licenses/cub/LICENSE
+    - packaging/smsd-cuda/licenses/cccl/LICENSE
+  summary: CUDA screening accelerator for the exact matching SMSD version
+  description: |
+    Linux x86-64 CUDA accelerator, built with CUDA 12.8 and dynamically linked
+    to the conda CUDA runtime. Requires an NVIDIA device and system driver for
+    execution. The CPU package remains independently installable.
+  dev_url: https://github.com/asad/SMSD
+
+extra:
+  source_commit: "{{ smsd_source_commit }}"
+  recipe-maintainers:
+    - asad

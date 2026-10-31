@@ -83,8 +83,8 @@ public:
         const int words = s_.words_;
         int root = 0, fewest = INT_MAX;
         for (int queryAtom = 0; queryAtom < s_.queryCount_; ++queryAtom) {
-            int count = 0;
-            for (int i = 0; i < words; ++i) count += popcount64(candidateRows[size_t(queryAtom) * words + i]);
+            const int count = static_cast<int>(
+                popcountWords(candidateRows.data() + size_t(queryAtom) * words, size_t(words)));
             if (count < fewest || (count == fewest && s_.query_.degree(queryAtom) > s_.query_.degree(root))) {
                 root = queryAtom;
                 fewest = count;

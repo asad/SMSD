@@ -918,6 +918,45 @@ py::list matchManyPython(const Query& query, const AtomNumbering& queryNumbering
     return converted;
 }
 
+/** Corpus decisions with the same atom-numbering conversion as ordinary batch searches. */
+template<class Query>
+py::list matchCorpusPython(const Query& query, const smsd::batch::TargetCorpus& corpus,
+    const py::sequence& targets, int minimumAtoms, bool gpuPrefilter, int numThreads, py::handle queryIndices) {
+    if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+    registeredResultTypes();
+    const AtomNumbering queryNumbering(queryIndices);
+    std::vector<AtomNumbering> numbering;
+    std::vector<py::object> owners;
+    numbering.reserve(static_cast<size_t>(targets.size()));
+    for (py::object target : targets) {
+        if (!PyTuple_Check(target.ptr()) || PyTuple_GET_SIZE(target.ptr()) != 2)
+            throw py::type_error("Each target must be a (graph, atom numbering) pair");
+        numbering.emplace_back(PyTuple_GET_ITEM(target.ptr(), 1));
+        owners.push_back(std::move(target));
+    }
+    std::vector<smsd::CorpusSearchResult> outcomes;
+    {
+        py::gil_scoped_release release;
+        const int threads = batchThreads(numThreads);
+        if constexpr (std::is_same<Query, smsd::MCS>::value)
+            outcomes = query.matchCorpus(corpus, minimumAtoms, gpuPrefilter, threads);
+        else
+            outcomes = query.matchCorpus(corpus, gpuPrefilter, threads);
+    }
+    if (outcomes.size() != numbering.size())
+        throw std::runtime_error("Corpus changed while its atom numbering was captured");
+    const auto deadline = ResultsDeadline::cancelledBy(query.cancellation());
+    py::list converted;
+    for (const auto& outcome : outcomes) {
+        py::object result = outcome.result
+            ? pythonResult(*outcome.result, queryNumbering, numbering[outcome.targetIndex], deadline) : py::none();
+        py::object bound = outcome.atomUpperBound < 0 ? py::none() : py::cast(outcome.atomUpperBound);
+        converted.append(py::make_tuple(outcome.targetIndex, bound, outcome.provenBelowThreshold,
+                                        outcome.thresholdReached, result));
+    }
+    return converted;
+}
+
 /** A prepared query with the caller's numbering of its atoms, checked once when it is made. */
 template<class Query>
 struct NumberedQuery {
@@ -1032,29 +1071,88 @@ PYBIND11_MODULE(_smsd, m) {
             Py_DECREF(message);
         }
     });
+    // An unavailable exact ring basis is a RuntimeError of its own type, as in C++ and Java; a
+    // batch failure keeps the single-call failure as its cause.
+    static PyObject* ringBasisUnavailable = nullptr;
+    ringBasisUnavailable = py::register_exception<smsd::detail_rf::RingBasisUnavailable>(
+        m, "RingBasisUnavailable", PyExc_RuntimeError).ptr();
+    py::register_local_exception_translator([](std::exception_ptr pointer) {
+        try {
+            if (pointer) std::rethrow_exception(pointer);
+        } catch (const smsd::detail_rf::RingBasisUnavailable& error) {
+            py::detail::handle_nested_exception(error, pointer);
+            if (PyErr_Occurred()) py::raise_from(ringBasisUnavailable, error.what());
+            else PyErr_SetString(ringBasisUnavailable, error.what());
+        }
+    });
 
-    py::enum_<smsd::ChemOptions::BondOrderMode>(m, "BondOrderMode")
+    py::enum_<smsd::ChemOptions::BondOrderMode>(m, "BondOrderMode",
+          R"doc(Bond-order matching mode.
+
+
+Example::
+
+    >>> import smsd
+    >>> chemistry = smsd.ChemOptions().with_bond_order_mode(smsd.BondOrderMode.STRICT)
+    >>> assert chemistry.match_bond_order == smsd.BondOrderMode.STRICT
+)doc")
         .value("STRICT", smsd::ChemOptions::BondOrderMode::STRICT)
         .value("LOOSE",  smsd::ChemOptions::BondOrderMode::LOOSE)
         .value("ANY",    smsd::ChemOptions::BondOrderMode::ANY)
         .export_values();
 
-    py::enum_<smsd::ChemOptions::AromaticityMode>(m, "AromaticityMode")
+    py::enum_<smsd::ChemOptions::AromaticityMode>(m, "AromaticityMode",
+          R"doc(Aromatic bond compatibility mode during matching.
+
+
+Example::
+
+    >>> import smsd
+    >>> chemistry = smsd.ChemOptions().with_aromaticity_mode(smsd.AromaticityMode.STRICT)
+    >>> assert chemistry.aromaticity_mode == smsd.AromaticityMode.STRICT
+)doc")
         .value("STRICT",   smsd::ChemOptions::AromaticityMode::STRICT)
         .value("FLEXIBLE", smsd::ChemOptions::AromaticityMode::FLEXIBLE)
         .export_values();
 
-    py::enum_<smsd::AromaticityModel>(m, "AromaticityModel")
+    py::enum_<smsd::AromaticityModel>(m, "AromaticityModel",
+          R"doc(Model used when perceiving graph aromaticity.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.perceive_aromaticity("C1=CC=CC=C1", model=smsd.AromaticityModel.DAYLIGHT_LIKE)
+    >>> assert all(graph.aromatic)
+)doc")
         .value("DAYLIGHT_LIKE", smsd::AromaticityModel::DAYLIGHT_LIKE)
         .export_values();
 
-    py::enum_<smsd::ChemOptions::RingFusionMode>(m, "RingFusionMode")
+    py::enum_<smsd::ChemOptions::RingFusionMode>(m, "RingFusionMode",
+          R"doc(Ring-fusion matching restriction.
+
+
+Example::
+
+    >>> import smsd
+    >>> chemistry = smsd.ChemOptions().with_ring_fusion_mode(smsd.RingFusionMode.STRICT)
+    >>> assert chemistry.ring_fusion_mode == smsd.RingFusionMode.STRICT
+)doc")
         .value("IGNORE",     smsd::ChemOptions::RingFusionMode::IGNORE)
         .value("PERMISSIVE", smsd::ChemOptions::RingFusionMode::PERMISSIVE)
         .value("STRICT",     smsd::ChemOptions::RingFusionMode::STRICT)
         .export_values();
 
-    py::enum_<smsd::ChemOptions::Solvent>(m, "Solvent")
+    py::enum_<smsd::ChemOptions::Solvent>(m, "Solvent",
+          R"doc(Solvent used by the optional tautomer-confidence heuristic.
+
+
+Example::
+
+    >>> import smsd
+    >>> chemistry = smsd.ChemOptions().with_solvent(smsd.Solvent.AQUEOUS)
+    >>> assert chemistry.solvent == smsd.Solvent.AQUEOUS
+)doc")
         .value("AQUEOUS",       smsd::ChemOptions::Solvent::AQUEOUS)
         .value("DMSO",          smsd::ChemOptions::Solvent::DMSO)
         .value("METHANOL",      smsd::ChemOptions::Solvent::METHANOL)
@@ -1063,7 +1161,18 @@ PYBIND11_MODULE(_smsd, m) {
         .value("DIETHYL_ETHER", smsd::ChemOptions::Solvent::DIETHYL_ETHER)
         .export_values();
 
-    py::class_<smsd::ChemOptions>(m, "ChemOptions")
+    py::class_<smsd::ChemOptions>(m, "ChemOptions",
+          R"doc(Atom, bond, ring and stereo matching settings.
+
+
+Example::
+
+    >>> import smsd
+    >>> chemistry = smsd.ChemOptions.profile("strict")
+    >>> options = smsd.MCS.Options()
+    >>> options.chemistry = chemistry
+    >>> assert smsd.MCS.find("CCO").with_options(options).match("CCO").best.atom_count == 3
+)doc")
         .def(py::init<>())
         .def(py::init<const smsd::ChemOptions&>(), py::arg("options"), "An independent copy of options")
         .def("__copy__", [](const smsd::ChemOptions& o) { return smsd::ChemOptions(o); })
@@ -1074,30 +1183,84 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("match_formal_charge",   &smsd::ChemOptions::matchFormalCharge)
         .def_readwrite("match_isotope",         &smsd::ChemOptions::matchIsotope)
         .def("with_match_isotope", &smsd::ChemOptions::withMatchIsotope, py::arg("on"),
-             py::return_value_policy::reference_internal, "Set isotope matching and return these options")
+             py::return_value_policy::reference_internal, "Set isotope matching and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_match_isotope(True) is options
+    >>> assert options.match_isotope == True
+)doc")
         .def_readwrite("use_chirality",         &smsd::ChemOptions::useChirality)
         .def_readwrite("use_bond_stereo",       &smsd::ChemOptions::useBondStereo)
         .def_readwrite("ring_matches_ring_only",&smsd::ChemOptions::ringMatchesRingOnly)
         // Ring completeness
         .def_readwrite("complete_rings_only",   &smsd::ChemOptions::completeRingsOnly)
         .def("with_complete_rings_only", &smsd::ChemOptions::withCompleteRingsOnly, py::arg("on"),
-             py::return_value_policy::reference_internal, "Set complete-ring matching and return these options")
+             py::return_value_policy::reference_internal, "Set complete-ring matching and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_complete_rings_only(True) is options
+    >>> assert options.complete_rings_only == True
+)doc")
         // Tautomer
         .def_readwrite("tautomer_aware",        &smsd::ChemOptions::tautomerAware)
         .def("with_tautomer_aware", &smsd::ChemOptions::withTautomerAware, py::arg("on"),
-             py::return_value_policy::reference_internal, "Set tautomer-aware matching and return these options")
+             py::return_value_policy::reference_internal, "Set tautomer-aware matching and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_tautomer_aware(True) is options
+    >>> assert options.tautomer_aware == True
+)doc")
         // Solvent
         .def_readwrite("solvent",               &smsd::ChemOptions::solvent)
         .def("with_solvent", &smsd::ChemOptions::withSolvent, py::arg("solvent"),
              py::return_value_policy::reference_internal,
-             "Set the solvent for tautomer weight corrections and return these options")
+             "Set the solvent for tautomer weight corrections and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_solvent(smsd.Solvent.METHANOL) is options
+    >>> assert options.solvent == smsd.Solvent.METHANOL
+)doc")
         // Bond matching
         .def_readwrite("match_bond_order",      &smsd::ChemOptions::matchBondOrder)
         .def("with_bond_order_mode", &smsd::ChemOptions::withBondOrderMode, py::arg("mode"),
-             py::return_value_policy::reference_internal, "Set the bond order mode and return these options")
+             py::return_value_policy::reference_internal, "Set the bond order mode and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_bond_order_mode(smsd.BondOrderMode.ANY) is options
+    >>> assert options.match_bond_order == smsd.BondOrderMode.ANY
+)doc")
         .def_readwrite("aromaticity_mode",      &smsd::ChemOptions::aromaticityMode)
         .def("with_aromaticity_mode", &smsd::ChemOptions::withAromaticityMode, py::arg("mode"),
-             py::return_value_policy::reference_internal, "Set the aromaticity mode and return these options")
+             py::return_value_policy::reference_internal, "Set the aromaticity mode and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_aromaticity_mode(smsd.AromaticityMode.STRICT) is options
+    >>> assert options.aromaticity_mode == smsd.AromaticityMode.STRICT
+)doc")
         .def_property("aromaticity_model", &deprecatedAromaticityModel, &setDeprecatedAromaticityModel,
              "Deprecated: no search reads this field. Pass the model to MolGraphBuilder.build() or "
              "perceive_aromaticity(); reading or writing it warns with DeprecationWarning.")
@@ -1105,18 +1268,51 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("pH",                    &smsd::ChemOptions::pH)
         .def("with_ph", &smsd::ChemOptions::withPH, py::arg("pH"),
              py::return_value_policy::reference_internal,
-             "Set a finite pH for the tautomer confidence helper, clamped to [0, 14], and return these options")
+             "Set a finite pH for the tautomer confidence helper, clamped to [0, 14], and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_ph(7.4) is options
+    >>> assert options.pH == 7.4
+)doc")
         // Ring fusion
         .def_readwrite("ring_fusion_mode",      &smsd::ChemOptions::ringFusionMode)
         .def("with_ring_fusion_mode", &smsd::ChemOptions::withRingFusionMode, py::arg("mode"),
-             py::return_value_policy::reference_internal, "Set the ring fusion mode and return these options")
+             py::return_value_policy::reference_internal, "Set the ring fusion mode and return these options"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions()
+    >>> assert options.with_ring_fusion_mode(smsd.RingFusionMode.STRICT) is options
+    >>> assert options.ring_fusion_mode == smsd.RingFusionMode.STRICT
+)doc")
         // Named profiles
         .def_static("tautomer_profile", &smsd::ChemOptions::tautomerProfile,
-                     "ChemOptions for tautomer-aware matching with loose bond orders; otherwise the defaults")
+                     "ChemOptions for tautomer-aware matching with loose bond orders; otherwise the defaults"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.ChemOptions.tautomer_profile().tautomer_aware
+)doc")
         .def_static("profile", &smsd::ChemOptions::profile,
                      py::arg("name") = "default",
                      "ChemOptions from a named profile, ignoring case: 'default', 'strict', 'pharma', "
-                     "'compat-fmcs', 'compat-substruct' or 'reaction'")
+                     "'compat-fmcs', 'compat-substruct' or 'reaction'"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.ChemOptions.profile("default")
+    >>> assert options.match_atom_type and not options.match_formal_charge
+)doc")
         .def("__repr__", [](const smsd::ChemOptions& o) {
             auto flag = [](bool value) { return std::string(value ? "True" : "False"); };
             auto bondOrder = [](smsd::ChemOptions::BondOrderMode mode) {
@@ -1188,7 +1384,17 @@ PYBIND11_MODULE(_smsd, m) {
             return values.equal(py::hasattr(other, "keys") ? py::object(py::dict(other)) : other);
         }, py::is_operator());
 
-    py::class_<smsd::MolGraph>(m, "MolGraph")
+    py::class_<smsd::MolGraph>(m, "MolGraph",
+          R"doc(Native molecular graph with represented atom and bond properties.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert graph.n == len(graph) == 3 and graph.atomic_num == [6, 6, 8]
+    >>> assert graph.has_bond(0, 1) and graph.bond_order(1, 2) == 1
+)doc")
         .def(py::init<>())
         .def_readonly("n",          &smsd::MolGraph::n)
         .def_readonly("atomic_num", &smsd::MolGraph::atomicNum)
@@ -1228,32 +1434,93 @@ PYBIND11_MODULE(_smsd, m) {
                      for (int j : g.neighbors[i])
                          if (j > i) result.emplace_back(i, j, g.bondOrder(i, j));
                  return result;
-             }, "Return all bonds as (atom_i, atom_j, order) tuples, 0-indexed")
+             }, "Return all bonds as (atom_i, atom_j, order) tuples, 0-indexed"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert graph.bonds() == [(0, 1, 1), (1, 2, 1)]
+)doc")
         .def("bond_order", [](const smsd::MolGraph& g, int i, int j) {
                  requireAtomPair(g, i, j);
                  return g.bondOrder(i, j);
              }, py::arg("i"), py::arg("j"),
-             "Get bond order between atoms i and j (0 if no bond)")
+             "Get bond order between atoms i and j (0 if no bond)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CC=O")
+    >>> assert graph.bond_order(1, 2) == 2 and graph.bond_order(0, 2) == 0
+)doc")
         .def("bond_in_ring", [](const smsd::MolGraph& g, int i, int j) {
                  requireAtomPair(g, i, j);
                  return g.bondInRing(i, j);
-             }, py::arg("i"), py::arg("j"))
+             }, py::arg("i"), py::arg("j"),
+          R"doc(Whether a represented bond belongs to a ring.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("C1CC1")
+    >>> assert graph.bond_in_ring(0, 1)
+)doc")
         .def("bond_aromatic", [](const smsd::MolGraph& g, int i, int j) {
                  requireAtomPair(g, i, j);
                  return g.bondAromatic(i, j);
-             }, py::arg("i"), py::arg("j"))
+             }, py::arg("i"), py::arg("j"),
+          R"doc(Whether a represented bond is marked aromatic.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> assert graph.bond_aromatic(0, 1)
+)doc")
         .def("ensure_canonical", [](const smsd::MolGraph& g) {
                  g.ensureCanonical();
-             }, "Compute and cache Morgan ranks, canonical labels, and orbits")
+             }, "Compute and cache Morgan ranks, canonical labels, and orbits"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> graph.ensure_canonical()
+    >>> assert sorted(graph.canonical_label) == [0, 1, 2]
+)doc")
         .def("get_automorphism_generators", [](const smsd::MolGraph& g) {
                  return g.getAutomorphismGenerators();
              }, "Return automorphism generators as list of permutation lists.\n"
                 "Each generator is a list of length n where gen[i] is the image\n"
                 "of atom i. The full automorphism group is the closure of these\n"
-                "generators.")
+                "generators."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CC")
+    >>> generators = graph.get_automorphism_generators()
+    >>> assert generators and all(sorted(generator) == [0, 1] for generator in generators)
+)doc")
         .def("automorphism_generators_truncated", [](const smsd::MolGraph& g) {
                  return g.automorphismGeneratorsTruncated();
-             }, "True if generators were capped (group may be incomplete)")
+             }, "True if generators were capped (group may be incomplete)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CC")
+    >>> _ = graph.get_automorphism_generators()
+    >>> assert not graph.automorphism_generators_truncated()
+)doc")
         .def("get_canonical_hash", [](const smsd::MolGraph& g) -> uint64_t {
                  return g.getCanonicalHash();
              }, "Return the canonical hash of this molecule. "
@@ -1261,30 +1528,88 @@ PYBIND11_MODULE(_smsd, m) {
                 "formal charge, mass number and stereo (tetrahedral chirality and "
                 "E/Z double-bond configuration). The hash is a compact screening key, "
                 "not a proof of identity or difference: use a validated graph mapping "
-                "when identity matters.")
+                "when identity matters."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert graph.get_canonical_hash() == smsd.parse_smiles("OCC").get_canonical_hash()
+)doc")
         .def("ensure_ring_counts", [](const smsd::MolGraph& g) {
                  g.ensureRingCounts();
-             }, "Compute and cache per-atom ring counts")
+             }, "Compute and cache legacy bounded Horton-candidate counts per atom, "
+                "using sorted neighbour order"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> graph.ensure_ring_counts()
+    >>> assert graph.num_rings() == 1
+)doc")
         .def("ring_system_of", [](const smsd::MolGraph& g, int atom) {
                  return g.ringSystemOf(atom);
-             }, py::arg("atom"), "Ring system ID for an atom (-1 if acyclic)")
+             }, py::arg("atom"), "Ring system ID for an atom (-1 if acyclic)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCc1ccccc1")
+    >>> assert graph.ring_system_of(0) == -1 and graph.ring_system_of(2) >= 0
+)doc")
         .def("ring_system_sig", [](const smsd::MolGraph& g, int rsId) {
                  return g.ringSystemSig(rsId);
-             }, py::arg("rs_id"), "Signature of a ring system; identical ring systems share it")
+             }, py::arg("rs_id"), "Signature of a ring system; identical ring systems share it"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> system = graph.ring_system_of(0)
+    >>> assert graph.ring_system_sig(system) == graph.ring_system_sig(graph.ring_system_of(1))
+)doc")
         .def("ring_system_count", [](const smsd::MolGraph& g) {
                  return g.ringSystemCount();
-             }, "Number of distinct ring systems")
+             }, "Number of distinct ring systems"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.parse_smiles("c1ccccc1.C1CC1").ring_system_count() == 2
+)doc")
         .def("prewarm", [](const smsd::MolGraph& g) {
                  smsd::batch::detail::prewarmGraph(g);
              },
              py::call_guard<py::gil_scoped_release>(),
-             "Compute and cache common lazy invariants used by matching and batch APIs")
+             "Compute and cache common lazy invariants used by matching and batch APIs"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> graph.prewarm()
+    >>> assert smsd.MCS.find(graph).match("CCO").best.atom_count == 3
+)doc")
         .def("num_rings", [](const smsd::MolGraph& g) {
                  g.ensureRingCounts();
                  auto sssr = smsd::computeSSSR(g);
                  return static_cast<int>(sssr.size());
              },
-             "Return the SSSR ring count for this molecule")
+             "Return the SSSR ring count for this molecule"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.parse_smiles("c1ccccc1").num_rings() == 1
+)doc")
         .def("perceive_aromaticity", [](smsd::MolGraph& g, smsd::AromaticityModel model) -> smsd::MolGraph& {
                  g.perceiveAromaticity(model);
                  return g;
@@ -1292,7 +1617,15 @@ PYBIND11_MODULE(_smsd, m) {
              py::return_value_policy::reference_internal,
              py::arg("model") = smsd::AromaticityModel::DAYLIGHT_LIKE,
              py::call_guard<py::gil_scoped_release>(),
-             "Recompute ring membership and aromaticity using the native model")
+             "Recompute ring membership and aromaticity using the native model"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("C1=CC=CC=C1")
+    >>> assert graph.perceive_aromaticity() is graph and all(graph.aromatic)
+)doc")
         .def("kekulize", [](smsd::MolGraph& g) -> smsd::MolGraph& {
                  if (!g.kekulize())
                      throw py::value_error("kekulize could not assign a valid Kekule form for this aromatic system");
@@ -1300,7 +1633,15 @@ PYBIND11_MODULE(_smsd, m) {
              },
              py::return_value_policy::reference_internal,
              py::call_guard<py::gil_scoped_release>(),
-             "Convert aromatic atoms and bonds into an explicit Kekule assignment")
+             "Convert aromatic atoms and bonds into an explicit Kekule assignment"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> assert graph.kekulize() is graph and not any(graph.aromatic)
+)doc")
         .def("dearomatize", [](smsd::MolGraph& g) -> smsd::MolGraph& {
                  if (!g.dearomatize())
                      throw py::value_error("dearomatize could not assign a valid non-aromatic Kekule form for this aromatic system");
@@ -1308,78 +1649,269 @@ PYBIND11_MODULE(_smsd, m) {
              },
              py::return_value_policy::reference_internal,
              py::call_guard<py::gil_scoped_release>(),
-             "Alias of kekulize(): remove aromatic flags via an explicit Kekule assignment")
+             "Alias of kekulize(): remove aromatic flags via an explicit Kekule assignment"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> assert graph.dearomatize() is graph and not any(graph.aromatic)
+)doc")
         .def("has_bond", [](const smsd::MolGraph& g, int i, int j) {
                  requireAtomPair(g, i, j);
                  return g.hasBond(i, j);
-             }, py::arg("i"), py::arg("j"))
+             }, py::arg("i"), py::arg("j"),
+          R"doc(Whether two valid atom indices are adjacent.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert graph.has_bond(0, 1) and not graph.has_bond(0, 2)
+)doc")
         .def("__repr__", [](const smsd::MolGraph& g) {
             return "<MolGraph n=" + std::to_string(g.n) + ">";
         })
         .def("__len__", [](const smsd::MolGraph& g) { return g.n; });
 
-    py::class_<smsd::MolGraph::Builder>(m, "MolGraphBuilder")
+    py::class_<smsd::MolGraph::Builder>(m, "MolGraphBuilder",
+          R"doc(Construct a molecular graph from explicit atom and adjacency data.
+
+
+Example::
+
+    >>> import smsd
+    >>> graph = (smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8])
+    ...          .neighbors([[1], [0]]).bond_orders([[1], [1]]).hydrogen_counts([3, 1]).build())
+    >>> assert graph.n == 2 and graph.atomic_num == [6, 8]
+)doc")
         .def(py::init<>())
         .def("atom_count", [](smsd::MolGraph::Builder& b, int n) -> smsd::MolGraph::Builder& {
             return b.atomCount(n);
         }, py::arg("n"), py::return_value_policy::reference_internal,
-             "Set the number of atoms")
+             "Set the number of atoms"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.atom_count(2)
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.n == 2
+)doc")
         .def("atomic_numbers", [](smsd::MolGraph::Builder& b, std::vector<int> v) -> smsd::MolGraph::Builder& {
             return b.atomicNumbers(std::move(v));
         }, py::arg("nums"), py::return_value_policy::reference_internal,
-             "Set atomic numbers for all atoms")
+             "Set atomic numbers for all atoms"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.atomic_numbers([6, 8])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.atomic_num == [6, 8]
+)doc")
         .def("formal_charges", [](smsd::MolGraph::Builder& b, std::vector<int> v) -> smsd::MolGraph::Builder& {
             return b.formalCharges(std::move(v));
         }, py::arg("charges"), py::return_value_policy::reference_internal,
-             "Set formal charges")
+             "Set formal charges"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.formal_charges([0, 0])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.formal_charge == [0, 0]
+)doc")
         .def("mass_numbers", [](smsd::MolGraph::Builder& b, std::vector<int> v) -> smsd::MolGraph::Builder& {
             return b.massNumbers(std::move(v));
-        }, py::arg("masses"), py::return_value_policy::reference_internal)
+        }, py::arg("masses"), py::return_value_policy::reference_internal,
+          R"doc(Set isotope mass numbers, with zero meaning unspecified.
+
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.mass_numbers([13, 0])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.mass_number == [13, 0]
+)doc")
         .def("hydrogen_counts", [](smsd::MolGraph::Builder& b, std::vector<int> v) -> smsd::MolGraph::Builder& {
             return b.hydrogenCounts(std::move(v));
-        }, py::arg("counts"), py::return_value_policy::reference_internal)
+        }, py::arg("counts"), py::return_value_policy::reference_internal,
+          R"doc(Set per-atom hydrogen counts.
+
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.hydrogen_counts([3, 1])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.hydrogen_count == [3, 1]
+)doc")
         .def("ring_flags", [](smsd::MolGraph::Builder& b, std::vector<uint8_t> v) -> smsd::MolGraph::Builder& {
             return b.ringFlags(std::move(v));
         }, py::arg("flags"), py::return_value_policy::reference_internal,
-             "Set ring membership flags")
+             "Set ring membership flags"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.ring_flags([False, False])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert not any(graph.ring)
+)doc")
         .def("aromatic_flags", [](smsd::MolGraph::Builder& b, std::vector<uint8_t> v) -> smsd::MolGraph::Builder& {
             return b.aromaticFlags(std::move(v));
         }, py::arg("flags"), py::return_value_policy::reference_internal,
-             "Set aromaticity flags")
+             "Set aromaticity flags"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.aromatic_flags([False, False])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert not any(graph.aromatic)
+)doc")
         .def("neighbors", [](smsd::MolGraph::Builder& b, std::vector<std::vector<int>> v) -> smsd::MolGraph::Builder& {
             return b.setNeighbors(std::move(v));
         }, py::arg("adj"), py::return_value_policy::reference_internal,
-             "Set adjacency lists")
+             "Set adjacency lists"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.neighbors([[1], [0]])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.neighbors == [[1], [0]]
+)doc")
         .def("bond_orders", [](smsd::MolGraph::Builder& b, std::vector<std::vector<int>> v) -> smsd::MolGraph::Builder& {
             return b.setBondOrders(std::move(v));
         }, py::arg("orders"), py::return_value_policy::reference_internal,
-             "Set bond orders (parallel to neighbors)")
+             "Set bond orders (parallel to neighbors)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.bond_orders([[1], [1]])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.bond_order(0, 1) == 1
+)doc")
         .def("bond_ring_flags", [](smsd::MolGraph::Builder& b, std::vector<std::vector<bool>> v) -> smsd::MolGraph::Builder& {
             return b.bondRingFlags(std::move(v));
-        }, py::arg("flags"), py::return_value_policy::reference_internal)
+        }, py::arg("flags"), py::return_value_policy::reference_internal,
+          R"doc(Set bond ring flags parallel to the adjacency lists.
+
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.bond_ring_flags([[False], [False]])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert not graph.bond_in_ring(0, 1)
+)doc")
         .def("bond_aromatic_flags", [](smsd::MolGraph::Builder& b, std::vector<std::vector<bool>> v) -> smsd::MolGraph::Builder& {
             return b.bondAromaticFlags(std::move(v));
-        }, py::arg("flags"), py::return_value_policy::reference_internal)
+        }, py::arg("flags"), py::return_value_policy::reference_internal,
+          R"doc(Set bond aromaticity flags parallel to the adjacency lists.
+
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.bond_aromatic_flags([[False], [False]])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert not graph.bond_aromatic(0, 1)
+)doc")
         .def("atom_ids", [](smsd::MolGraph::Builder& b, std::vector<int> v) -> smsd::MolGraph::Builder& {
             return b.atomIds(std::move(v));
         }, py::arg("ids"), py::return_value_policy::reference_internal,
-             "Set optional external atom IDs (1-based, gaps allowed) for index translation")
+             "Set optional external atom IDs (1-based, gaps allowed) for index translation"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.atom_ids([101, 205])
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert smsd.translate_to_atom_ids({0: 1}, graph, graph) == {101: 205}
+)doc")
         .def("name", [](smsd::MolGraph::Builder& b, std::string v) -> smsd::MolGraph::Builder& {
             return b.name(std::move(v));
         }, py::arg("value"), py::return_value_policy::reference_internal,
-             "Set molecule name/title")
+             "Set molecule name/title"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.name("Methanol")
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.name == "Methanol"
+)doc")
         .def("program_line", [](smsd::MolGraph::Builder& b, std::string v) -> smsd::MolGraph::Builder& {
             return b.programLine(std::move(v));
         }, py::arg("value"), py::return_value_policy::reference_internal,
-             "Set MDL program line/header text")
+             "Set MDL program line/header text"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.program_line("Molecule example")
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.program_line == "Molecule example"
+)doc")
         .def("comment", [](smsd::MolGraph::Builder& b, std::string v) -> smsd::MolGraph::Builder& {
             return b.comment(std::move(v));
         }, py::arg("value"), py::return_value_policy::reference_internal,
-             "Set molecule comment text")
+             "Set molecule comment text"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.comment("Two heavy atoms")
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.comment == "Two heavy atoms"
+)doc")
         .def("properties", [](smsd::MolGraph::Builder& b, std::map<std::string, std::string> v) -> smsd::MolGraph::Builder& {
             return b.properties(std::move(v));
         }, py::arg("values"), py::return_value_policy::reference_internal,
-             "Set SDF-style molecule properties")
+             "Set SDF-style molecule properties"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> _ = builder.properties({"sample": "methanol"})
+    >>> graph = builder.build(perceive_aromaticity=False)
+    >>> assert graph.properties["sample"] == "methanol"
+)doc")
         .def("build", [](const smsd::MolGraph::Builder& b,
                          bool perceive_aromaticity,
                          smsd::AromaticityModel aromaticity_model) {
@@ -1387,7 +1919,16 @@ PYBIND11_MODULE(_smsd, m) {
         },
              py::arg("perceive_aromaticity") = true,
              py::arg("aromaticity_model") = smsd::AromaticityModel::DAYLIGHT_LIKE,
-             "Build the immutable MolGraph, optionally running aromaticity perception");
+             "Build the immutable MolGraph, optionally running aromaticity perception"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> builder = smsd.MolGraphBuilder().atom_count(2).atomic_numbers([6, 8]).neighbors([[1], [0]]).bond_orders([[1], [1]])
+    >>> graph = builder.hydrogen_counts([3, 1]).build()
+    >>> assert graph.n == 2 and graph.bond_order(0, 1) == 1
+)doc");
 
     py::class_<smsd::ParseOptions>(m, "ParseOptions")
         .def(py::init<>())
@@ -1409,28 +1950,101 @@ PYBIND11_MODULE(_smsd, m) {
 
     m.def("read_mol_block", &smsd::readMolBlock,
           py::arg("mol_block"),
-          "Parse an MDL MOL V2000 block into a MolGraph");
+          "Parse an MDL MOL V2000 block into a MolGraph"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> restored = smsd.read_mol_block(smsd.write_mol_block("CCO"))
+    >>> assert restored.n == 3
+)doc");
     m.def("write_mol_block", &smsd::writeMolBlock,
           py::arg("mol"),
-          "Write a MolGraph as an MDL MOL V2000 block");
+          "Write a MolGraph as an MDL MOL V2000 block"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> text = smsd.write_mol_block("CCO")
+    >>> assert "V2000" in text and smsd.read_mol_block(text).n == 3
+)doc");
     m.def("write_mol_block_v3000", &smsd::writeMolBlockV3000,
           py::arg("mol"),
-          "Write a MolGraph as an MDL MOL V3000 block");
+          "Write a MolGraph as an MDL MOL V3000 block"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> text = smsd.write_mol_block_v3000("CCO")
+    >>> assert "V3000" in text and smsd.read_mol_block(text).n == 3
+)doc");
     m.def("write_sdf_record", &smsd::writeSDFRecord,
           py::arg("mol"),
-          "Write a MolGraph as a single SDF record");
+          "Write a MolGraph as a single SDF record"
+          R"doc(
 
-    auto searchStatus = py::enum_<smsd::SearchStatus>(m, "SearchStatus")
+Example::
+
+    >>> import smsd
+    >>> text = smsd.write_sdf_record("CCO")
+    >>> assert text.rstrip().endswith("$$$$") and "V2000" in text
+)doc");
+
+    auto searchStatus = py::enum_<smsd::SearchStatus>(m, "SearchStatus",
+          R"doc(Completion or stopping reason from the native search.
+
+
+Example::
+
+    >>> import smsd
+    >>> result = smsd.MCS.find("CCO").with_timeout(0).match("CCN")
+    >>> assert result.status == smsd.SearchStatus.TIMED_OUT and not result.optimal
+)doc")
         .value("COMPLETED", smsd::SearchStatus::Completed)
         .value("TIMED_OUT", smsd::SearchStatus::TimedOut)
         .value("CANCELLED", smsd::SearchStatus::Cancelled)
         .value("LIMIT_REACHED", smsd::SearchStatus::LimitReached);
     initialiseResultTypes(searchStatus);
 
-    py::class_<smsd::CancellationToken, std::shared_ptr<smsd::CancellationToken>>(m, "CancellationToken")
+    py::class_<smsd::CancellationToken, std::shared_ptr<smsd::CancellationToken>>(m, "CancellationToken",
+          R"doc(A cancellation signal shared with search options.
+
+
+Example::
+
+    >>> import smsd
+    >>> token = smsd.CancellationToken()
+    >>> assert not token.is_cancelled
+    >>> token.cancel()
+    >>> assert token.is_cancelled
+)doc")
         .def(py::init<>())
-        .def("cancel", &smsd::CancellationToken::cancel)
-        .def_property_readonly("is_cancelled", &smsd::CancellationToken::isCancelled);
+        .def("cancel", &smsd::CancellationToken::cancel,
+          R"doc(Request cancellation; the token cannot be reset.
+
+
+Example::
+
+    >>> import smsd
+    >>> token = smsd.CancellationToken()
+    >>> token.cancel()
+    >>> assert token.is_cancelled
+)doc")
+        .def_property_readonly("is_cancelled", &smsd::CancellationToken::isCancelled,
+          R"doc(Whether cancellation has been requested.
+
+
+Example::
+
+    >>> import smsd
+    >>> token = smsd.CancellationToken()
+    >>> assert not token.is_cancelled
+    >>> token.cancel()
+    >>> assert token.is_cancelled
+)doc");
 
     py::class_<smsd::SearchOptions>(m, "_SearchOptions")
         .def(py::init<>())
@@ -1445,7 +2059,8 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("bond_mapping", &smsd::Match::bondMapping)
         .def_readwrite("fragments", &smsd::Match::fragments)
         .def("to_graph", &smsd::Match::toGraph, py::arg("query"))
-        .def("to_smiles", &smsd::Match::toSmiles, py::arg("query"));
+        .def("to_smiles", &smsd::Match::toSmiles, py::arg("query"))
+        .def("to_smarts", &smsd::Match::toSmarts, py::arg("query"), py::arg("chemistry") = smsd::ChemOptions());
 
     py::class_<smsd::SearchResult>(m, "SearchResult")
         .def_readonly("matches", &smsd::SearchResult::matches)
@@ -1477,13 +2092,43 @@ PYBIND11_MODULE(_smsd, m) {
           });
 
     auto mcs = py::class_<smsd::MCS>(m, "MCS");
-    py::enum_<smsd::MCS::Objective>(mcs, "Objective")
+    py::enum_<smsd::MCS::Objective>(mcs, "Objective",
+          R"doc(Optimise common atoms (MCIS) or selected common bonds (MCES).
+
+
+Example::
+
+    >>> import smsd
+    >>> result = smsd.MCS.find("CC").with_objective(smsd.MCS.Objective.MCES).match("CCC")
+    >>> assert result.score == 1 and result.best.bond_count == 1
+)doc")
         .value("MCIS", smsd::MCS::Objective::MCIS)
         .value("MCES", smsd::MCS::Objective::MCES);
-    py::enum_<smsd::MCS::Connectivity>(mcs, "Connectivity")
+    py::enum_<smsd::MCS::Connectivity>(mcs, "Connectivity",
+          R"doc(Require a connected common graph or allow fragments.
+
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.MCS.Options()
+    >>> options.connectivity = smsd.MCS.Connectivity.FRAGMENTS
+    >>> assert smsd.MCS.find("C.O").with_options(options).match("C.O").best.atom_count == 2
+)doc")
         .value("CONNECTED", smsd::MCS::Connectivity::Connected)
         .value("FRAGMENTS", smsd::MCS::Connectivity::Fragments);
-    py::class_<smsd::MCS::Options, smsd::SearchOptions>(mcs, "Options")
+    py::class_<smsd::MCS::Options, smsd::SearchOptions>(mcs, "Options",
+          R"doc(MCS objective, connectivity, chemistry and stopping limits.
+
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.MCS.Options()
+    >>> options.timeout_ms, options.node_limit = 1000, 100000
+    >>> options.objective = smsd.MCS.Objective.MCIS
+    >>> assert smsd.MCS.find("CCO").with_options(options).match("CCN").found
+)doc")
         .def(py::init<>())
         .def(py::init<const smsd::MCS::Options&>())
         .def_readwrite("objective", &smsd::MCS::Options::objective)
@@ -1503,6 +2148,11 @@ PYBIND11_MODULE(_smsd, m) {
             return query.matchAll(target, static_cast<size_t>(limit));
         }, py::arg("target"), py::arg("limit") = 1000)
         .def("match_many", &matchMany<smsd::MCS>, py::arg("targets"), py::arg("num_threads") = 0);
+    mcs.def("_match_corpus_prefiltered", [](const smsd::MCS& query, const smsd::batch::TargetCorpus& corpus,
+        const py::sequence& targets, int minimumAtoms, bool gpuPrefilter, int numThreads, py::handle queryIndices) {
+        return matchCorpusPython(query, corpus, targets, minimumAtoms, gpuPrefilter, numThreads, queryIndices);
+    }, py::arg("corpus"), py::arg("targets"), py::arg("minimum_atoms"), py::arg("gpu_prefilter"),
+       py::arg("num_threads"), py::arg("query_indices"));
     bindPythonSearches(mcs);
 
     py::class_<smsd::MCS::ConsensusResult>(mcs, "ConsensusResult")
@@ -1539,7 +2189,17 @@ PYBIND11_MODULE(_smsd, m) {
         py::call_guard<py::gil_scoped_release>());
 
     auto substructure = py::class_<smsd::Substructure>(m, "Substructure");
-    py::class_<smsd::Substructure::Options, smsd::SearchOptions>(substructure, "Options")
+    py::class_<smsd::Substructure::Options, smsd::SearchOptions>(substructure, "Options",
+          R"doc(Molecule and SMARTS options, including induced topology.
+
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.Substructure.Options()
+    >>> options.induced = True
+    >>> assert not smsd.Substructure.find("CCC").with_options(options).match("C1CC1").found
+)doc")
         .def(py::init<>())
         .def(py::init<const smsd::Substructure::Options&>())
         .def_readwrite("induced", &smsd::Substructure::Options::induced);
@@ -1559,6 +2219,10 @@ PYBIND11_MODULE(_smsd, m) {
                                 const py::sequence& targets, int numThreads, py::handle queryIndices) {
             return matchManyPython(query, AtomNumbering(queryIndices), targets, numThreads, &corpus);
         }, py::arg("corpus"), py::arg("targets"), py::arg("num_threads"), py::arg("query_indices"));
+    substructure.def("_match_corpus_prefiltered", [](const smsd::Substructure& query, const smsd::batch::TargetCorpus& corpus,
+        const py::sequence& targets, bool gpuPrefilter, int numThreads, py::handle queryIndices) {
+        return matchCorpusPython(query, corpus, targets, 1, gpuPrefilter, numThreads, queryIndices);
+    }, py::arg("corpus"), py::arg("targets"), py::arg("gpu_prefilter"), py::arg("num_threads"), py::arg("query_indices"));
     bindPythonSearches(substructure);
 
     mcs.def_static("canonicalize_mapping",
@@ -1580,7 +2244,15 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("mapping"), py::arg("g1"), py::arg("g2"),
           "Translate MCS mapping from internal 0-based indices to external atom IDs.\n"
-          "If neither graph has atomId set, the mapping is returned unchanged.");
+          "If neither graph has atomId set, the mapping is returned unchanged."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert smsd.translate_to_atom_ids({0: 1}, graph, graph) == {0: 1}
+)doc");
 
     m.def("validate_tautomer_consistency", &smsd::validateTautomerConsistency,
           py::arg("g1"), py::arg("g2"), py::arg("mcs"),
@@ -1610,7 +2282,15 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("path_length") = 7, py::arg("fp_size") = 2048,
           "Element path fingerprint over heavy atoms: each path of up to path_length bonds is "
           "hashed by its atomic numbers. Returns list of set bit positions. Distinct from "
-          "batch_fingerprint, which also hashes atom labels, bond orders and hydrogens.");
+          "batch_fingerprint, which also hashes atom labels, bond orders and hydrogens."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> bits = smsd.path_fingerprint(smsd.parse_smiles("CCO"), fp_size=128)
+    >>> assert bits and all(0 <= bit < 128 for bit in bits)
+)doc");
 
     m.def("mcs_fingerprint",
           [](const smsd::MolGraph& mol, int pathLength, int fpSize, bool tautomerAware) {
@@ -1622,15 +2302,39 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("mol"), py::arg("path_length") = 7, py::arg("fp_size") = 2048,
           py::arg("tautomer_aware") = false,
-          "Compute MCS-aware path fingerprint. Returns list of set bit positions.");
+          "Compute MCS-aware path fingerprint. Returns list of set bit positions."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> bits = smsd.mcs_fingerprint(smsd.parse_smiles("CCO"), fp_size=128)
+    >>> assert bits and all(0 <= bit < 128 for bit in bits)
+)doc");
 
     m.def("fingerprint_subset", &fingerprintSubset,
           py::arg("fp1"), py::arg("fp2"),
-          "Check if fingerprint fp1 is a subset of fp2 (all bits in fp1 are set in fp2)");
+          "Check if fingerprint fp1 is a subset of fp2 (all bits in fp1 are set in fp2)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.fingerprint_subset([1, 3], [1, 3, 8])
+    >>> assert not smsd.fingerprint_subset([1, 5], [1, 3, 8])
+)doc");
 
     m.def("analyze_fp_quality", &analyzeFpQuality,
           py::arg("fp"), py::arg("fp_size") = 2048,
-          "Analyse fingerprint quality: density, set bits, collision rate");
+          "Analyse fingerprint quality: density, set bits, collision rate"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> quality = smsd.analyze_fp_quality([1, 3], fp_size=64)
+    >>> assert quality["set_bits"] == 2 and quality["density"] == 2 / 64
+)doc");
 
     m.def("to_smarts",
           [](const smsd::MolGraph& g,
@@ -1650,7 +2354,15 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("include_ring_member") = false,
           py::arg("include_h_count")     = false,
           py::arg("include_isotope")     = false,
-          "Generate canonical SMARTS with configurable predicates");
+          "Generate canonical SMARTS with configurable predicates"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> pattern = smsd.to_smarts("CCO")
+    >>> assert smsd.Substructure.smarts(pattern).match("CCO").found
+)doc");
 
     m.def("gpu_is_available",
           []() { return smsd::gpu::isAvailable(); },
@@ -1805,7 +2517,15 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("radius") = 2,
           py::arg("fp_size") = 2048, py::arg("mode") = "ecfp",
           "Circular fingerprint (Morgan). mode='ecfp' (structural) or 'fcfp' "
-          "(pharmacophoric); any other mode raises ValueError. Returns list of set bit positions.");
+          "(pharmacophoric); any other mode raises ValueError. Returns list of set bit positions."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> bits = smsd.circular_fingerprint(smsd.parse_smiles("CCO"), fp_size=128)
+    >>> assert bits and all(0 <= bit < 128 for bit in bits)
+)doc");
 
     m.def("circular_fingerprint_counts",
           [](const smsd::MolGraph& mol, int radius, int fpSize,
@@ -1819,7 +2539,15 @@ PYBIND11_MODULE(_smsd, m) {
           "Count-based circular fingerprint (Morgan). mode='ecfp' (structural) "
           "or 'fcfp' (pharmacophoric); any other mode raises ValueError. Returns list of "
           "(bit_position, count) tuples for non-zero bins, preserving the multiplicity "
-          "that binary fingerprints lose.");
+          "that binary fingerprints lose."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> counts = smsd.circular_fingerprint_counts(smsd.parse_smiles("CCCCCC"), fp_size=128)
+    >>> assert counts and any(count > 1 for position, count in counts)
+)doc");
 
     m.def("topological_torsion",
           [](const smsd::MolGraph& mol, int fpSize) {
@@ -1837,7 +2565,15 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("mol"), py::arg("fp_size") = 2048,
           "Count-based topological torsion fingerprint. Returns list of "
-          "(bit_position, count) tuples for non-zero bins.");
+          "(bit_position, count) tuples for non-zero bins."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> counts = smsd.topological_torsion_counts(smsd.parse_smiles("CCCCC"), fp_size=128)
+    >>> assert counts and all(0 <= position < 128 and count > 0 for position, count in counts)
+)doc");
 
     // -----------------------------------------------------------------------
     // Configurable fingerprints
@@ -1849,7 +2585,14 @@ PYBIND11_MODULE(_smsd, m) {
     using smsd::batch::ScaffoldMode;
 
     py::enum_<FingerprintFamily>(m, "FingerprintFamily",
-        "A fingerprint family: the circular ECFP and FCFP, PATH and TORSION families, or substructure KEYS.")
+        "A fingerprint family: the circular ECFP and FCFP, PATH and TORSION families, or substructure KEYS."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.FingerprintOptions(family="ecfp").family == smsd.FingerprintFamily.ECFP
+)doc")
         .value("ECFP", FingerprintFamily::ECFP)
         .value("FCFP", FingerprintFamily::FCFP)
         .value("PATH", FingerprintFamily::PATH)
@@ -1858,20 +2601,46 @@ PYBIND11_MODULE(_smsd, m) {
 
     py::enum_<FragmentMode>(m, "FragmentMode",
         "How the connected components of a molecule are fingerprinted: the WHOLE molecule, the "
-        "LARGEST component only, or PER_FRAGMENT, where every atom term carries its component's class.")
+        "LARGEST component only, or PER_FRAGMENT, where every atom term carries its component's class."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions(fragments="largest")
+    >>> assert options.fragments == smsd.FragmentMode.LARGEST
+)doc")
         .value("WHOLE", FragmentMode::WHOLE)
         .value("LARGEST", FragmentMode::LARGEST)
         .value("PER_FRAGMENT", FragmentMode::PER_FRAGMENT);
 
     py::enum_<ScaffoldMode>(m, "ScaffoldMode",
-        "Whether the molecule is reduced before it is fingerprinted: NONE, or its MURCKO framework.")
+        "Whether the molecule is reduced before it is fingerprinted: NONE, or its MURCKO framework."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions(scaffold="murcko")
+    >>> assert options.scaffold == smsd.ScaffoldMode.MURCKO
+)doc")
         .value("NONE", ScaffoldMode::NONE)
         .value("MURCKO", ScaffoldMode::MURCKO);
 
     py::class_<FingerprintKey>(m, "FingerprintKey",
         "A substructure key: its bit is set when a molecule holds at least `minimum` distinct "
         "matches of its SMARTS pattern. The MACCS set also counts isotopes, aromatic rings and "
-        "fragments, which `kind` names.")
+        "fragments, which `kind` names."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> key = smsd.FingerprintKey("[#8]", minimum=1)
+    >>> options = smsd.FingerprintOptions(family="keys", keys=[key])
+    >>> assert smsd.fingerprint("CCO", options=options) == [0]
+    >>> assert smsd.fingerprint("CCN", options=options) == []
+)doc")
         .def(py::init<std::string, int>(), py::arg("smarts"), py::arg("minimum") = 1)
         .def_readonly("smarts", &FingerprintKey::smarts)
         .def_readonly("minimum", &FingerprintKey::minimum)
@@ -1899,7 +2668,16 @@ PYBIND11_MODULE(_smsd, m) {
         "from the classic configuration of the family, which gives the bits of the fixed fingerprint "
         "functions, and applies the keyword arguments; every further switch extends the hashed "
         "terms. Assigning `family` later keeps the current switches. Pass it as the `options` of "
-        "fingerprint() or fingerprint_from_smiles().")
+        "fingerprint() or fingerprint_from_smiles()."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.ecfp(radius=2, size=128)
+    >>> bits = smsd.fingerprint("CCO", options=options)
+    >>> assert bits and all(0 <= bit < 128 for bit in bits)
+)doc")
         .def(py::init([](py::object family, py::kwargs keywords) {
             FingerprintOptions options = FingerprintOptions::of(fingerprintFamily(family));
             for (auto item : keywords)
@@ -1942,19 +2720,77 @@ PYBIND11_MODULE(_smsd, m) {
                 if (options.family == FingerprintFamily::KEYS) options.size = static_cast<int>(options.keys.size());
             })
         .def("copy", [](const FingerprintOptions& options) { return options; },
-             "A copy of these options.")
+             "A copy of these options."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.ecfp(size=128)
+    >>> copied = options.copy()
+    >>> copied.size = 256
+    >>> assert options.size == 128 and copied.size == 256
+)doc")
         .def_static("ecfp", &FingerprintOptions::ecfp, py::arg("radius") = 2, py::arg("size") = 2048,
-                    "The classic ECFP configuration; radius 2 is ECFP4.")
+                    "The classic ECFP configuration; radius 2 is ECFP4."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.ecfp(radius=2, size=128)
+    >>> assert options.family == smsd.FingerprintFamily.ECFP and smsd.fingerprint("CCO", options=options)
+)doc")
         .def_static("fcfp", &FingerprintOptions::fcfp, py::arg("radius") = 2, py::arg("size") = 2048,
-                    "The classic FCFP configuration; radius 2 is FCFP4.")
+                    "The classic FCFP configuration; radius 2 is FCFP4."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.fcfp(radius=2, size=128)
+    >>> assert options.family == smsd.FingerprintFamily.FCFP and smsd.fingerprint("CCO", options=options)
+)doc")
         .def_static("path", &FingerprintOptions::path, py::arg("path_length") = 7, py::arg("size") = 2048,
-                    "The classic path configuration: heavy-atom paths hashed by atomic number, as path_fingerprint.")
+                    "The classic path configuration: heavy-atom paths hashed by atomic number, as path_fingerprint."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.path(path_length=4, size=128)
+    >>> assert options.family == smsd.FingerprintFamily.PATH and smsd.fingerprint("CCO", options=options)
+)doc")
         .def_static("torsion", &FingerprintOptions::torsion, py::arg("size") = 2048,
-                    "The classic topological torsion configuration, as topological_torsion.")
+                    "The classic topological torsion configuration, as topological_torsion."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.torsion(size=128)
+    >>> assert options.family == smsd.FingerprintFamily.TORSION and smsd.fingerprint("CCCC", options=options)
+)doc")
         .def_static("maccs", &FingerprintOptions::maccs,
-                    "The 166 MACCS structural keys; key k is position k - 1.")
+                    "The 166 MACCS structural keys; key k is position k - 1."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.FingerprintOptions.maccs()
+    >>> assert options.size == 166 and smsd.fingerprint("CCO", options=options)
+)doc")
         .def_static("maccs_keys", [] { return FingerprintOptions::maccsKeys(); },
-                    "The MACCS key definitions, in key order.")
+                    "The MACCS key definitions, in key order."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> keys = smsd.FingerprintOptions.maccs_keys()
+    >>> assert len(keys) == 166 and all(isinstance(key, smsd.FingerprintKey) for key in keys)
+)doc")
         .def("__repr__", &describeFingerprintOptions);
 
     m.def("fingerprint_options",
@@ -2017,7 +2853,14 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("fp1"), py::arg("fp2"), py::arg("fp_size") = 2048,
           "Dice similarity between two fingerprints (lists of set bit positions). "
           "Dice = 2*|A&B| / (|A| + |B|). Weights shared features more heavily "
-          "than Tanimoto.");
+          "than Tanimoto."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.dice([1, 3], [3, 5], fp_size=64) == 0.5
+)doc");
 
     m.def("cosine",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2,
@@ -2027,7 +2870,14 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("fp1"), py::arg("fp2"), py::arg("fp_size") = 2048,
           "Cosine similarity between two fingerprints (lists of set bit positions). "
-          "Cosine = |A&B| / sqrt(|A| * |B|). Normalises for fingerprint density.");
+          "Cosine = |A&B| / sqrt(|A| * |B|). Normalises for fingerprint density."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.cosine([1, 3], [3, 5], fp_size=64) == 0.5
+)doc");
 
     m.def("soergel",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2,
@@ -2037,7 +2887,14 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("fp1"), py::arg("fp2"), py::arg("fp_size") = 2048,
           "Soergel distance between two fingerprints (lists of set bit positions). "
-          "Soergel = 1 - Tanimoto. A proper metric distance for clustering.");
+          "Soergel = 1 - Tanimoto. A proper metric distance for clustering."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.soergel([1, 3], [1, 3], fp_size=64) == 0.0
+)doc");
 
     // -----------------------------------------------------------------------
     m.def("count_tanimoto",
@@ -2085,7 +2942,14 @@ PYBIND11_MODULE(_smsd, m) {
           "Convert fingerprint to binary string of 0s and 1s.");
 
     py::enum_<smsd::cip::RSLabel>(m, "RSLabel",
-        "CIP tetrahedral stereo descriptor (R, S, pseudoasymmetric r, s, or NONE)")
+        "CIP tetrahedral stereo descriptor (R, S, pseudoasymmetric r, s, or NONE)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.assign_cip("N[C@@H](C)C(=O)O").rs_labels[1] == smsd.RSLabel.S
+)doc")
         .value("NONE", smsd::cip::RSLabel::NONE)
         .value("R",    smsd::cip::RSLabel::R)
         .value("S",    smsd::cip::RSLabel::S)
@@ -2094,14 +2958,29 @@ PYBIND11_MODULE(_smsd, m) {
         .export_values();
 
     py::enum_<smsd::cip::EZLabel>(m, "EZLabel",
-        "CIP double-bond stereo descriptor (E, Z, or NONE)")
+        "CIP double-bond stereo descriptor (E, Z, or NONE)"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.assign_cip("C/C=C/C").ez_bonds[0][2] == smsd.EZLabel.E
+)doc")
         .value("NONE", smsd::cip::EZLabel::NONE)
         .value("E",    smsd::cip::EZLabel::E)
         .value("Z",    smsd::cip::EZLabel::Z)
         .export_values();
 
     py::class_<smsd::cip::CIPDescriptors>(m, "CIPDescriptors",
-        "CIP stereo descriptors for all centres and double bonds")
+        "CIP stereo descriptors for all centres and double bonds"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> descriptors = smsd.assign_cip("N[C@@H](C)C(=O)O")
+    >>> assert descriptors.rs_labels[1] == smsd.RSLabel.S
+)doc")
         .def_readonly("rs_labels", &smsd::cip::CIPDescriptors::rsLabels,
             "Per-atom R/S labels (NONE if not a stereocentre)")
         .def_readonly("ez_bonds",  &smsd::cip::CIPDescriptors::ezBonds,
@@ -2133,7 +3012,15 @@ PYBIND11_MODULE(_smsd, m) {
           "Compute the CIP descriptors of every stereocentre and stereogenic double bond.\n"
           "Returns CIPDescriptors with rs_labels (one R/S label per atom) and ez_bonds\n"
           "(a list of (atom1, atom2, EZLabel) tuples).\n"
-          "Example: assign_cip('N[C@@H](C)C(=O)O').rs_labels  # [NONE, S, NONE, ...]");
+          "Example: assign_cip('N[C@@H](C)C(=O)O').rs_labels  # [NONE, S, NONE, ...]"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> descriptors = smsd.assign_cip("N[C@@H](C)C(=O)O")
+    >>> assert len(descriptors.rs_labels) == 6 and descriptors.rs_labels[1] == smsd.RSLabel.S
+)doc");
 
     m.def("assign_cip_from_smiles", &smsd::cip::assignFromSMILES,
           py::arg("smiles"),
@@ -2146,14 +3033,41 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"),
           "Return the Smallest Set of Smallest Rings (minimum cycle basis) as lists of\n"
           "atom indices, sorted by ring size.\n"
-          "Example: compute_sssr('c1ccc2ccccc2c1')  # [[0, 1, 2, 3, 8, 9], [3, 4, 5, 6, 7, 8]]");
+          "Example: compute_sssr('c1ccc2ccccc2c1')  # [[0, 1, 2, 3, 8, 9], [3, 4, 5, 6, 7, 8]]"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> rings = smsd.compute_sssr("c1ccccc1")
+    >>> assert len(rings) == 1 and set(rings[0]) == set(range(6))
+)doc");
 
     m.def("rings_truncated", &smsd::ringsTruncated,
           py::arg("mol"),
-          "Whether the ring perception behind compute_sssr stopped its exhaustive candidate search\n"
-          "at its work bound, as for a very large ring system, so that the rings may be fewer than\n"
-          "the graph holds. The rings are the same whether or not this is asked.\n"
-          "Example: rings_truncated('c1ccc2ccccc2c1')  # False");
+          "Whether the bounded Horton/minimum-basis perception stopped early or failed to reach\n"
+          "the graph's cycle rank. This does not report a separate relevant-cycle enumeration cut.\n"
+          "The rings are the same whether or not this is asked.\n"
+          "Example: rings_truncated('c1ccc2ccccc2c1')  # False"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert not smsd.rings_truncated("c1ccccc1")
+)doc");
+
+    m.def("relevant_cycles_truncated", &smsd::relevantCyclesTruncated,
+          py::arg("mol"),
+          "Whether full relevant-cycle enumeration was incomplete, including its path or work\n"
+          "bounds. This flag is independent of rings_truncated for the minimum-basis perception."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert not smsd.relevant_cycles_truncated("c1ccccc1")
+)doc");
 
     m.def("layout_sssr",
           [](const smsd::MolGraph& g) {
@@ -2163,9 +3077,132 @@ PYBIND11_MODULE(_smsd, m) {
           "Return the SSSR rings in the order used for 2D coordinate generation:\n"
           "largest ring system first, fused rings by shared-edge adjacency within a\n"
           "system, and smaller rings first within a system.\n"
-          "Example: layout_sssr('c1ccc2ccccc2c1')");
+          "Example: layout_sssr('c1ccc2ccccc2c1')"
+          R"doc(
 
-    py::class_<smsd::Point2D>(m, "Point2D")
+Example::
+
+    >>> import smsd
+    >>> rings = smsd.layout_sssr("c1ccccc1")
+    >>> assert len(rings) == 1 and len(rings[0]) == 6
+)doc");
+
+    // Exact member counts may exceed 64 bits; they arrive in decimal and leave as Python int.
+    const auto exactInteger = [](const std::string& decimal) {
+        PyObject* value = PyLong_FromString(decimal.c_str(), nullptr, 10);
+        if (value == nullptr) throw py::error_already_set();
+        return py::reinterpret_steal<py::int_>(value);
+    };
+
+    py::class_<smsd::RelevantCycleFamily>(m, "RelevantCycleFamily",
+          R"doc(A family of relevant cycles: its ring size, the highest-numbered atom shared by
+its members (root), the atoms opposite it, one member and the exact number of members.
+For an odd size, first and second are the atoms of the bond opposite root and opposite is
+-1; for an even size, opposite is the atom opposite root and first and second are its ring
+neighbours.
+
+Example::
+
+    >>> import smsd
+    >>> family = smsd.compute_relevant_cycle_families("c1ccccc1").families[0]
+    >>> assert (family.size, family.root, family.opposite, family.member_count) == (6, 5, 2, 1)
+)doc")
+        .def_readonly("size", &smsd::RelevantCycleFamily::size, "Ring size of every member.")
+        .def_readonly("root", &smsd::RelevantCycleFamily::root, "The highest-numbered atom shared by every member.")
+        .def_readonly("first", &smsd::RelevantCycleFamily::first,
+                      "For an odd size, the lower-numbered atom of the bond opposite root; for an even size, "
+                      "the lower-numbered ring neighbour of the opposite atom.")
+        .def_readonly("second", &smsd::RelevantCycleFamily::second, "As first, the higher-numbered atom.")
+        .def_readonly("opposite", &smsd::RelevantCycleFamily::opposite,
+                      "The atom opposite root for an even ring size, otherwise -1.")
+        .def_readonly("prototype", &smsd::RelevantCycleFamily::prototype,
+                      "One member as atom indices, starting at root and reaching first before second.")
+        .def_property_readonly("member_count",
+                               [exactInteger](const smsd::RelevantCycleFamily& family) { return exactInteger(family.memberCount); },
+                               "The exact number of members.")
+        .def("__repr__", [](const smsd::RelevantCycleFamily& family) {
+            return "RelevantCycleFamily(size=" + std::to_string(family.size) + ", root=" + std::to_string(family.root)
+                + ", member_count=" + family.memberCount + ")";
+        });
+
+    py::class_<smsd::RelevantCycleFamilies>(m, "RelevantCycleFamilies",
+          R"doc(Relevant cycles grouped into families, in ascending ring size, then root.
+relevant_cycle_count is the exact number of members of the families listed; truncated
+reports an incomplete enumeration, whose families are relevant but may not be all of them.
+When the enumeration is complete, the relevant cycles and their number do not depend on
+atom order; the grouping into families, and so each family's record, can.
+
+Example::
+
+    >>> import smsd
+    >>> result = smsd.compute_relevant_cycle_families("c1ccc2ccccc2c1")
+    >>> assert len(result.families) == 2 and result.relevant_cycle_count == 2 and not result.truncated
+)doc")
+        .def_readonly("families", &smsd::RelevantCycleFamilies::families, "The families, as a list.")
+        .def_property_readonly("relevant_cycle_count",
+                               [exactInteger](const smsd::RelevantCycleFamilies& families) {
+                                   return exactInteger(families.relevantCycleCount);
+                               },
+                               "The exact number of members of the families listed.")
+        .def_readonly("truncated", &smsd::RelevantCycleFamilies::truncated,
+                      "Whether the enumeration was incomplete, so that families may be missing.")
+        .def("__repr__", [](const smsd::RelevantCycleFamilies& families) {
+            return "RelevantCycleFamilies(families=" + std::to_string(families.families.size())
+                + ", relevant_cycle_count=" + families.relevantCycleCount
+                + ", truncated=" + (families.truncated ? "True" : "False") + ")";
+        });
+
+    m.def("compute_relevant_cycle_families", &smsd::computeRelevantCycleFamilies,
+          py::arg("mol"),
+          "Return the relevant cycles grouped into families (RelevantCycleFamilies): each family\n"
+          "gives its ring size, the highest-numbered atom shared by its members, the atoms\n"
+          "opposite it, one member and the exact number of members; truncated reports an\n"
+          "incomplete enumeration."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> result = smsd.compute_relevant_cycle_families("C12C3C4C1C5C2C3C45")
+    >>> assert len(result.families) == 6 and result.relevant_cycle_count == 6
+)doc");
+
+    m.def("relevant_cycle_family_of", &smsd::relevantCycleFamilyOf,
+          py::arg("mol"), py::arg("families"), py::arg("ring"),
+          "Return the index in families.families of the family that has ring (a list of atom\n"
+          "indices in ring order) as a member, or -1 when ring is not a member of a listed family."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> families = smsd.compute_relevant_cycle_families("c1ccccc1")
+    >>> assert smsd.relevant_cycle_family_of("c1ccccc1", families, [0, 1, 2, 3, 4, 5]) == 0
+)doc");
+
+    m.def("relevant_cycle_family_members", &smsd::relevantCycleFamilyMembers,
+          py::arg("mol"), py::arg("family"), py::arg("limit"),
+          "Return up to limit members of family as lists of atom indices, in a fixed order that\n"
+          "starts with the family's prototype."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> family = smsd.compute_relevant_cycle_families("c1ccccc1").families[0]
+    >>> assert smsd.relevant_cycle_family_members("c1ccccc1", family, 10) == [family.prototype]
+)doc");
+
+    py::class_<smsd::Point2D>(m, "Point2D",
+          R"doc(A Cartesian two-dimensional coordinate.
+
+
+Example::
+
+    >>> import smsd
+    >>> point = smsd.Point2D(1.0, 2.0)
+    >>> assert (point.x, point.y) == (1.0, 2.0)
+)doc")
         .def(py::init<>())
         .def(py::init([](double x, double y) {
             smsd::Point2D p; p.x = x; p.y = y; return p;
@@ -2192,7 +3229,16 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: a sequence of (x, y) pairs, one per atom; the input is not changed.\n"
           "max_iter: maximum number of refinement iterations (default 1000).\n"
           "Returns (crossings_remaining, updated_coords).\n"
-          "Example: crossings, coords = reduce_crossings(mol, generate_coords_2d(mol))");
+          "Example: crossings, coords = reduce_crossings(mol, generate_coords_2d(mol))"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> crossings, coordinates = smsd.reduce_crossings(graph, smsd.generate_coords_2d(graph), max_iter=10)
+    >>> assert crossings == 0 and len(coordinates) == 6
+)doc");
 
     m.def("force_directed_layout",
           [](const smsd::MolGraph& g, const py::sequence& coordsList, int maxIter, double targetBondLength) {
@@ -2213,7 +3259,16 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: a sequence of (x, y) pairs, one per atom; the input is not changed.\n"
           "max_iter: maximum number of force iterations (default 500).\n"
           "target_bond_length: desired bond length in coordinate units (default 1.5).\n"
-          "Returns (final_stress, updated_coords).");
+          "Returns (final_stress, updated_coords)."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> stress, coordinates = smsd.force_directed_layout(graph, smsd.generate_coords_2d(graph), max_iter=10)
+    >>> assert math.isfinite(stress) and len(coordinates) == 3
+)doc");
 
     m.def("stress_majorisation",
           [](const smsd::MolGraph& g, const py::sequence& coordsList, int maxIter, double targetBondLength) {
@@ -2234,7 +3289,16 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: a sequence of (x, y) pairs, one per atom; the input is not changed.\n"
           "max_iter: maximum number of majorisation iterations (default 300).\n"
           "target_bond_length: desired bond length in coordinate units (default 1.5).\n"
-          "Returns (final_stress, updated_coords).");
+          "Returns (final_stress, updated_coords)."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> stress, coordinates = smsd.stress_majorisation(graph, smsd.generate_coords_2d(graph), max_iter=10)
+    >>> assert math.isfinite(stress) and len(coordinates) == 3
+)doc");
 
     m.def("match_template",
           [](const smsd::MolGraph& g, double targetBondLength) {
@@ -2246,7 +3310,14 @@ PYBIND11_MODULE(_smsd, m) {
           "if it does, and an empty list otherwise.\n"
           "Templates: benzene, naphthalene, indole, purine, steroid, morphinan,\n"
           "quinoline, biphenyl, cyclohexane, piperidine.\n"
-          "Example: match_template('c1ccccc1')  # six coordinate pairs");
+          "Example: match_template('c1ccccc1')  # six coordinate pairs"
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert len(smsd.match_template("c1ccccc1")) == 6
+)doc");
 
     // The mapping checks run bounded searches, so they release the GIL as the searches do; the
     // match and options are copied while it is held, so Python threads that change them cannot
@@ -2310,7 +3381,17 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("atom_indices"),
           "Extract a subgraph containing only the specified atoms.\n"
           "Returns a new MolGraph with atoms re-indexed from 0.\n"
-          "Preserves all atom and bond properties.");
+          "Preserves all atom and bond properties, a stereocentre whose neighbours all\n"
+          "stay and the E/Z configuration of a double bond whose ends keep the neighbours\n"
+          "that define it."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> fragment = smsd.extract_subgraph("CCO", [0, 1])
+    >>> assert fragment.n == 2 and fragment.atomic_num == [6, 6]
+)doc");
 
     m.def("murcko_scaffold",
           &smsd::murckoScaffold,
@@ -2320,27 +3401,56 @@ PYBIND11_MODULE(_smsd, m) {
           "and every atom joined to these by a double or triple bond;\n"
           "each stripped substituent is replaced by hydrogen. A stereocentre\n"
           "keeps its configuration when all its neighbours stay, and a\n"
-          "double bond when each end keeps a ligand.");
+          "double bond when each end keeps a ligand."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> scaffold = smsd.murcko_scaffold("CCc1ccccc1")
+    >>> assert scaffold.n == 6 and all(scaffold.ring)
+)doc");
 
     m.def("count_components",
           static_cast<int (*)(const smsd::MolGraph&)>(&smsd::search_detail::countComponents),
           py::arg("mol"),
           "Count the number of connected components in a molecule.\n"
-          "Returns 1 for normal connected molecules, >1 for salts/mixtures.");
+          "Returns 1 for normal connected molecules, >1 for salts/mixtures."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.count_components("CCO.[Na+]") == 2
+)doc");
 
     m.def("split_components",
           &smsd::search_detail::splitComponents,
           py::arg("mol"),
           "Split a molecule into its connected components.\n"
           "Returns a list of MolGraphs, one per connected component.\n"
-          "Useful for separating salts, counterions, or mixture components.");
+          "Useful for separating salts, counterions, or mixture components."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert sorted(graph.n for graph in smsd.split_components("CCO.[Na+]")) == [1, 3]
+)doc");
 
     m.def("same_canonical_graph",
           &smsd::search_detail::sameCanonicalGraph,
           py::arg("mol1"), py::arg("mol2"),
           "Check if two molecules are canonically identical.\n"
           "Compares canonical SMILES — fast graph isomorphism test.\n"
-          "Does not consider stereochemistry unless encoded in SMILES.");
+          "Does not consider stereochemistry unless encoded in SMILES."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.same_canonical_graph(smsd.parse_smiles("CCO"), smsd.parse_smiles("OCC"))
+)doc");
 
     m.def("read_mol_file",
           &smsd::readMolFile,
@@ -2372,7 +3482,15 @@ PYBIND11_MODULE(_smsd, m) {
           "Classify an atom into pharmacophoric feature classes (FCFP invariant).\n"
           "Returns a bitmask: bit 0=H-bond donor, 1=H-bond acceptor,\n"
           "2=positive ionisable, 3=negative ionisable, 4=aromatic, 5=hydrophobic.\n"
-          "Based on Rogers & Hahn 2010 ECFP/FCFP definitions.");
+          "Based on Rogers & Hahn 2010 ECFP/FCFP definitions."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> oxygen = smsd.classify_pharmacophore(smsd.parse_smiles("CCO"), 2)
+    >>> assert oxygen & 1  # hydroxyl donor
+)doc");
 
     m.def("implicit_h",
           [](int atomicNum, int bondOrderSum, int formalCharge, bool aromatic) {
@@ -2382,7 +3500,14 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("aromatic") = false,
           "Compute implicit hydrogen count for an atom with the SMILES valence model.\n"
           "Uses element- and charge-dependent default valences; an aromatic atom counts\n"
-          "one extra bond order. Returns 0 if no default valence fits.");
+          "one extra bond order. Returns 0 if no default valence fits."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.implicit_h(6, 1, 0) == 3  # methyl carbon
+)doc");
 
     // The quality measures read exactly one (x, y) pair per atom, ignoring any beyond the last atom.
     m.def("count_crossings",
@@ -2393,7 +3518,15 @@ PYBIND11_MODULE(_smsd, m) {
           "Count the number of bond crossings in a 2D layout.\n"
           "coords: a sequence of (x, y) pairs, one per atom.\n"
           "Returns the number of pairs of bonds that cross each other; 0 is optimal\n"
-          "for a planar graph.");
+          "for a planar graph."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("c1ccccc1")
+    >>> assert smsd.count_crossings(graph, smsd.generate_coords_2d(graph)) == 0
+)doc");
 
     m.def("is_degenerate_layout",
           [](const py::sequence& coordsList) {
@@ -2402,7 +3535,15 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("coords"),
           "Check if a 2D layout is degenerate (all points collinear or stacked).\n"
           "Returns True if the layout has zero width or height.\n"
-          "Use before reduce_crossings() to detect bad initial layouts.");
+          "Use before reduce_crossings() to detect bad initial layouts."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.is_degenerate_layout([(0, 0), (1, 0), (2, 0)])
+    >>> assert not smsd.is_degenerate_layout([(0, 0), (1, 0), (0, 1)])
+)doc");
 
     m.def("counts_to_array",
           &smsd::batch::countsToArray,
@@ -2411,7 +3552,16 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns a list of length fp_size where index i = count of feature i.\n"
           "Useful for ML pipelines that require fixed-width feature vectors.");
 
-    py::class_<smsd::Point3D>(m, "Point3D")
+    py::class_<smsd::Point3D>(m, "Point3D",
+          R"doc(A Cartesian three-dimensional coordinate.
+
+
+Example::
+
+    >>> import smsd
+    >>> point = smsd.Point3D(1.0, 2.0, 3.0)
+    >>> assert (point.x, point.y, point.z) == (1.0, 2.0, 3.0)
+)doc")
         .def(py::init<>())
         .def(py::init([](double x, double y, double z) {
             return smsd::Point3D{x, y, z};
@@ -2433,7 +3583,15 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("mol"), py::arg("target_bond_length") = 1.5,
           "Generate 2D coordinates for a molecule.\n"
-          "Returns a list of (x, y) tuples, one per atom.");
+          "Returns a list of (x, y) tuples, one per atom."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> coordinates = smsd.generate_coords_2d("CCO")
+    >>> assert len(coordinates) == 3 and all(math.isfinite(value) for point in coordinates for value in point)
+)doc");
 
     m.def("generate_coords_3d",
           [](const smsd::MolGraph& g, double targetBondLength) {
@@ -2449,7 +3607,16 @@ PYBIND11_MODULE(_smsd, m) {
           "Generate an approximate 3D geometry for a molecule.\n"
           "Returns a list of (x, y, z) tuples, one per atom. For production conformers,\n"
           "dedicated tools such as ETKDG or MMFF are recommended; this gives a reasonable\n"
-          "starting geometry.");
+          "starting geometry."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> coordinates = smsd.generate_coords_3d("CCO")
+    >>> assert len(coordinates) == 3 and all(len(point) == 3 for point in coordinates)
+    >>> assert all(math.isfinite(value) for point in coordinates for value in point)
+)doc");
 
     m.def("layout_quality",
           [](const smsd::MolGraph& g, const py::sequence& coordsList, double targetBondLength) {
@@ -2458,7 +3625,16 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("coords"), py::arg("target_bond_length") = 1.5,
           "Compute a layout quality score (0.0 = perfect).\n"
           "Combines bond length uniformity, overlap count and crossing count, so that\n"
-          "different layout strategies can be compared.");
+          "different layout strategies can be compared."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> quality = smsd.layout_quality(graph, smsd.generate_coords_2d(graph))
+    >>> assert math.isfinite(quality) and quality >= 0
+)doc");
 
     m.def("resolve_overlaps",
           [](const py::sequence& coordsList, double threshold, int maxIter) {
@@ -2468,7 +3644,15 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("coords"), py::arg("threshold") = 0.3, py::arg("max_iter") = 100,
           "Resolve atom-atom overlaps by pushing the atoms apart.\n"
-          "Returns (remaining_overlaps, updated_coords).");
+          "Returns (remaining_overlaps, updated_coords)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> remaining, coordinates = smsd.resolve_overlaps([(0, 0), (2, 0)], threshold=0.3)
+    >>> assert remaining == 0 and len(coordinates) == 2
+)doc");
 
     // The transforms take exactly the pairs given; a pair shorter than two raises IndexError.
     const auto transformed = [](const py::sequence& coordsList) {
@@ -2482,7 +3666,14 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"), py::arg("dx"), py::arg("dy"),
-          "Translate 2D coordinates by (dx, dy).");
+          "Translate 2D coordinates by (dx, dy)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.translate_2d([(0, 0), (1, 2)], 3, -1) == [(3.0, -1.0), (4.0, 1.0)]
+)doc");
 
     m.def("rotate_2d",
           [transformed](const py::sequence& coordsList, double angle) {
@@ -2491,7 +3682,15 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"), py::arg("angle"),
-          "Rotate 2D coordinates by angle (radians) about the centroid.");
+          "Rotate 2D coordinates by angle (radians) about the centroid."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> coordinates = smsd.rotate_2d([(-1, 0), (1, 0)], math.pi / 2)
+    >>> assert abs(coordinates[0][0]) < 1e-9 and abs(coordinates[0][1] + 1) < 1e-9
+)doc");
 
     m.def("scale_2d",
           [transformed](const py::sequence& coordsList, double factor) {
@@ -2500,7 +3699,14 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"), py::arg("factor"),
-          "Scale 2D coordinates uniformly about the centroid.");
+          "Scale 2D coordinates uniformly about the centroid."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.scale_2d([(-1, 0), (1, 0)], 2) == [(-2.0, 0.0), (2.0, 0.0)]
+)doc");
 
     m.def("mirror_x",
           [transformed](const py::sequence& coordsList) {
@@ -2509,7 +3715,14 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"),
-          "Mirror 2D coordinates about the X axis (flip vertically).");
+          "Mirror 2D coordinates about the X axis (flip vertically)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.mirror_x([(1, 2), (3, 4)]) == [(1.0, 4.0), (3.0, 2.0)]
+)doc");
 
     m.def("mirror_y",
           [transformed](const py::sequence& coordsList) {
@@ -2518,7 +3731,14 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"),
-          "Mirror 2D coordinates about the Y axis (flip horizontally).");
+          "Mirror 2D coordinates about the Y axis (flip horizontally)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.mirror_y([(1, 2), (3, 4)]) == [(3.0, 2.0), (1.0, 4.0)]
+)doc");
 
     m.def("center_2d",
           [transformed](const py::sequence& coordsList) {
@@ -2527,7 +3747,14 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("coords"),
-          "Centre 2D coordinates on the origin.");
+          "Centre 2D coordinates on the origin."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.center_2d([(1, 2), (3, 4)]) == [(-1.0, -1.0), (1.0, 1.0)]
+)doc");
 
     m.def("align_2d",
           [transformed](const py::sequence& coordsList, const py::sequence& refList) {
@@ -2538,7 +3765,15 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("coords"), py::arg("reference"),
           "Align 2D coordinates to a reference by the optimal rotation.\n"
-          "Returns (RMSD, aligned_coords).");
+          "Returns (RMSD, aligned_coords)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> rmsd, coordinates = smsd.align_2d([(1, 0), (2, 0)], [(0, 0), (1, 0)])
+    >>> assert rmsd < 1e-9 and len(coordinates) == 2
+)doc");
 
     m.def("bounding_box_2d",
           [transformed](const py::sequence& coordsList) {
@@ -2546,7 +3781,14 @@ PYBIND11_MODULE(_smsd, m) {
               return py::make_tuple(bb[0], bb[1], bb[2], bb[3]);
           },
           py::arg("coords"),
-          "Compute the bounding box. Returns (minX, minY, maxX, maxY).");
+          "Compute the bounding box. Returns (minX, minY, maxX, maxY)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> assert smsd.bounding_box_2d([(1, 2), (-3, 4)]) == (-3.0, 2.0, 1.0, 4.0)
+)doc");
 
     m.def("normalise_bond_length",
           [transformed](const smsd::MolGraph& g, const py::sequence& coordsList, double target) {
@@ -2555,7 +3797,15 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("mol"), py::arg("coords"), py::arg("target") = 1.5,
-          "Normalise bond lengths to the target value.");
+          "Normalise bond lengths to the target value."
+          R"doc(
+
+Example::
+
+    >>> import smsd, math
+    >>> coordinates = smsd.normalise_bond_length("CC", [(0, 0), (4, 0)], target=1.5)
+    >>> assert abs(math.dist(*coordinates) - 1.5) < 1e-9
+)doc");
 
     m.def("canonical_orientation",
           [transformed](const smsd::MolGraph& g, const py::sequence& coordsList) {
@@ -2564,10 +3814,28 @@ PYBIND11_MODULE(_smsd, m) {
               return pointList(coords);
           },
           py::arg("mol"), py::arg("coords"),
-          "Rotate to the canonical orientation (30-degree grid alignment).");
+          "Rotate to the canonical orientation (30-degree grid alignment)."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> graph = smsd.parse_smiles("CCO")
+    >>> assert len(smsd.canonical_orientation(graph, smsd.generate_coords_2d(graph))) == 3
+)doc");
 
     py::class_<smsd::DepictOptions>(m, "DepictOptions",
-        "SVG depiction options for bond, atom-label and highlight styling.")
+        "SVG depiction options for bond, atom-label and highlight styling."
+          R"doc(
+
+Example::
+
+    >>> import smsd
+    >>> options = smsd.DepictOptions()
+    >>> options.width, options.height = 400, 200
+    >>> svg = smsd.depict_svg("CCO", opts=options)
+    >>> assert 'width="400"' in svg and 'height="200"' in svg
+)doc")
         .def(py::init<>())
         .def_readwrite("bond_length",       &smsd::DepictOptions::bondLength,
             "Bond length in pixels (default 30). All ACS proportions scale from this.")

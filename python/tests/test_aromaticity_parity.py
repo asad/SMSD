@@ -90,10 +90,14 @@ def test_kekulize_round_trip_restores_daylight_like_perception(entry):
 def test_dearomatize_alias_matches_kekulize(entry):
     kekule_graph = parse_smiles(entry["kekule"])
     dearomatized_graph = parse_smiles(entry["kekule"])
+    native_graph = parse_smiles(entry["kekule"])
 
     kekulize(kekule_graph)
     with pytest.deprecated_call():
         dearomatize(dearomatized_graph)
+    assert native_graph.kekulize() is native_graph
 
     assert list(kekule_graph.aromatic) == list(dearomatized_graph.aromatic)
     assert bond_signature(kekule_graph) == bond_signature(dearomatized_graph)
+    assert list(kekule_graph.aromatic) == list(native_graph.aromatic)
+    assert bond_signature(kekule_graph) == bond_signature(native_graph)

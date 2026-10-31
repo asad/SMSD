@@ -15,6 +15,20 @@ public final class MCS {
   public enum Objective { MCIS, MCES }
   public enum Connectivity { Connected, Fragments }
 
+  /** The search status and mappings, and a portable SMARTS query for the best match. */
+  public static final class SmartsResult {
+    private final SearchResult result;
+    private final String smarts;
+
+    private SmartsResult(SearchResult result, String smarts) {
+      this.result = result;
+      this.smarts = smarts;
+    }
+
+    public SearchResult result() { return result; }
+    public String smarts() { return smarts; }
+  }
+
   /** Chemistry, objective and resource limits copied when preparing a query. */
   public static final class Options {
     public ChemOptions chemistry = new ChemOptions();
@@ -57,6 +71,16 @@ public final class MCS {
   }
   public SearchResult match(IAtomContainer target) {
     return match(MolGraph.copyOf(target));
+  }
+  /** Export using the prepared chemistry; unsupported SMARTS export rules are rejected. */
+  public SmartsResult matchWithSmarts(MolGraph target) {
+    SearchResult result = match(target);
+    String pattern = result.found()
+        ? result.matches().get(0).toSmarts(query, options.chemistry) : "";
+    return new SmartsResult(result, pattern);
+  }
+  public SmartsResult matchWithSmarts(IAtomContainer target) {
+    return matchWithSmarts(MolGraph.copyOf(target));
   }
   public SearchResult matchAll(MolGraph target) {
     return matchAll(target, 1000);
@@ -118,7 +142,10 @@ public final class MCS {
         reversed.score(), reversed.nodesVisited(), control.elapsedMillis()), query, target, options.chemistry);
   }
 
-  /** Whether the chemistry relies on an exhaustive set of relevant cycles. */
+  /**
+   * Whether proof needs a complete ring source: the relevant cycles for completeRingsOnly,
+   * and the ring-count perception for STRICT fusion.
+   */
   private static boolean needsRingProof(ChemOptions chemistry) {
     return chemistry.completeRingsOnly || chemistry.ringFusionMode == ChemOptions.RingFusionMode.STRICT;
   }
@@ -128,7 +155,7 @@ public final class MCS {
       SearchResult result, MolGraph query, MolGraph target, ChemOptions chemistry) {
     if (!needsRingProof(chemistry)
         || (!result.optimal() && !result.complete() && result.status() != SearchResult.Status.Completed)
-        || (!query.ringsTruncated() && !target.ringsTruncated()))
+        || (!query.ringProofIncomplete(chemistry) && !target.ringProofIncomplete(chemistry)))
       return result;
     SearchResult.Status status = result.status();
     if (status == SearchResult.Status.Completed || status == SearchResult.Status.LimitReached)
@@ -427,7 +454,7 @@ public final class MCS {
     return isMappingMaximal(query, target, mapping, options);
   }
 
-  /** A progressive consensus and its independently supported molecule mappings. */
+  /** A progressive consensus and its supporting molecule mappings; never a proof of optimality. */
   public static final class ConsensusResult {
     private static final SearchResult.Match NO_FRAGMENT =
         new SearchResult.Match(Collections.emptyMap(), Collections.emptyMap(), Collections.emptyList(), 0);
@@ -474,9 +501,11 @@ public final class MCS {
     public boolean found() {
       return fragment.atomCount() > 0;
     }
+    /** Always false: progressive reduction does not prove a global optimum. */
     public boolean optimal() {
       return false;
     }
+    /** Whether the progressive pass finished, not whether it proved a global optimum or absence. */
     public boolean complete() {
       return status == SearchResult.Status.Completed;
     }
@@ -500,6 +529,10 @@ public final class MCS {
    * its support, and the best supported candidate by the objective is kept; a later candidate of
    * equal score does not replace it. One budget covers every search of the call. An empty list
    * gives a result that is not found, with {@code sourceIndex() == -1}.
+   *
+   * <p>The result always has {@code optimal() == false}, including empty and single-input calls.
+   * {@code complete()} reports whether the progressive pass finished. Neither it nor
+   * {@code Completed} proves a global optimum or the absence of a qualifying common graph.
    *
    * @throws IllegalArgumentException if the threshold lies outside (0, 1], or the options carry
    *     atom weights or excluded target atoms, which have no single target here
@@ -550,7 +583,7 @@ public final class MCS {
       SearchResult.Status status = control.status();
       if (status == SearchResult.Status.Completed && needsRingProof(options.chemistry))
         for (MolGraph molecule : molecules)
-          if (molecule.ringsTruncated()) {
+          if (molecule.ringProofIncomplete(options.chemistry)) {
             status = SearchResult.Status.LimitReached;
             break;
           }

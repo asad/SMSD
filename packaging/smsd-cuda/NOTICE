@@ -23,11 +23,17 @@ permission from the copyright holder.
 
 THIRD-PARTY NOTICES
 ===================
-This package bundles no NVIDIA library. Its library links the NVIDIA
-CUDA runtime, which is installed separately, from NVIDIA's
+This package bundles no NVIDIA runtime library. Its library incorporates
+code from CUB, part of the NVIDIA CUDA Toolkit; the CUB copyright notice
+and licence are provided in licenses/cub/LICENSE. The library links the
+NVIDIA CUDA runtime, which is installed separately, from NVIDIA's
 nvidia-cuda-runtime-cu12 package or with the CUDA toolkit, under NVIDIA's
 own licence terms, and calls the NVIDIA display driver, which the system
 provides.
+
+The CUB headers used to build the library include headers from Thrust and
+libcu++. CUB, Thrust and libcu++ are part of the NVIDIA CUDA Core Compute
+Libraries (CCCL), whose licence is provided in licenses/cccl/LICENSE.
 
 Linux builds made with GCC link the GNU C++ runtime (libstdc++), which
 the system provides, under GPL-3.0 with the GCC Runtime Library Exception.

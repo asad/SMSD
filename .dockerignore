@@ -15,3 +15,5 @@ scripts/*
 !licenses/
 licenses/*
 !licenses/NVIDIA-CUDA.txt
+!licenses/cub/LICENSE
+!licenses/cccl/LICENSE

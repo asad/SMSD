@@ -198,6 +198,7 @@ static void testBatchThreads() {
     struct Query {
         std::mutex* mutex;
         std::set<std::thread::id>* threads;
+        const std::chrono::steady_clock::time_point* patience;
         smsd::SearchResult match(const Target& target) const {
             // About 20 microseconds of work, so that a team starts after the serial start.
             const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(20);
@@ -205,6 +206,15 @@ static void testBatchThreads() {
             {
                 const std::lock_guard<std::mutex> lock(*mutex);
                 threads->insert(std::this_thread::get_id());
+            }
+            // Until the patience deadline, a lone thread waits for a helper, so a busy machine
+            // that starts the team late cannot leave the whole batch to the calling thread.
+            while (std::chrono::steady_clock::now() < *patience) {
+                {
+                    const std::lock_guard<std::mutex> lock(*mutex);
+                    if (threads->size() > 1) break;
+                }
+                std::this_thread::yield();
             }
             if (target.fail) throw std::runtime_error(std::to_string(target.id));
             smsd::SearchResult result;
@@ -220,14 +230,16 @@ static void testBatchThreads() {
             for (size_t index = 0; index < size; ++index) targets[index] = {static_cast<int>(random() % 50), index, false};
             std::mutex mutex;
             std::set<std::thread::id> threads;
-            const Query query{&mutex, &threads};
+            const size_t team = std::min({size, size_t(workers), smsd::search_detail::maximumWorkers()});
+            const auto patience = std::chrono::steady_clock::now()
+                + std::chrono::seconds(team > 1 && size > 64 * team ? 10 : 0);
+            const Query query{&mutex, &threads, &patience};
             const auto results = smsd::search_detail::matchMany(query, targets, workers);
             require(results.size() == size, "a batch lost a target");
             for (size_t index = 0; index < size; ++index)
                 require(results[index].nodesVisited == index && results[index].score == targets[index].n,
                         "a batch result is out of place");
             // A long batch lasts long enough for its helpers to take part however threads are scheduled.
-            const size_t team = std::min({size, size_t(workers), smsd::search_detail::maximumWorkers()});
             if (team == 1) require(threads.size() == 1, "a one-worker batch must stay on the calling thread");
             else if (size > 64 * team) require(threads.size() > 1, "a long batch did not use its team");
             for (size_t failing : {size / 2, size / 5, size - 1}) targets[failing].fail = true;

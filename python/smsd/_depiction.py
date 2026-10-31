@@ -48,6 +48,12 @@ def depict_svg(mol_or_smiles, opts=None, **kwargs):
 
     Returns:
         str: SVG text for a file or a notebook.
+
+    Example::
+
+        >>> import smsd
+        >>> svg = smsd.depict_svg("CCO", width=300, height=200)
+        >>> assert '<svg' in svg and 'width="300"' in svg
     """
     opts = _options(opts, kwargs)
     return _smsd.depict(_ensure_mol(mol_or_smiles), opts)
@@ -64,6 +70,13 @@ def depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs):
 
     Returns:
         str: SVG text with the matched atoms highlighted in green.
+
+    Example::
+
+        >>> import smsd
+        >>> match = smsd.MCS.find("CCO").match("CCN").best
+        >>> svg = smsd.depict_mapping("CCO", match.atom_mapping)
+        >>> assert '<svg' in svg
     """
     opts = _options(opts, kwargs)
     return _smsd.depict_with_mapping(_graph(mol_or_smiles), mapping, opts)
@@ -81,6 +94,13 @@ def depict_pair(mol1, mol2, mapping, opts=None, **kwargs):
 
     Returns:
         str: SVG text showing both molecules with the matched regions highlighted.
+
+    Example::
+
+        >>> import smsd
+        >>> match = smsd.MCS.find("CCO").match("CCN").best
+        >>> svg = smsd.depict_pair("CCO", "CCN", match.atom_mapping)
+        >>> assert '<svg' in svg
     """
     opts = _options(opts, kwargs)
     return _smsd.depict_pair(_graph(mol1), _graph(mol2), mapping, opts)
@@ -92,6 +112,16 @@ def save_svg(svg_str, path):
     Args:
         svg_str: SVG text, from :func:`depict_svg`, :func:`depict_pair` or another renderer.
         path: Output file path, such as ``'molecule.svg'``.
+
+    Example::
+
+        >>> import smsd
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory:
+        ...     destination = Path(directory) / "molecule.svg"
+        ...     smsd.save_svg(smsd.depict_svg("CCO"), destination)
+        ...     assert '<svg' in destination.read_text(encoding="utf-8")
     """
     from pathlib import Path
     Path(path).write_text(svg_str, encoding="utf-8")
@@ -131,18 +161,18 @@ def _highlighted_pair(first, second, mapping, size, query_legend):
 
 def depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
                size=(600, 300), highlight_color=_DEFAULT_HIGHLIGHT):
-    """Find the MCS and return an RDKit image with the matched atoms highlighted.
+    """Find the MCS and return an RDKit image with matched atoms highlighted.
 
-    Works in notebooks (displayed inline) and scripts (a PIL image).
-
-    ``highlight_color`` is deprecated: it has no effect, and RDKit draws the
-    highlights in its default colour.
+    Requires the optional RDKit drawing dependency. This convenience image does
+    not carry proof flags; obtain a SearchResult and use smsd.highlight.mcs_svg
+    when proof status must travel with the image. ``highlight_color`` is deprecated
+    and has no effect; the drawing uses RDKit's default highlight colour.
 
     Example::
 
-        import smsd
-        img = smsd.depict_mcs("c1ccccc1", "c1ccc(O)cc1")
-        img.save("mcs.png")  # or just display in a notebook
+        >>> import smsd
+        >>> image = smsd.depict_mcs("c1ccccc1", "c1ccc(O)cc1")
+        >>> assert image.size == (600, 300)
     """
     if highlight_color != _DEFAULT_HIGHLIGHT:
         warnings.warn("the highlight_color argument of smsd.depict_mcs() has no effect and is deprecated",
@@ -185,11 +215,11 @@ def to_svg(mol_or_smiles, *, size=(300, 200)):
 
     Example::
 
-        import smsd
-
-        svg = smsd.to_svg("c1ccccc1")
-        with open("benzene.svg", "w") as f:
-            f.write(svg)
+        >>> import smsd, warnings
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     svg = smsd.to_svg("c1ccccc1")
+        >>> assert '<svg' in svg
     """
     _deprecated("to_svg", "depict_svg")
     Chem = _require_rdkit("to_svg", drawing=True)

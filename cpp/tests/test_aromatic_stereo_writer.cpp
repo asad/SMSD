@@ -292,8 +292,8 @@ static std::string cyclicMolBlock(int atoms, int shortcut = -1, bool alternating
 static void inferredRingStereo() {
     require(smsd::readMolBlock(cyclicMolBlock(6, -1, true)).dbStereo(0, 1) == 0,
             "Small aromatic ring coordinates must not create double-bond stereo");
-    require(smsd::readMolBlock(cyclicMolBlock(7)).dbStereo(0, 1) != 0,
-            "Nonaromatic seven-membered ring geometry must retain double-bond stereo");
+    require(smsd::readMolBlock(cyclicMolBlock(7)).dbStereo(0, 1) == 0,
+            "Nonaromatic seven-membered ring geometry must not create double-bond stereo");
     require(smsd::readMolBlock(cyclicMolBlock(8)).dbStereo(0, 1) != 0,
             "Eight-membered ring geometry must retain double-bond stereo");
     require(smsd::readMolBlock(cyclicMolBlock(8, 5, true)).dbStereo(0, 1) == 0,

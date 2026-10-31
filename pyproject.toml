@@ -4,11 +4,11 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "8.0.3"
+version = "8.1.0"
 description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
     {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
 ]
@@ -18,11 +18,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Operating System :: OS Independent",
@@ -31,8 +30,20 @@ classifiers = [
 keywords = ["cheminformatics", "mcs", "maximum-common-substructure", "substructure", "graph-matching", "chemistry", "smiles", "smarts", "fingerprint", "ecfp", "maccs", "similarity", "screening", "tautomer"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0,<10", "pytest-timeout>=2.0,<3", "tomli>=2,<3; python_version<'3.11'"]
+dev = ["pytest>=7.0,<10", "pytest-timeout>=2.0,<3"]
 rdkit = ["rdkit<2027"]
+numpy = ["numpy>=1.24,<3"]
+torch = ["numpy>=1.24,<3", "torch>=2.2,<3"]
+sklearn = ["numpy>=1.24,<3", "scikit-learn>=1.4,<2"]
+scipy = ["numpy>=1.24,<3", "scipy>=1.11,<2"]
+pandas = ["pandas>=2.0,<4"]
+polars = ["polars>=1.0,<2"]
+arrow = ["numpy>=1.24,<3", "pyarrow>=14,<27"]
+pyg = ["torch>=2.2,<3", "torch-geometric>=2.5,<3"]
+mcp = ["mcp>=1.26,<3"]
+
+[project.scripts]
+smsd-mcp = "smsd.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/asad/SMSD"
@@ -45,12 +56,13 @@ Changelog = "https://github.com/asad/SMSD/blob/master/CHANGELOG.md"
 cmake.source-dir = "cpp"
 cmake.build-type = "Release"
 wheel.packages = ["python/smsd"]
-wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT", "licenses/libgomp/COPYING3", "licenses/libgomp/COPYING.RUNTIME", "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx", "licenses/msvc/LICENSE-2026.docx"]
+wheel.license-files = ["LICENSE", "NOTICE", "licenses/rdkit/LICENSE", "licenses/pybind11/LICENSE", "licenses/libomp/LICENSE.TXT", "licenses/libgomp/COPYING3", "licenses/libgomp/COPYING.RUNTIME", "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx", "licenses/msvc/LICENSE-2026.docx"]
 # Benchmark corpora and the Java and script test suites are left out of the sdist. The native
 # release checks build cpp/tests from it; the tautomer atom-order test, which reads the
 # benchmark corpus benchmarks/data/chembl_mcs_benchmark.smi, is skipped there. The Python
-# tests in the sdist read the two shared golden fixtures and three benchmark modules. The
-# separately built smsd-cuda package is left out too.
+# tests in the sdist read the four shared fixtures and three benchmark modules, and the native
+# ring candidate test reads the shared ring search golden file. The separately built smsd-cuda
+# package is left out too.
 sdist.exclude = ["benchmarks/**", "java/src/test/**", "java/cli/src/test/**", "scripts/tests/**", "packaging/**"]
 sdist.include = [
     "benchmarks/generate_dalke_pairs.py",
@@ -58,6 +70,9 @@ sdist.include = [
     "benchmarks/mcs_protocol.py",
     "java/src/test/resources/com/bioinception/smsd/aromaticity_parity.json",
     "java/src/test/resources/com/bioinception/smsd/chemistry_rules.json",
+    "java/src/test/resources/com/bioinception/smsd/ring_search_golden.json",
+    "java/src/test/resources/com/bioinception/smsd/subgraph_stereo.json",
+    "java/cli/src/test/resources/com/bioinception/smsd/cli/mol_ez_eligibility.json",
 ]
 minimum-version = "0.5"
 
@@ -65,8 +80,8 @@ minimum-version = "0.5"
 SMSD_BUILD_PYTHON = "ON"
 SMSD_BUILD_TESTS = "OFF"
 SMSD_BUILD_OPENMP = "ON"
-SMSD_BUILD_METAL = "AUTO"
-SMSD_BUILD_CUDA = "AUTO"
+SMSD_BUILD_METAL = "OFF"
+SMSD_BUILD_CUDA = "OFF"
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests", "scripts/tests"]

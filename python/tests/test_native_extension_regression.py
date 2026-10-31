@@ -43,7 +43,7 @@ def test_import_rejects_an_extension_of_another_version(tmp_path):
     assert "ImportError: smsd 0.0.1 found a native extension built for " + smsd.__version__ in result.stderr
 
 
-def _main_thread_runs_during(call, attempts=3):
+def _main_thread_runs_during(call, attempts=10):
     """Whether this thread executes Python code in the middle half of call() on another thread.
 
     A call that holds the GIL blocks this thread until it returns, so no step of the loop below

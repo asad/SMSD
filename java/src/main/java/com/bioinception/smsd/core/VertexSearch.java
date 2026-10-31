@@ -18,6 +18,14 @@ final class VertexSearch {
   private final MCS.Options options;
   private final SearchResult.Control control;
   private final boolean all, connected;
+  /** Whether true leaf pairs have equivalence-only labels. */
+  private final boolean leafExchangeAllowed;
+  /** Whether free non-terminal target twins may share one candidate. */
+  private final boolean targetTwinsAllowed;
+  private int[] targetTwins, targetTwinSeen;
+  private int targetTwinStamp, targetTwinWork;
+  private boolean targetTwinsDeclined;
+  private BridgeBound bridgeBound;
   private final int limit;
   private final int[] queryToTarget, targetToQuery;
   private final int[] domainSize;
@@ -41,6 +49,7 @@ final class VertexSearch {
   private int[] candidateSupport;
   private int frameDepth;
   private RingIndex queryRings, targetRings;
+  private boolean ringViabilityAllowed;
   /** The stamp of the last complete-ring test. Package-private so that tests can check the wrap. */
   int ringStamp;
   // Unweighted, uncapped single-result fragment searches take the native order; connected,
@@ -65,11 +74,23 @@ final class VertexSearch {
     nativeOrder = !connected && !all && options.atomWeights == null && options.nodeLimit == 0;
     this.limit = limit;
     this.all = all;
+    ChemOptions chemistry = options.chemistry;
+    leafExchangeAllowed = !all && limit == 1 && options.objective == MCS.Objective.MCIS
+        && options.connectivity == MCS.Connectivity.Connected && options.atomWeights == null
+        && !chemistry.matchIsotope && !chemistry.useChirality && !chemistry.useBondStereo
+        && !chemistry.tautomerAware && !chemistry.completeRingsOnly && !chemistry.ringMatchesRingOnly
+        && chemistry.ringFusionMode == ChemOptions.RingFusionMode.IGNORE
+        && chemistry.aromaticityMode == ChemOptions.AromaticityMode.STRICT
+        && chemistry.matchBondOrder == ChemOptions.BondOrderMode.STRICT;
     control = sharedControl != null
         ? sharedControl
         : new SearchResult.Control(
               SearchResult.Control.resolveTimeout(options.timeoutMillis, query.n, target.n, true),
               options.cancellation);
+    targetTwinsAllowed = leafExchangeAllowed && chemistry.matchAtomType
+        && options.excludedTargetAtoms.isEmpty() && query.n <= 512 && target.n <= 512
+        && !control.stopped() && !tagged(query) && !tagged(target)
+        && !configured(query) && !configured(target) && smallTargetDegrees(target);
     queryToTarget = new int[query.n];
     Arrays.fill(queryToTarget, -1);
     targetToQuery = new int[target.n];
@@ -102,9 +123,10 @@ final class VertexSearch {
       query.ensureRingCounts();
       target.ensureRingCounts();
     }
-    if (options.chemistry.completeRingsOnly && !query.ringsTruncated() && !target.ringsTruncated()) {
+    if (options.chemistry.completeRingsOnly && !query.relevantCyclesTruncated() && !target.relevantCyclesTruncated()) {
       queryRings = new RingIndex(query);
       targetRings = new RingIndex(target);
+      ringViabilityAllowed = options.objective == MCS.Objective.MCIS;
     }
     boolean[] excludedTargets = new boolean[target.n];
     for (Integer targetAtom : options.excludedTargetAtoms)
@@ -155,6 +177,9 @@ final class VertexSearch {
 
   SearchResult search() {
     if (!control.stopped()) {
+      if (connected && options.objective == MCS.Objective.MCIS && options.atomWeights == null
+          && query.n >= 64 && target.n >= 64)
+        bridgeBound = BridgeBound.create(query, target, options.chemistry, control);
       // As in the native search, first try to embed the whole query; an induced embedding of
       // every query atom is optimal and gives the fragment search an incumbent.
       if (nativeOrder && initialAtoms == 0 && query.n > 0 && query.n <= target.n) {
@@ -317,6 +342,25 @@ final class VertexSearch {
     for (int targetAtom = 0; targetAtom < target.n; targetAtom++)
       availableTarget[targetAtom] = targetToQuery[targetAtom] >= 0
           || (availableTargetBits[targetAtom >>> 6] & (1L << (targetAtom & 63))) != 0;
+    if (ringViabilityAllowed) {
+      if (!restrictRingAvailability(queryRings, query, availableQuery, reachableQuery)
+          || !restrictRingAvailability(targetRings, target, availableTarget, reachableTarget))
+        return;
+      for (int position = 0; position < mappedCount; position++) {
+        int queryAtom = mappedQueryAtoms[position];
+        if (!availableQuery[queryAtom] || !availableTarget[queryToTarget[queryAtom]])
+          return;
+      }
+      int queryCapacity = 0;
+      targetCapacity = 0;
+      for (boolean available : availableQuery)
+        if (available)
+          queryCapacity++;
+      for (boolean available : availableTarget)
+        if (available)
+          targetCapacity++;
+      atomBound = Math.min(atomBound, Math.min(queryCapacity, targetCapacity));
+    }
     // Feasible domains only shrink; every connected extension stays in these components.
     if (connected) {
       int queryRoot = mappedCount == 0 ? -1 : mappedQueryAtoms[0];
@@ -343,6 +387,16 @@ final class VertexSearch {
     }
     int bondBound = (int) Math.min(Math.min(queryBondBound, targetBondBound),
         (long) atomBound * (atomBound - 1) / 2);
+    if (bridgeBound != null) {
+      int bridgeAtoms = bridgeBound.upper();
+      for (int position = 0; position < mappedCount; position++) {
+        int queryAtom = mappedQueryAtoms[position];
+        bridgeAtoms = Math.min(bridgeAtoms, bridgeBound.bound(queryAtom, queryToTarget[queryAtom]));
+      }
+      atomBound = Math.min(atomBound, bridgeAtoms);
+      if (bridgeBound.acyclic())
+        bondBound = Math.min(bondBound, Math.max(0, atomBound - 1));
+    }
     double weightBound = options.atomWeights == null ? 0.0 : weightBound();
     if (!Double.isNaN(weightBound)) {
       int boundOrder = compare(atomBound, bondBound, weightBound);
@@ -357,8 +411,14 @@ final class VertexSearch {
     for (int neighbor : query.neighbors[chosen])
       if (queryToTarget[neighbor] >= 0)
         addedBonds++;
-    if (nativeOrder) {
-      int depth = frameDepth, size = orderCandidates(chosen);
+    int pendantTarget = pendantTarget(chosen);
+    if (pendantTarget >= 0) {
+      branch(chosen, pendantTarget, mappedAtoms, mappedBonds + addedBonds);
+      return;
+    }
+    if (nativeOrder || (targetTwinsAllowed && initialAtoms == 0 && !targetTwinsDeclined)) {
+      int depth = frameDepth;
+      int size = nativeOrder ? orderCandidates(chosen) : targetTwinCandidates(chosen);
       int[] order = candidateOrder[depth];
       boolean stop = false;
       for (int position = 0; position < size && !stop; position++)
@@ -382,6 +442,124 @@ final class VertexSearch {
     excludedAtoms[chosen] = true;
     atoms(mappedAtoms, mappedBonds);
     excludedAtoms[chosen] = false;
+  }
+
+  /** Fix a true leaf pair beside a mapped parent without losing an optimal extension. */
+  private int pendantTarget(int queryAtom) {
+    if (!leafExchangeAllowed || initialAtoms != 0 || query.neighbors[queryAtom].length != 1)
+      return -1;
+    int queryParent = query.neighbors[queryAtom][0], targetParent = queryToTarget[queryParent];
+    if (targetParent < 0)
+      return -1;
+    int[] neighbors = target.neighbors[targetParent];
+    for (int position = 0; position < neighbors.length; position++) {
+      if ((position & 255) == 255 && control.stopped())
+        return -1;
+      int targetAtom = neighbors[position];
+      if (target.neighbors[targetAtom].length == 1 && targetToQuery[targetAtom] < 0
+          && (domainBits[queryAtom][targetAtom >>> 6] & (1L << (targetAtom & 63))) != 0
+          && MolGraph.ChemOps.bondsCompatible(query, queryAtom, queryParent,
+              target, targetAtom, targetParent, options.chemistry))
+        return targetAtom;
+    }
+    return -1;
+  }
+
+  private static boolean smallTargetDegrees(MolGraph graph) {
+    for (int[] neighbors : graph.neighbors)
+      if (neighbors.length > 8)
+        return false;
+    return true;
+  }
+
+  /** Keep one feasible free target from each exact transposition class, in input order. */
+  private int targetTwinCandidates(int chosen) {
+    if (candidateOrder == null)
+      candidateOrder = new int[query.n + 1][];
+    int[] order = candidateOrder[frameDepth];
+    if (order == null || order.length < domainSize[chosen])
+      candidateOrder[frameDepth] = order = new int[domainSize[chosen]];
+    frameDepth++;
+    int size = 0;
+    for (int word = 0; word < target.words; word++) {
+      long candidates = feasibleTargets(chosen, word);
+      while (candidates != 0) {
+        int candidate = (word << 6) + Long.numberOfTrailingZeros(candidates);
+        candidates &= candidates - 1;
+        order[size++] = candidate;
+      }
+    }
+    if (size < 2)
+      return size;
+    if (targetTwins == null) {
+      targetTwins = new int[target.n];
+      Arrays.fill(targetTwins, -1);
+      targetTwinSeen = new int[target.n];
+    }
+    if (++targetTwinStamp == 0) {
+      Arrays.fill(targetTwinSeen, 0);
+      targetTwinStamp = 1;
+    }
+    int kept = 0;
+    for (int position = 0; position < size; position++) {
+      int candidate = order[position], twin = targetTwin(candidate);
+      if (twin < 0 || targetTwinSeen[twin] != targetTwinStamp) {
+        order[kept++] = candidate;
+        if (twin >= 0)
+          targetTwinSeen[twin] = targetTwinStamp;
+      }
+    }
+    return kept;
+  }
+
+  /** A cached exact transposition, or no pruning after the bounded work or call budget stops. */
+  private int targetTwin(int atom) {
+    if (targetTwinsDeclined)
+      return -1;
+    if (targetTwins[atom] >= 0)
+      return targetTwins[atom];
+    if (target.neighbors[atom].length < 2)
+      return targetTwins[atom] = atom;
+    for (int other = 0; other < atom; other++) {
+      int work = 1 + target.neighbors[atom].length * (1 + target.neighbors[other].length);
+      if (targetTwinWork > 1000000 - work) {
+        targetTwinsDeclined = true;
+        return -1;
+      }
+      int previousWork = targetTwinWork;
+      targetTwinWork += work;
+      if ((previousWork >>> 8) != (targetTwinWork >>> 8) && control.stopped()) {
+        targetTwinsDeclined = true;
+        return -1;
+      }
+      if (sameTargetTwins(atom, other))
+        return targetTwins[atom] = other;
+    }
+    return targetTwins[atom] = atom;
+  }
+
+  /** Whether swapping the atoms preserves their full labelled target neighbourhoods. */
+  private boolean sameTargetTwins(int first, int second) {
+    if (target.neighbors[first].length != target.neighbors[second].length
+        || target.atomicNum[first] != target.atomicNum[second]
+        || target.formalCharge[first] != target.formalCharge[second]
+        || target.massNumber[first] != target.massNumber[second]
+        || target.hydrogenCount(first) != target.hydrogenCount(second)
+        || target.label[first] != target.label[second]
+        || target.ring[first] != target.ring[second] || target.aromatic[first] != target.aromatic[second]
+        || target.ringCount[first] != target.ringCount[second]
+        || (target.tautomerClass == null ? -1 : target.tautomerClass[first])
+            != (target.tautomerClass == null ? -1 : target.tautomerClass[second]))
+      return false;
+    for (int neighbor : target.neighbors[first]) {
+      if (neighbor == second)
+        continue;
+      if (target.bondOrder(first, neighbor) != target.bondOrder(second, neighbor)
+          || target.bondAromatic(first, neighbor) != target.bondAromatic(second, neighbor)
+          || target.bondInRing(first, neighbor) != target.bondInRing(second, neighbor))
+        return false;
+    }
+    return true;
   }
 
   private boolean branch(int chosen, int targetAtom, int mappedAtoms, int mappedBonds) {
@@ -583,6 +761,37 @@ final class VertexSearch {
       largest = Math.max(largest, tail);
     }
     return largest;
+  }
+
+  /** A selected ring atom must remain on a relevant cycle whose vertices are all available. */
+  private boolean restrictRingAvailability(
+      RingIndex rings, MolGraph graph, boolean[] available, boolean[] covered) {
+    Arrays.fill(covered, false);
+    int work = 0;
+    for (int[] cycle : rings.cycles) {
+      boolean viable = true;
+      for (int atom : cycle) {
+        if ((work++ & 255) == 0 && control.stopped())
+          return false;
+        if (!available[atom]) {
+          viable = false;
+          break;
+        }
+      }
+      if (viable)
+        for (int atom : cycle) {
+          if ((work++ & 255) == 0 && control.stopped())
+            return false;
+          covered[atom] = true;
+        }
+    }
+    for (int atom = 0; atom < available.length; atom++) {
+      if ((atom & 255) == 0 && control.stopped())
+        return false;
+      if (available[atom] && rings.ringAtom(graph, atom) && !covered[atom])
+        available[atom] = false;
+    }
+    return true;
   }
 
   private double orderedWeight() {

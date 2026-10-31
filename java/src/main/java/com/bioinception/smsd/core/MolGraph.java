@@ -36,6 +36,7 @@ public final class MolGraph {
   long canonicalHash;
   private volatile boolean canonicalComputed = false;
   private volatile boolean ringCountsComputed = false;
+  private boolean ringCountsTruncated;
   final boolean[] ring, aromatic;
   final int[] degree;
   public final int[] ringCount;
@@ -102,6 +103,11 @@ public final class MolGraph {
   public final Map<String, String> properties;
   /** The rings, once perceived, see {@link #rings()}. */
   private volatile RingPerception.Rings rings;
+  private volatile RingPerception.Rings ringBasis;
+  /** The relevant-cycle families, once found, see {@link #computeRelevantCycleFamilies()}. */
+  private volatile RelevantCycleFamilies relevantCycleFamilies;
+  /** The internal switches of ring perception for every graph; all are off. */
+  static final RingCandidateSearch.RingSearchOptions RING_SEARCH_OPTIONS = RingCandidateSearch.RingSearchOptions.DEFAULTS;
   /** The ring systems of the ring atoms, once found, see {@link #ringSystems()}. */
   private volatile RingPerception.AtomSystems ringSystems;
   /**
@@ -538,34 +544,60 @@ public final class MolGraph {
   /** The orbit of each atom under the chemical automorphism group, as a copy. */
   public int[] getOrbit() { ensureCanonical(); return orbit.clone(); }
 
-  public int[][] computeRings() { return rings().smallest; }
+  public int[][] computeRings() { return basisRings().smallest; }
 
   /**
-   * The rings, perceived on first use. Searches on several threads may share a graph, so both
-   * sets are published together, once, through a volatile field: a thread sees them whole or
-   * waits for the thread that perceives them.
+   * The relevant set, perceived only when requested. The immutable basis and relevant results
+   * have independent volatile publication, so a relevant request never replaces a basis that
+   * another reader already holds.
    */
   private RingPerception.Rings rings() {
     RingPerception.Rings perceived = rings;
     if (perceived != null) return perceived;
     synchronized (this) {
-      if (rings == null) rings = RingPerception.perceive(n, neighbors);
+      if (rings == null) rings = RingPerception.completeRelevant(n, neighbors, basisRings(), RING_SEARCH_OPTIONS);
       return rings;
     }
   }
 
+  private RingPerception.Rings basisRings() {
+    RingPerception.Rings perceived = ringBasis;
+    if (perceived != null) return perceived;
+    synchronized (this) {
+      if (ringBasis == null)
+        ringBasis = RingPerception.perceive(n, neighbors, false, RingPerception.RING_SEARCH_WORK_LIMIT,
+                                            RING_SEARCH_OPTIONS, null);
+      return ringBasis;
+    }
+  }
+
+  /**
+   * The basis of the bounded fallback, which tautomer classes read: the same as
+   * {@link #computeRings()} unless a basis the fallback left unproved was completed.
+   */
+  int[][] baseRingBasis() { return basisRings().baseSmallest; }
+
   public int numRings() { return computeRings().length; }
 
   /**
-   * Whether the ring perception behind {@link #computeRings()} and
-   * {@link #computeRelevantCycles()} stopped its exhaustive candidate search at its work bound,
-   * as for a very large ring system, so that the rings come from the bounded perception and may
-   * be fewer than the graph holds. The rings themselves are the same whether or not this is
-   * asked. The native core reports the same through {@code smsd::ringsTruncated()}.
+   * Whether the cached Horton basis used a work-limited fallback or did not reach the cycle
+   * rank. Relevant-cycle enumeration has its own independent completeness flag.
    *
-   * @return true when the exhaustive candidate search stopped at its work bound
+   * @return true when the minimum-basis candidate search was incomplete
    */
-  public boolean ringsTruncated() { return rings().truncated; }
+  public boolean ringsTruncated() { return basisRings().basisTruncated; }
+
+  /** Whether bounded relevant-cycle enumeration may have omitted cycles. */
+  public boolean relevantCyclesTruncated() { return rings().relevantTruncated; }
+
+  /** A minimum basis with the same deterministic tie-break as numeric native SMARTS R. */
+  int[][] numericRingBasis() { return basisRings().numericBasis; }
+
+  /** Whether the cycle set actually used by these chemistry rules is incomplete. */
+  boolean ringProofIncomplete(ChemOptions chemistry) {
+    return (chemistry.completeRingsOnly && relevantCyclesTruncated())
+        || (chemistry.ringFusionMode == ChemOptions.RingFusionMode.STRICT && ringCountsIncomplete());
+  }
 
   /**
    * The ring systems of the ring atoms, found on first use and published once, as the rings
@@ -627,6 +659,45 @@ public final class MolGraph {
    */
   public int[][][] computeURFs() {
     return RingPerception.uniqueRingFamilies(this);
+  }
+
+  /**
+   * The relevant cycles grouped into families, found once and kept: each family gives its ring
+   * size, the highest-numbered atom shared by its members, the atoms opposite it, one member and
+   * the exact number of members. {@link RelevantCycleFamilies#truncated()} reports an incomplete
+   * enumeration.
+   *
+   * @return the families, in ascending ring size and then root
+   */
+  public RelevantCycleFamilies computeRelevantCycleFamilies() {
+    RelevantCycleFamilies found = relevantCycleFamilies;
+    if (found != null) return found;
+    synchronized (this) {
+      if (relevantCycleFamilies == null) relevantCycleFamilies = RelevantCycleFamilySearch.compute(n, neighbors);
+      return relevantCycleFamilies;
+    }
+  }
+
+  /**
+   * The family that has a ring as a member.
+   *
+   * @param families families of this graph, see {@link #computeRelevantCycleFamilies()}
+   * @param ring the atom indices of a cycle, in ring order
+   * @return the index of the family in {@code families.families()}, or -1 when none has the ring
+   */
+  public int relevantCycleFamilyOf(RelevantCycleFamilies families, int[] ring) {
+    return RelevantCycleFamilySearch.familyOf(n, neighbors, families, ring);
+  }
+
+  /**
+   * Members of a family, always in the same order, the first being its prototype.
+   *
+   * @param family a family of this graph, see {@link #computeRelevantCycleFamilies()}
+   * @param limit the most members to return
+   * @return up to {@code limit} members, each as atom indices in ring order from the root
+   */
+  public int[][] relevantCycleFamilyMembers(RelevantCycleFamily family, int limit) {
+    return RelevantCycleFamilySearch.members(n, neighbors, family, limit);
   }
 
   /**
@@ -1143,6 +1214,7 @@ public final class MolGraph {
     degree = source.degree.clone();
     ringCount = source.ringCount.clone();
     ringCountsComputed = source.ringCountsComputed;
+    ringCountsTruncated = source.ringCountsTruncated;
     neighbors = copyRows(source.neighbors);
     bondOrdMatrix = copyRows(source.bondOrdMatrix);
     bondRingMatrix = copyRows(source.bondRingMatrix);
@@ -1216,6 +1288,12 @@ public final class MolGraph {
     }
   }
 
+  /** Completeness of the actual neighbour-order perception used by fusion counts. */
+  boolean ringCountsIncomplete() {
+    ensureRingCounts();
+    return ringCountsTruncated;
+  }
+
   /** Get ring counts, computing lazily if needed. */
   public int[] getRingCounts() {
     ensureRingCounts();
@@ -1223,14 +1301,8 @@ public final class MolGraph {
   }
 
   /**
-   * The relevant cycles through each atom, found over each atom's neighbours in index order,
-   * as the native core finds them. Unlike one smallest set of smallest rings they do not depend
-   * on which equivalent ring a basis keeps, so cages such as cubane count every equivalent ring.
-   * Of several equally short paths the candidate search keeps the first it reaches; reading the
-   * neighbours in index order makes that choice follow the atom order alone, and not the order
-   * in which the bonds were listed. Where a ring system has more relevant cycles of one size
-   * than the search reaches, as the macrocycle of a cyclodextrin, the counts still depend on
-   * the atom order.
+   * Compatible fusion memberships from bounded Horton candidates in neighbour-index order.
+   * The completeness flag describes that same count-producing perception.
    */
   private void computeRingCounts() {
     java.util.Arrays.fill(ringCount, 0);
@@ -1240,14 +1312,18 @@ public final class MolGraph {
         indexOrder = neighbors[atom][k - 1] < neighbors[atom][k];
     int[][] relevant;
     if (indexOrder) {
-      relevant = computeRelevantCycles();
+      RingPerception.Rings perceived = basisRings();
+      relevant = perceived.legacyRelevant;
+      ringCountsTruncated = perceived.truncated;
     } else {
       int[][] ordered = new int[n][];
       for (int atom = 0; atom < n; atom++) {
         ordered[atom] = neighbors[atom].clone();
         java.util.Arrays.sort(ordered[atom]);
       }
-      relevant = RingPerception.perceive(n, ordered).relevant;
+      RingPerception.Rings perceived = RingPerception.perceive(n, ordered, false);
+      relevant = perceived.legacyRelevant;
+      ringCountsTruncated = perceived.truncated;
     }
     for (int[] r : relevant) {
       for (int atom : r) ringCount[atom]++;

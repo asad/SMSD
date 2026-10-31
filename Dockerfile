@@ -19,7 +19,7 @@ ARG TARGETARCH
 ARG SMSD_REVISION
 LABEL org.opencontainers.image.title="SMSD Pro" \
       org.opencontainers.image.description="Command-line and Python substructure and MCS search, fingerprints and similarity screening" \
-      org.opencontainers.image.version="8.0.3" \
+      org.opencontainers.image.version="8.1.0" \
       org.opencontainers.image.revision="${SMSD_REVISION}" \
       org.opencontainers.image.source="https://github.com/asad/SMSD" \
       org.opencontainers.image.licenses="Apache-2.0 AND LGPL-2.1-or-later AND BSD-2-Clause AND GPL-2.0-only WITH Classpath-exception-2.0 AND MIT AND BSL-1.0 AND PSF-2.0" \

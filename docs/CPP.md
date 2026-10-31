@@ -7,6 +7,16 @@ quick start](../cpp/README.md#quick-start). See also the [installation
 guide](HOWTO-INSTALL.md#supported-platforms), the [Java](JAVA.md) and [Python](PYTHON.md) guides
 and the [changelog](../CHANGELOG.md).
 
+## SMARTS export in 8.1.0
+
+`MCS::matchWithSmarts(target)` returns
+`MCS::SmartsResult`, whose `result` retains the ordinary search status and whose
+`smarts` uses the prepared chemistry. `Match::toSmarts(query, chemistry)` exports
+an existing selected match. See [SMARTS export](SMARTS_EXPORT.md) for portable
+query semantics and a library-search example. Unsupported stereo, tautomer-aware,
+complete-ring and strict ring-fusion rules raise instead of weakening the query.
+The output does not encode induced MCIS or establish an optimality proof.
+
 ## Headers
 
 Include `smsd/smsd.hpp`, which includes every header below except
@@ -20,7 +30,7 @@ implementation code.
 | Search | `mcs.hpp` (`MCS`, mapping utilities); `substructure.hpp` (`Substructure`, `RGroupResult`); `search_types.hpp` (`SearchOptions`, `MCSOptions`, `SubstructureOptions`, `Match`, `SearchResult`, `SearchStatus`, `CancellationToken`); `chem_options.hpp` (`ChemOptions`) |
 | Molecules | `mol_graph.hpp` (`MolGraph`, `MolGraph::Builder`); `smiles_parser.hpp` (`parseSMILES`, `toSMILES`, `toSMARTS`); `smarts_parser.hpp` (`parseSMARTS`, `SmartsPredicateRegistry`); `parser_utils.hpp` (input limits); `mol_reader.hpp` (MOL and SDF) |
 | Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (optional CUDA or Metal screening with a CPU fallback, in `smsd::gpu`) |
-| Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, and `ringsTruncated`, which says whether the ring search stopped at its work bound); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
+| Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, `ringsTruncated` when the ring search stops before finding a complete set of rings, `relevantCyclesTruncated` for incomplete relevant-cycle enumeration, and `RingBasisUnavailable`, thrown where an exact ring basis is required but unavailable); `relevant_cycle_families.hpp` (`computeRelevantCycleFamilies`, `relevantCycleFamilyOf`, `relevantCycleFamilyMembers`: relevant cycles grouped into families with exact member counts); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
 | Data and utilities | `hungarian.hpp` (`optimalAssign`); `periodic_table.hpp` (`getElement`, `atomicWeight`, `paulingElectronegativity` and more); `scaffold_library.hpp` (reference ring systems, scaffolds, pharmacophore and functional-group SMARTS, drug-likeness limits); `bond_energies.hpp` (`bondDissociationEnergy`, `mappingBondChangeCost`, in kJ/mol); `color_palette.hpp` (`mapNumberToPaletteColor`, a fixed 20-colour cycle for atom-map numbers); `rdkit_adapter.hpp` ([optional](#optional-native-adapter)) |
 
 ## Prepared queries
@@ -75,7 +85,8 @@ the written configuration unless one is `/?` or `\?`, and an unpaired one
 matches either way.
 
 `parseSMARTS(text, maxRecursionDepth = 20)` throws `std::invalid_argument` for
-malformed SMARTS and for input over the `parser_utils.hpp` limits
+malformed SMARTS, including a pattern that ends with a bond such as `CC-`, and
+for input over the `parser_utils.hpp` limits
 `MAX_SMARTS_LENGTH`, `MAX_ATOMS` (also applied by `parseSMILES`),
 `MAX_SMARTS_EXPRESSION_NODES` and `MAX_SMARTS_NODES_PER_EXPRESSION`.
 A `SmartsPredicateRegistry` expands `$name` tokens into recursive SMARTS with
@@ -93,15 +104,29 @@ enumeration reached its match limit, or an MCES pair beyond the
 [size limits](#size-limits) was declined before any search; a declined pair
 returns no match and proves nothing. A stopped search may return an
 unproved mapping, and a capped enumeration may be optimal yet incomplete, so
-check both flags, and check `matches` before `front()`. `score` counts mapped
+check both flags, and check `matches` before `front()`. A stopped MCIS search
+can return a result or atom mapping that differs from 8.0.3 or Java (see the
+[upgrade notes](RELEASE_NOTES.md#upgrading-from-803)). `score` counts mapped
 atoms for the maximum common induced subgraph (MCIS), selected bonds for the
 maximum common edge subgraph (MCES), the summed weight for weighted MCIS, and
 query atoms for a `Substructure` match (zero without one).
 
-With `completeRingsOnly` or `RingFusionMode::STRICT`, truncated ring perception
-in either input leaves the mappings selected using the perceived rings, but
-cannot prove the result. The status is `LimitReached`, with `optimal` and
-`complete` both `false`; `TimedOut` and `Cancelled` take precedence.
+`completeRingsOnly` requires complete relevant-cycle perception;
+`RingFusionMode::STRICT` requires complete perception for its per-atom ring
+counts. If that perception is incomplete in either input, the selected mappings
+remain, but the result is `LimitReached`, with `optimal` and `complete` both
+`false`; `TimedOut` and `Cancelled` take precedence. Positive numeric SMARTS
+`R<n>` (`n > 0`) uses one deterministic minimum cycle basis, the same in C++
+and Java. If ring perception cannot complete it, a search that cannot be
+decided without it returns `LimitReached` without matches, including for
+negated, combined and recursive predicates; the empty `matches` then proves
+nothing. Literal `R` and `R0` remain independent of that basis. Other
+functions that need the basis throw `smsd::RingBasisUnavailable`, a
+`std::runtime_error`, naming the cause; `computeSSSR` and `computeRings` may
+return incomplete rings with truncation flags. `relevantCyclesTruncated` alone
+does not make the basis incomplete. Ring
+perception works within one fixed, deterministic work limit; see
+[Results and budgets](ALGORITHMS.md#results-and-budgets).
 
 A `Match` holds `atomMapping` (a `std::map<int, int>` from query to target
 atom), `bondMapping` (a `std::array<int, 4>` per selected bond: two query
@@ -111,6 +136,47 @@ bonds, as query atoms). Explicit hydrogen atoms are vertices; bracket hydrogen
 counts are not. `Match::toSmiles(query)` writes the selection with valences
 capped at cut bonds; `Match::toGraph(query)` returns it, compactly renumbered,
 with its original chemical context.
+
+### Corpus threshold decisions
+
+`Substructure::matchCorpus(corpus, gpuPrefilter, numThreads)` and
+`MCS::matchCorpus(corpus, minimumAtoms, gpuPrefilter, numThreads)` return one
+`CorpusSearchResult` per original target slot. `targetIndex` is that slot;
+`result` contains the ordinary CPU `SearchResult` when searched. It is absent
+only when a conservative filter proves rejection. `thresholdReached` needs a
+real witness; `provenBelowThreshold` needs a bound or completed CPU proof.
+Both false means unknown, including a stopped search below the threshold.
+
+```cpp
+#include <smsd/mcs.hpp>
+#include <smsd/substructure.hpp>
+#include <cassert>
+int main() {
+    smsd::batch::TargetCorpus corpus;
+    corpus.addTargets({smsd::parseSMILES("CCO"), smsd::parseSMILES("N")});
+    auto embeddings = smsd::Substructure::find("CO").matchCorpus(corpus, false, 1);
+    assert(embeddings[0].thresholdReached && embeddings[0].result);
+    assert(embeddings[1].provenBelowThreshold && !embeddings[1].result);
+    auto decisions = smsd::MCS::find("CC").matchCorpus(corpus, 2, false, 1);
+    assert(decisions[0].thresholdReached && decisions[1].atomUpperBound == 0);
+}
+```
+
+`gpuPrefilter=false`, the default, runs the same conservative filter on the
+CPU. `true` attempts the optional provider and falls back to the CPU filter.
+There is no automatic GPU selection for these new methods. For unweighted
+MCIS, `atomUpperBound` is an upper bound on the MCS atom count, and a target
+whose bound equals `minimumAtoms` is searched. When no bound is available,
+`atomUpperBound` is -1. With unsupported query chemistry, SMARTS, caps,
+immediate timeouts, cancellation tokens, MCS weights, MCES or exclusions,
+every target is searched on the CPU. A weighted or MCES result does not prove
+an atom-threshold negative. Existing `matchMany` is unchanged.
+
+Searches retain original target order and atom numbering, and each call
+searches the targets the corpus held when it started, even if targets are
+added meanwhile. `numThreads` has the ordinary batch meaning. Each target's
+search budget excludes the pre-screen, and these methods do not promise a
+whole-corpus wall-time limit.
 
 ### Size limits
 
@@ -240,7 +306,8 @@ int main() {
 - `completeRingsOnly` (`false`): retained ring atoms and bonds lie in fully
   selected relevant rings of their own input; a fusion atom needs only one.
 - `ringFusionMode` (`RingFusionMode::IGNORE`): `STRICT` requires mapped ring
-  atoms to lie in equally many relevant cycles.
+  atoms to have the same per-atom ring count; `PERMISSIVE` adds no constraint,
+  like `IGNORE`.
 - `useChirality` and `useBondStereo` (`false`): mapped tetrahedral centres and
   double bonds must agree in configuration, compared by the parity of their
   mapped neighbours, not by CIP labels (R/S, E/Z).
@@ -315,8 +382,10 @@ rounding.
   `supportCount` and verified `mappings` keyed by input index; `found` is false
   when none qualifies. `threshold` must lie in (0, 1]; atom weights and
   excluded target atoms are rejected. Consensus is heuristic, shares one budget
-  and always reports `optimal == false`. With complete rings or strict ring
-  fusion, truncated ring perception in any input makes it `LimitReached` and
+  and always reports `optimal == false`, including empty and single-input
+  calls. `complete` reports whether the progressive pass finished. Neither it
+  nor `Completed` proves a global optimum or absence of a qualifying common
+  graph. With complete rings or strict ring fusion, truncated ring perception in any input makes it `LimitReached` and
   incomplete, unless it is already `TimedOut` or `Cancelled`; its fragment and
   supporting mappings are retained.
 - `Substructure::decomposeRGroups(core, molecules, options = {})` returns an
@@ -335,7 +404,11 @@ exocyclic C=N on an aromatic ring, carries them on an aromatic bond, as RDKit
 writes it, which strict OpenSMILES readers take as a single bond.
 `toSMARTS(graph, options)` writes canonical SMARTS;
 `SmartsWriteOptions` writes aromaticity and charge by default, and ring
-membership, hydrogen count and isotope on request.
+membership, hydrogen count and isotope on request. Both writers reject a graph
+that needs more than 99 ring closures open at once. For a graph of more than
+5,000 atoms, or when canonical labelling reaches its search limit, canonical
+output can depend on the input atom order;
+`automorphismGeneratorsTruncated()` is then true.
 
 `MolGraph::Builder` sets atoms (`atomCount`, `atomicNumbers`, `formalCharges`,
 `massNumbers`, `hydrogenCounts`, `atomClasses`, `ringFlags`, `aromaticFlags`),
@@ -348,7 +421,37 @@ the supplied flags. When perception cannot read every candidate cycle of a
 molecule, as with a large bowl-shaped polyarene, the aromatic systems supplied
 on its fused ring systems keep their flags.
 
-- `extractSubgraph(graph, atoms)`: the induced subgraph, in the given order.
+`MolGraph::ringCountsTruncated()` reports whether the per-atom ring counts may
+be incomplete because ring perception reached its work limit before the
+minimum cycle basis was complete; it computes the counts first if needed.
+`MolGraph::computeRelevantCyclesFromBasis(basis, truncated)` returns the
+relevant cycles found from a given set of the graph's cycles, normally a
+minimum cycle basis, and sets `truncated` to whether the result may lack
+relevant cycles: the basis has fewer cycles than the cycle rank, or the
+enumeration reached one of its limits. With its optional third argument set to
+`false`, a basis with fewer cycles than the cycle rank no longer sets
+`truncated` and the work limit no longer stops the enumeration, which can then
+take much longer.
+
+`computeRelevantCycleFamilies(graph)` groups the relevant cycles into families
+and caches the result on the graph. Each `RelevantCycleFamily` gives the ring
+`size`, the `root` (the highest-numbered atom of every member), `first`,
+`second` and `opposite`, which locate the bond or atom opposite the root, one
+member as `prototype` and the exact `memberCount` as a decimal string, because
+counts can exceed 64 bits. `RelevantCycleFamilies::relevantCycleCount` is the
+exact number of members of the families listed, so the relevant cycles can be
+counted without listing them; `truncated` reports an incomplete enumeration,
+whose families are relevant but may not be all of them.
+`relevantCycleFamilyOf(graph, families, ring)` returns the index of the family
+that has `ring` as a member, or -1, and
+`relevantCycleFamilyMembers(graph, family, limit)` returns up to `limit`
+members, starting with the prototype. When the enumeration is complete, the
+relevant cycles and their number do not depend on the input atom order; the
+grouping into families can.
+
+- `extractSubgraph(graph, atoms)`: the induced subgraph, in the given order,
+  keeping a stereocentre whose neighbours all stay and the E/Z configuration of
+  a double bond whose ends keep the neighbours that define it.
 - `murckoScaffold(graph)`: the Bemis–Murcko scaffold (ring atoms, linkers and
   atoms double- or triple-bonded to them), capped with hydrogen, keeping
   surviving stereo; a molecule without rings is unchanged.
@@ -447,6 +550,9 @@ In `smsd::batch`:
   one hit-index vector per query, in query order. Each vector keeps target
   order. `screenMany` needs prewarmed ECFP4 fingerprints; `screenTargetsMany`
   uses the atom-count MCS similarity bound and needs no `prewarm`.
+- Errors in `prewarm` and in CPU screening reach the caller; when several
+  targets fail, the error of the first in target order is raised, whatever the
+  thread count.
 
 `similarityUpperBound(query, target, chemistry)` bounds the atom-count Tanimoto
 similarity of the MCS from above;
@@ -470,10 +576,15 @@ throws `std::invalid_argument`.
 
 ### Optional Metal fingerprint screening
 
-On macOS, configure the native source build with `-DSMSD_BUILD_METAL=ON`
-and link with `target_link_libraries(my_target PRIVATE smsd smsd_metal)`.
-Use these targets from the same source build; the installed header-only
-package does not include `smsd_metal`. Include `smsd/metal_gpu.hpp` and
+On macOS, the native source build compiles the `smsd_metal` library by default
+when Metal is available; `-DSMSD_BUILD_METAL=OFF` leaves it out and
+`-DSMSD_BUILD_METAL=ON` makes it required. A program uses Metal only when it
+links that library from the same source build, for example with
+`target_link_libraries(my_target PRIVATE smsd smsd_metal)`; the installed
+header-only package does not include `smsd_metal`. In a program linked with
+`smsd_metal`, `gpu::batchSimilarityScreenAuto` runs on a Metal GPU when one is
+available, unless `SMSD_DISABLE_GPU` disables it, and on the CPU otherwise. For
+fingerprint screening, include `smsd/metal_gpu.hpp` and
 `smsd/screen_accelerator.hpp`.
 
 `metal::fingerprintAccelerator()` supplies a resident packed-fingerprint
@@ -499,6 +610,12 @@ The separate float-valued `metal::batchSimilarityScreen` and graph-kernel
 APIs are outside this integer fingerprint contract. MCS and substructure
 search remain on the CPU.
 
+The [Metal screening example](../cpp/examples/metal_fingerprint_screen.cpp)
+screens a few molecules this way, falls back to the CPU screen when the provider
+declines or fails, and reports which path ran; configure with
+`-DSMSD_BUILD_EXAMPLES=ON` to build it. Without `smsd_metal` it builds and runs
+on the CPU alone.
+
 ### Configurable fingerprints
 
 `FingerprintOptions` gives the same bits in C++, Java and Python for
@@ -507,6 +624,9 @@ search remain on the CPU.
 `fingerprintFromSmiles` and
 `batchFingerprint(molecules, options, numThreads = 0)`, which reads any
 sequence of graphs and throws the exception of the first molecule that fails.
+An `smsd::RingBasisUnavailable` error, or the error of a key left undecided by
+its time or embedding limit, keeps its type and adds the zero-based input index
+to its message.
 `FingerprintOptions::ecfp(radius = 2, size = 2048)`,
 `fcfp(radius = 2, size = 2048)`, `path(pathLength = 7, size = 2048)` and
 `torsion(size = 2048)` reproduce `computeCircularFingerprintECFP`,
@@ -570,6 +690,14 @@ pharmacophore class; PATH sets `element`; TORSION sets `element`, `degree`,
 and unparsable SMARTS keys throw `std::invalid_argument`; a key count that
 cannot be settled within its budget throws `std::runtime_error`. These options
 do not configure the MCS screening fingerprint.
+
+A key whose minimum number of matches is found before the embedding limit is
+set; a key search that runs out of time throws, as in 8.0.3. Ring-size terms,
+double-bond stereo terms, aromatic-ring keys and SMARTS keys whose search needs
+the minimum cycle basis throw `smsd::RingBasisUnavailable` naming the cause if
+ring perception cannot complete that basis; a separate relevant-cycle truncation
+does not prevent their use. The ring refusals replace values that 8.0.3
+could compute from incomplete rings.
 
 ## Stereochemistry and depiction
 

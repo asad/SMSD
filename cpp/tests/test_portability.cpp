@@ -10,6 +10,7 @@
 #include "smsd/mol_reader.hpp"
 #include "test_support.hpp"
 #include "smsd/bitops.hpp"
+#include "smsd/batch.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -49,6 +50,64 @@ static void requireBitOperations() {
     require(!common.matches.empty() && common.matches[0].atomMapping.size() == 10, "naphthalene is not common to anthracene");
 }
 
+// The word loops, on whichever path the processor selects, against word-by-word portable counts.
+static void requireWordCounts() {
+    std::vector<uint64_t> words = {0, ~uint64_t(0), 0x5555555555555555ULL, 0xAAAAAAAAAAAAAAAAULL,
+                                   0x0F0F0F0F0F0F0F0FULL, 0x3333333333333333ULL, 0x8000000000000001ULL};
+    for (int bit = 0; bit < 64; ++bit) words.push_back(uint64_t(1) << bit);
+    uint64_t state = 0x2545F4914F6CDD1DULL;
+    for (int round = 0; round < 193; ++round) {
+        state ^= state << 13; state ^= state >> 7; state ^= state << 17;
+        words.push_back(state);
+    }
+    const size_t total = words.size();
+    std::vector<uint64_t> others(words.rbegin(), words.rend());
+    for (size_t i = 0; i < total; i += 3) others[i] = ~others[i];
+    for (size_t start = 0; start <= total; start += 37)
+        for (size_t count = 0; start + count <= total; count = count < 9 ? count + 1 : count * 2 + 1) {
+            int64_t bits = 0, common = 0, first = 0, second = 0;
+            for (size_t i = start; i < start + count; ++i) {
+                bits += smsd::popcount64_portable(words[i]);
+                common += smsd::popcount64_portable(words[i] & others[i]);
+                second += smsd::popcount64_portable(others[i]);
+            }
+            first = bits;
+            require(smsd::popcountWords(words.data() + start, count) == bits, "popcountWords miscounted a run");
+            int64_t pairCommon = 5, pairFirst = 6, pairSecond = 7;
+            smsd::popcountWordPairs(words.data() + start, others.data() + start, count, pairCommon, pairFirst, pairSecond);
+            require(pairCommon == common + 5 && pairFirst == first + 6 && pairSecond == second + 7,
+                    "popcountWordPairs miscounted a run");
+#if defined(SMSD_BITOPS_POPCNT_DISPATCH)
+            // Both paths are compared wherever the instruction exists, whichever one is selected.
+            if (smsd::detail::hasPopcntInstruction()) {
+                require(smsd::detail::popcountWordsPopcnt(words.data() + start, count) == bits,
+                        "the POPCNT word loop miscounted a run");
+                int64_t hardCommon = 0, hardFirst = 0, hardSecond = 0;
+                smsd::detail::popcountWordPairsPopcnt(words.data() + start, others.data() + start, count,
+                                                      hardCommon, hardFirst, hardSecond);
+                require(hardCommon == common && hardFirst == first && hardSecond == second,
+                        "the POPCNT pair loop miscounted a run");
+            }
+#endif
+        }
+    require(smsd::popcountWords(nullptr, 0) == 0, "an empty run has bits");
+    // Fingerprints of different lengths: the missing words of the shorter one are empty.
+    const std::vector<uint64_t> shorter(words.begin(), words.begin() + 40), longer(others.begin(), others.begin() + 71);
+    const auto counts = smsd::batch::bitCounts(shorter, longer), swapped = smsd::batch::bitCounts(longer, shorter);
+    int64_t common = 0, first = 0, second = 0;
+    for (size_t i = 0; i < longer.size(); ++i) {
+        const uint64_t a = i < shorter.size() ? shorter[i] : 0;
+        common += smsd::popcount64_portable(a & longer[i]);
+        first += smsd::popcount64_portable(a);
+        second += smsd::popcount64_portable(longer[i]);
+    }
+    require(counts.common == common && counts.first == first && counts.second == second
+                && swapped.common == common && swapped.first == second && swapped.second == first,
+            "bitCounts miscounted two fingerprints");
+    require(smsd::batch::bitCounts(std::vector<uint64_t>{}, std::vector<uint64_t>{}).first == 0,
+            "two empty fingerprints have bits");
+}
+
 static void requireSameGraph(const smsd::MolGraph& found, const smsd::MolGraph& expected) {
     require(found.n == expected.n && found.atomicNum == expected.atomicNum,
             "Unicode file changed the atom list");
@@ -85,6 +144,7 @@ public:
 int main() {
     try {
         requireBitOperations();
+        requireWordCounts();
         auto ring = smsd::MolGraph::Builder()
             .atomCount(6).atomicNumbers({6, 6, 6, 6, 6, 6})
             .setNeighbors({{1, 5}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 0}})

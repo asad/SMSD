@@ -58,8 +58,8 @@ inline int computeTotalValence(const MolGraph& g, int atom, int explicitValence,
 
 /**
  * SMARTS R<n>: the rings of the smallest set of smallest rings through the atom, as Daylight
- * defines it, with as many rings as the cycle rank. The graph's own ring counts follow the
- * relevant cycles instead, which count every equivalent ring of a symmetric cage.
+ * defines it, with as many rings as the cycle rank. The graph's fusion counts retain the
+ * bounded Horton-candidate perception used in 8.0.x; complete-ring matching uses relevant cycles.
  */
 inline int computeRingMembershipRaw(const MolGraph& g, int idx) {
     int rings = 0;

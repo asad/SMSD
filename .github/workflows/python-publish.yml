@@ -82,7 +82,7 @@ jobs:
           ]
           selected = [{**entry, 'python': version} for entry in entries
                       if target == 'all' or entry['platform'] == target
-                      for version in ('3.10', '3.11', '3.12', '3.13', '3.14')]
+                      for version in ('3.12', '3.13', '3.14', '3.15')]
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('value=' + json.dumps({'include': selected}) + '\n')
           PY
@@ -172,7 +172,7 @@ jobs:
           fetch-depth: 0
           path: release-checkout
           persist-credentials: false
-      - name: Check release hashes, frozen source and all 20 CPU wheels
+      - name: Check release hashes, frozen source and all 16 CPU wheels
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |

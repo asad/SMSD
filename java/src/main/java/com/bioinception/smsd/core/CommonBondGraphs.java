@@ -88,7 +88,7 @@ final class CommonBondGraphs {
       if (atom >= 0 && atom < excluded.length)
         excluded[atom] = true;
     clock.poll();
-    boolean pairRings = chemistry.completeRingsOnly && !query.ringsTruncated() && !target.ringsTruncated();
+    boolean pairRings = chemistry.completeRingsOnly && !query.relevantCyclesTruncated() && !target.relevantCyclesTruncated();
     VertexSearch.RingIndex queryRings = pairRings ? new VertexSearch.RingIndex(query) : null;
     VertexSearch.RingIndex targetRings = pairRings ? new VertexSearch.RingIndex(target) : null;
     atomPairs = new long[this.query.atomCount * atomWords];

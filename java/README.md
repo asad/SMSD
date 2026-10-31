@@ -11,13 +11,14 @@ only what it uses:
 
 Both run on Java 8 and later; Java 25 LTS is recommended.
 The [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
-also covers the CLI installers and Docker images.
+also covers the CLI installers.
 
 ## Installation
 
 ### Library
 
-Maven:
+Maven Central has version 8.0.3, without the 8.1.0 Java changes; to use those,
+[build from source](#build-from-source). Maven:
 
 ```xml
 <dependency>
@@ -31,6 +32,10 @@ Gradle (Kotlin DSL; in the Groovy DSL, write
 `implementation 'com.bioinceptionlabs:smsd:8.0.3'`):
 
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("com.bioinceptionlabs:smsd:8.0.3")
 }
@@ -56,15 +61,21 @@ automatic module `com.bioinception.smsd`.
 ### Command-line tool
 
 The self-contained `smsd-cli-8.0.3-jar-with-dependencies.jar` runs with
-`java -jar`, as shown under [Command-line interface](#command-line-interface).
-Download it from the [GitHub releases page](https://github.com/asad/SMSD/releases),
-or copy it from Maven Central:
+`java -jar`, in the same way as the source-built 8.1.0 JAR under
+[Command-line interface](#command-line-interface).
+The standalone command-line tool stays at 8.0.3 in this release: download it
+from the [8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3), or
+copy it from Maven Central:
 
 ```bash
 mvn dependency:copy \
   -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.3:jar:jar-with-dependencies \
   -DoutputDirectory=.
 ```
+
+The CPU [Docker images](../docs/HOWTO-INSTALL.md#docker) of this release carry
+the 8.1.0 tool, and a [source build](#build-from-source) writes it to
+`java/cli/target`.
 
 To call the CLI classes, such as `com.bioinception.smsd.cli.SMSDcli`, from an
 application, depend on the CLI module, which brings the library, picocli,
@@ -81,6 +92,10 @@ Jackson and the CDK file readers. Maven:
 Gradle (Kotlin DSL):
 
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("com.bioinceptionlabs:smsd-cli:8.0.3")
 }
@@ -89,7 +104,7 @@ dependencies {
 On the module path, the CLI JAR is the automatic module
 `com.bioinception.smsd.cli`. Packaged installers for Windows, macOS and Linux
 are described under
-[Java CLI installers](../docs/HOWTO-INSTALL.md#java-cli-installers).
+[Java CLI installers](../docs/HOWTO-INSTALL.md#portable-java-cli).
 
 ### Build from source
 
@@ -105,10 +120,19 @@ The build writes:
 
 | File | Use |
 | --- | --- |
-| `java/core/target/smsd-8.0.3.jar` | Library; Maven resolves its dependencies |
-| `java/cli/target/smsd-cli-8.0.3.jar` | CLI classes; Maven resolves their dependencies |
-| `java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
+| `java/core/target/smsd-8.1.0.jar` | Library; Maven resolves its dependencies |
+| `java/cli/target/smsd-cli-8.1.0.jar` | CLI classes; Maven resolves their dependencies |
+| `java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
 | `java/cli/target/appassembler/` | Portable `bin/smsd` launchers and the JARs they use, in `repo/` |
+
+## SMARTS export
+
+`MCS.matchWithSmarts(target)` returns the ordinary result and a pattern written
+under the prepared chemistry. `SearchResult.Match.toSmarts(query, chemistry)`
+and `SmartsWriter.toSmarts(graph, chemistry)` also support explicit export.
+See [SMARTS export](../docs/SMARTS_EXPORT.md) for an MCS-to-library example and
+the unsupported stereo, tautomer and ring constraints. Portable SMARTS does not
+encode the induced MCIS objective or establish an optimality proof.
 
 ## Quick start
 
@@ -158,12 +182,12 @@ After the build above, compile and run it from the repository root against the
 self-contained JAR, which includes the library, CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar CDKExample.java
-java -cp "java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar:." CDKExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar CDKExample.java
+java -cp "java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:." CDKExample
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
-entries with a semicolon: `"java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar;."`.
+entries with a semicolon: `"java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar;."`.
 
 By default, `MCS` finds a connected maximum common induced subgraph (MCIS),
 maximising atoms and then bonds, and `Substructure` finds a non-induced
@@ -179,10 +203,10 @@ timeouts and the full result contract.
 From the repository root:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SMI --q "CC(=O)NC" --T SMI --t "CCC(=O)N" --mode mcs --json -
 ```
 

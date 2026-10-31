@@ -308,6 +308,20 @@ public final class SearchResult {
       return toSmiles(new MolGraph(query));
     }
 
+    /**
+     * A portable SMARTS query over the selected atoms and common bonds, retaining their source
+     * context. Unsupported chemistry predicates throw {@link IllegalArgumentException}; the
+     * pattern describes a subgraph query and does not encode an induced MCIS objective.
+     */
+    public String toSmarts(MolGraph query, ChemOptions chemistry) {
+      return SmartsWriter.write(query, atomMapping.keySet(), bondMapping.keySet(), chemistry);
+    }
+
+    /** The selected common graph as SMARTS, reading atom indices from the supplied molecule. */
+    public String toSmarts(org.openscience.cdk.interfaces.IAtomContainer query, ChemOptions chemistry) {
+      return toSmarts(new MolGraph(query), chemistry);
+    }
+
     @Override
     public boolean equals(Object other) {
       if (!(other instanceof Match))

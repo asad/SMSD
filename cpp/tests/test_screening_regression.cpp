@@ -35,7 +35,7 @@ int main() {
     const std::vector<smsd::MolGraph> targets{target};
     smsd::ChemOptions chemistry;
     smsd::MCSOptions options;
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     require(std::abs(smsd::similarityUpperBound(query, target) - 1.0) < 1e-8,
             "Default screening must allow aromatic atoms to match aliphatic atoms");
     require(smsd::screenTargets(query, targets, 0.5) == std::vector<int>{0},

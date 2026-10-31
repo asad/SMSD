@@ -97,6 +97,7 @@ inline Match makeMatch(const std::vector<int>& mapping, std::vector<std::array<i
     for (size_t atom = 0; atom < mapping.size(); ++atom)
         if (mapping[atom] >= 0) result.atomMapping.emplace_hint(result.atomMapping.end(), static_cast<int>(atom), mapping[atom]);
     std::sort(bonds.begin(), bonds.end());
+    bonds.erase(std::unique(bonds.begin(), bonds.end()), bonds.end());
     result.bondMapping = std::move(bonds);
     // One buffer holds both the union-find parents and the fragment numbers.
     std::vector<int> scratch(2 * mapping.size(), -1);
@@ -289,9 +290,9 @@ inline std::shared_ptr<const CycleList> recentRelevantCycles(const MolGraph& gra
         if (truncated) *truncated = recent.front().truncated;
         return recent.front().cycles;
     }
-    bool stopped = false;
-    auto cycles = std::make_shared<const CycleList>(graph.computeRelevantCyclesReportingTruncation(stopped));
-    stopped = stopped || smsd::ringsTruncated(graph);
+    const auto& perceived = smsd::detail_rf::cachedRingSets(graph);
+    auto cycles = std::shared_ptr<const CycleList>(graph.cachedRingSets_, &perceived.rcb);
+    const bool stopped = perceived.relevantTruncated;
     std::rotate(recent.begin(), recent.end() - 1, recent.end());
     recent.front() = Entry{&graph, graph.cacheNonce, graph.n, bondEnds, cycles, stopped};
     if (truncated) *truncated = stopped;
@@ -502,8 +503,9 @@ public:
 
 using TranspositionKey = std::array<int, 10>;
 
-/** Every atom property that transposable() compares, so that atoms can also be grouped by them. */
-inline TranspositionKey transpositionKey(const MolGraph& graph, int atom) {
+/** Compared atom properties; the element/topology mode requires its caller to certify that narrower contract. */
+inline TranspositionKey transpositionKey(const MolGraph& graph, int atom, bool elementTopologyOnly = false) {
+    if (elementTopologyOnly) return {graph.atomicNum[atom], 0, 0, 0, 0, 0, 0, graph.degree[atom], 0, 0};
     auto property = [atom](const auto& values, int fallback = 0) {
         return atom < static_cast<int>(values.size()) ? static_cast<int>(values[atom]) : fallback;
     };
@@ -512,16 +514,18 @@ inline TranspositionKey transpositionKey(const MolGraph& graph, int atom) {
             property(graph.ringCount), property(graph.tautomerClass, -1)};
 }
 
-/** Whether exchanging an earlier atom with a later one preserves every compared property and bond. */
-inline bool transposable(const MolGraph& graph, int first, int second, const std::vector<double>* weights) {
+/** Whether a transposition preserves the chosen predicates on a certified simple reciprocal graph. */
+inline bool transposable(const MolGraph& graph, int first, int second, const std::vector<double>* weights,
+                         bool elementTopologyOnly = false) {
     if (graph.atomicNum[first] != graph.atomicNum[second] || graph.degree[first] != graph.degree[second]
-        || transpositionKey(graph, first) != transpositionKey(graph, second)
+        || transpositionKey(graph, first, elementTopologyOnly) != transpositionKey(graph, second, elementTopologyOnly)
         || (weights && !weights->empty() && (*weights)[first] != (*weights)[second])) return false;
     for (int neighbor : graph.neighbors[first]) {
         if (neighbor == second) continue;
-        if (!graph.hasBond(second, neighbor) || graph.bondOrder(first, neighbor) != graph.bondOrder(second, neighbor)
+        if (!graph.hasBond(second, neighbor)) return false;
+        if (!elementTopologyOnly && (graph.bondOrder(first, neighbor) != graph.bondOrder(second, neighbor)
             || graph.bondInRing(first, neighbor) != graph.bondInRing(second, neighbor)
-            || graph.bondAromatic(first, neighbor) != graph.bondAromatic(second, neighbor)) return false;
+            || graph.bondAromatic(first, neighbor) != graph.bondAromatic(second, neighbor))) return false;
     }
     return true;
 }
@@ -540,18 +544,18 @@ inline bool hasStereoTags(const MolGraph& graph) {
  * class of the earliest atom transposable with it, or keeps its own.
  */
 inline std::vector<int> transpositionClasses(const MolGraph& graph, Budget& budget,
-                                             const std::vector<double>* weights = nullptr) {
-    if (hasStereoTags(graph)) return {};
+                                             const std::vector<double>* weights = nullptr, bool elementTopologyOnly = false) {
+    if (!elementTopologyOnly && hasStereoTags(graph)) return {};
     std::vector<int> classes = SpareVectors<int>::take(static_cast<size_t>(graph.n), 0);
     std::iota(classes.begin(), classes.end(), 0);
     bool hasTranspositions = false;
     for (int first = 0; first < graph.n && !budget.stopped(); ++first)
         for (int second = first + 1; second < graph.n; ++second) {
-            if (classes[second] != second || !transposable(graph, first, second, weights)) continue;
+            if (classes[second] != second || !transposable(graph, first, second, weights, elementTopologyOnly)) continue;
             classes[second] = classes[first];
             hasTranspositions = true;
         }
-    if (!hasTranspositions) {
+    if (!hasTranspositions || (elementTopologyOnly && budget.stopped())) {
         SpareVectors<int>::give(classes);
         return {};
     }

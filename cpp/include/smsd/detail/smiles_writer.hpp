@@ -199,12 +199,16 @@ inline std::vector<std::vector<int>> connectedComponents(const MolGraph& g) {
  * neighbours in canonical order. A first pass assigns ring-closure numbers to the back
  * edges; the second pass emits, for every atom, atomToken(atom, parent, children, ringDigits),
  * then each ring digit preceded by ringBond(atom, digit, opening), then the children,
- * each preceded by bond(atom, child) and all but the last wrapped in a branch.
+ * each preceded by bond(atom, child) and all but the last wrapped in a branch. A component
+ * that needs more than 99 simultaneously open ring closures throws std::invalid_argument
+ * with closureLimitMessage, which names the output being written.
  */
 template <class AtomToken, class RingBond, class Bond>
 inline std::string writeCanonicalComponent(const MolGraph& g, const std::vector<int>& canon,
                                            const std::vector<int>& component,
-                                           AtomToken&& atomToken, RingBond&& ringBond, Bond&& bond) {
+                                           AtomToken&& atomToken, RingBond&& ringBond, Bond&& bond,
+                                           const char* closureLimitMessage =
+                                               "SMILES output needs more than 99 simultaneously open ring closures") {
     const int n = g.n;
     auto sortedNeighbors = [&](int atom) {
         std::vector<int> nbs = g.neighbors[atom];
@@ -223,57 +227,100 @@ inline std::string writeCanonicalComponent(const MolGraph& g, const std::vector<
     std::set<int64_t> assignedRings;
     std::vector<std::vector<RingDigit>> ringDigits(n);
     int ringCounter = 1;
-    std::function<void(int, int)> dfs1 = [&](int atom, int parent) {
-        vis[atom] = true;
+    struct ScanFrame {
+        int atom;
+        int parent;
+        std::vector<int> neighbors;
+        size_t next = 0;
         bool parentSkipped = false;
-        for (int nb : sortedNeighbors(atom)) {
-            if (nb == parent && !parentSkipped) { parentSkipped = true; continue; }
-            if (vis[nb]) {
-                if (assignedRings.insert(MolGraph::bondKey(atom, nb)).second) {
-                    const int rn = ringCounter++;
-                    const int bo = g.bondOrder(atom, nb);
-                    ringDigits[atom].push_back({rn, bo, nb});
-                    ringDigits[nb].push_back({rn, bo, atom});
-                }
-            } else {
-                treeEdges.insert(MolGraph::bondKey(atom, nb));
-                dfs1(nb, atom);
-            }
-        }
     };
-    dfs1(root, -1);
+    std::vector<ScanFrame> scan;
+    vis[root] = true;
+    scan.push_back({root, -1, sortedNeighbors(root)});
+    while (!scan.empty()) {
+        auto& frame = scan.back();
+        if (frame.next == frame.neighbors.size()) {
+            scan.pop_back();
+            continue;
+        }
+        const int atom = frame.atom;
+        const int neighbor = frame.neighbors[frame.next++];
+        if (neighbor == frame.parent && !frame.parentSkipped) {
+            frame.parentSkipped = true;
+            continue;
+        }
+        if (vis[neighbor]) {
+            if (assignedRings.insert(MolGraph::bondKey(atom, neighbor)).second) {
+                const int ring = ringCounter++;
+                const int order = g.bondOrder(atom, neighbor);
+                ringDigits[atom].push_back({ring, order, neighbor});
+                ringDigits[neighbor].push_back({ring, order, atom});
+            }
+        } else {
+            treeEdges.insert(MolGraph::bondKey(atom, neighbor));
+            vis[neighbor] = true;
+            scan.push_back({neighbor, atom, sortedNeighbors(neighbor)});
+        }
+    }
 
-    // Pass 2: emit the tokens.
+    // Pass 2: emit the tokens, reusing a ring label after its second occurrence.
     vis.assign(n, false);
     std::string text;
     std::unordered_set<int> emittedRings;
-    std::function<void(int, int)> dfs2 = [&](int atom, int parent) {
+    std::vector<int> ringLabels(ringCounter, 0);
+    bool usedLabels[100] = {};
+    struct EmitFrame {
+        int atom;
+        std::vector<int> children;
+        size_t next = 0;
+        bool closeBranch = false;
+    };
+    std::vector<EmitFrame> emission;
+    auto enter = [&](int atom, int parent, bool closeBranch) {
         vis[atom] = true;
         std::vector<int> children;
-        for (int nb : sortedNeighbors(atom))
-            if (!vis[nb] && treeEdges.count(MolGraph::bondKey(atom, nb))) children.push_back(nb);
+        for (int neighbor : sortedNeighbors(atom))
+            if (!vis[neighbor] && treeEdges.count(MolGraph::bondKey(atom, neighbor)))
+                children.push_back(neighbor);
         text += atomToken(atom, parent, children, ringDigits[atom]);
         for (const auto& digit : ringDigits[atom]) {
             const bool opening = emittedRings.insert(digit.rn).second;
-            text += ringBond(atom, digit, opening);
-            if (digit.rn < 10) text += std::to_string(digit.rn);
-            else text += "%" + std::to_string(digit.rn);
-        }
-        for (size_t i = 0; i < children.size(); i++) {
-            const int nb = children[i];
-            if (vis[nb]) continue;
-            const std::string symbol = bond(atom, nb);
-            if (i < children.size() - 1) {
-                text += "(" + symbol;
-                dfs2(nb, atom);
-                text += ")";
-            } else {
-                text += symbol;
-                dfs2(nb, atom);
+            int label = ringLabels[digit.rn];
+            if (opening) {
+                label = digit.rn;
+                if (label > 99 || usedLabels[label]) {
+                    label = 1;
+                    while (label <= 99 && usedLabels[label]) ++label;
+                }
+                if (label > 99) throw std::invalid_argument(closureLimitMessage);
+                usedLabels[label] = true;
+                ringLabels[digit.rn] = label;
             }
+            text += ringBond(atom, digit, opening);
+            if (label < 10) text += std::to_string(label);
+            else text += "%" + std::to_string(label);
+            if (!opening) usedLabels[label] = false;
         }
+        emission.push_back({atom, std::move(children), 0, closeBranch});
     };
-    dfs2(root, -1);
+    enter(root, -1, false);
+    while (!emission.empty()) {
+        auto& frame = emission.back();
+        if (frame.next == frame.children.size()) {
+            if (frame.closeBranch) text += ")";
+            emission.pop_back();
+            continue;
+        }
+        const int atom = frame.atom;
+        const size_t childIndex = frame.next++;
+        const int child = frame.children[childIndex];
+        if (vis[child]) continue;
+        const bool branch = childIndex < frame.children.size() - 1;
+        const std::string symbol = bond(atom, child);
+        if (branch) text += "(";
+        text += symbol;
+        enter(child, atom, branch);
+    }
     return text;
 }
 

@@ -1385,3 +1385,36 @@ class TestResultAndSmilesWriterContracts:
                 f"SMSD canonical output {out!r} (from {smi_in!r}) "
                 f"is not RDKit-parseable"
             )
+
+
+# ===========================================================================
+# Relevant-cycle families
+# ===========================================================================
+
+class TestRelevantCycleFamilies:
+    """Relevant cycles grouped into families, with exact member counts."""
+
+    def test_families_of_naphthalene(self):
+        result = smsd.compute_relevant_cycle_families(NAPHTHALENE)
+        assert isinstance(result, smsd.RelevantCycleFamilies)
+        assert [family.size for family in result.families] == [6, 6]
+        assert result.relevant_cycle_count == 2 and not result.truncated
+
+    def test_family_record_fields(self):
+        family = smsd.compute_relevant_cycle_families(BENZENE).families[0]
+        assert isinstance(family, smsd.RelevantCycleFamily)
+        assert (family.size, family.root, family.first, family.second, family.opposite) == (6, 5, 1, 3, 2)
+        assert family.prototype[0] == family.root and family.member_count == 1
+
+    def test_membership_and_members(self):
+        mol = smsd.parse_smiles(NAPHTHALENE)
+        families = smsd.compute_relevant_cycle_families(mol)
+        for index, family in enumerate(families.families):
+            members = smsd.relevant_cycle_family_members(mol, family, 5)
+            assert members == [family.prototype]
+            assert smsd.relevant_cycle_family_of(mol, families, members[0]) == index
+        assert smsd.relevant_cycle_family_of(mol, families, [0, 1, 2]) == -1
+
+    def test_acyclic_molecule_has_no_families(self):
+        result = smsd.compute_relevant_cycle_families(ETHANOL)
+        assert result.families == [] and result.relevant_cycle_count == 0 and not result.truncated
