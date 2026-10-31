@@ -52,6 +52,10 @@ static smsd::MolGraph molecule(int n, const Bonds& bonds, bool uniqueLabels = fa
     return smsd::MolGraph::Builder().atomCount(n).atomicNumbers(labels).setNeighbors(adjacent).setBondOrders(orders).build(false);
 }
 
+// Small searches here must prove their answers; the limit only guards against a hang, so it
+// allows for slow Debug builds sharing a runner with other tests.
+static constexpr int kProofTimeoutMs = 30000;
+
 static int completeSubgraphOracle(const Graph& graph) {
     int maximum = 0;
     for (unsigned mask = 1; mask < (1u << graph.n); ++mask) {
@@ -74,7 +78,7 @@ static void verifyCompleteSubgraph(const Graph& graph) {
         for (int neighbor : graph.adj[atom]) if (atom < neighbor) source[{atom, neighbor}] = 1;
         for (int neighbor = atom + 1; neighbor < graph.n; ++neighbor) complete[{atom, neighbor}] = 1;
     }
-    const auto result = smsd::MCS::find(molecule(graph.n, source)).withTimeout(1000).match(molecule(graph.n, complete));
+    const auto result = smsd::MCS::find(molecule(graph.n, source)).withTimeout(kProofTimeoutMs).match(molecule(graph.n, complete));
     std::string context;
     if (!result.optimal || !result.complete) {
         std::uint64_t mask = 0;
@@ -132,7 +136,7 @@ static void testCompleteInputConnectivity() {
         for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
             smsd::MCSOptions options;
             options.connectivity = connectivity;
-            options.timeoutMs = 1000;
+            options.timeoutMs = kProofTimeoutMs;
             const auto single = smsd::MCS::find(query).withOptions(options).match(target);
             require(single.status == smsd::SearchStatus::Completed && single.optimal && single.complete
                     && single.score == 2.0 && single.matches.size() == 1,
@@ -157,7 +161,7 @@ static void testCompleteInputConnectivity() {
             const auto timedOut = smsd::MCS::find(query).withOptions(options).match(target);
             require(timedOut.status == smsd::SearchStatus::TimedOut && !timedOut.optimal && !timedOut.complete
                     && timedOut.matches.empty(), "expired complete-input searches must do no work");
-            options.timeoutMs = 1000;
+            options.timeoutMs = kProofTimeoutMs;
             options.cancellation = std::make_shared<smsd::CancellationToken>();
             options.cancellation->cancel();
             const auto cancelled = smsd::MCS::find(query).withOptions(options).match(target);
@@ -186,7 +190,7 @@ static void testCompleteInputConnectivity() {
         for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
             smsd::MCSOptions options;
             options.connectivity = connectivity;
-            options.timeoutMs = 1000;
+            options.timeoutMs = kProofTimeoutMs;
             const auto result = smsd::MCS::find(noncompleteQuery).withOptions(options).match(noncompleteTarget);
             require(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete
                     && result.score == (connectivity == smsd::MCSConnectivity::Connected ? 1.0 : 2.0),
@@ -266,7 +270,7 @@ static void testSubstructureOracle() {
                             require(rejected, "zero result cap must be rejected");
                             continue;
                         }
-                        const auto result = smsd::Substructure::find(molecule(nQuery, query)).withTimeout(1000).matchAll(molecule(nTarget, target), cap);
+                        const auto result = smsd::Substructure::find(molecule(nQuery, query)).withTimeout(kProofTimeoutMs).matchAll(molecule(nTarget, target), cap);
                         std::vector<Mapping> found;
                         for (const auto& match : result.matches) found.emplace_back(match.atomMapping.begin(), match.atomMapping.end());
                         require(found.size() == std::min(expected.size(), static_cast<std::size_t>(cap)),
@@ -290,7 +294,7 @@ static void testMolecularValidity() {
     const auto source = molecule(3, query, true);
     for (const auto& target : {Bonds{}, wrongOrders}) {
         const auto destination = molecule(3, target, true);
-        const auto result = smsd::MCS::find(source).withTimeout(1000).match(destination);
+        const auto result = smsd::MCS::find(source).withTimeout(kProofTimeoutMs).match(destination);
         require(result.optimal && result.score <= 2.0, "strict bonds falsely reach the full graph");
         for (const auto& match : result.matches)
             require(smsd::MCS::validateMapping(source, destination, match).empty(), "search returned incompatible bonds");
