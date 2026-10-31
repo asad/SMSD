@@ -28,7 +28,7 @@
     
   
       
-        <title>AI assistants - SMSD Pro</title>
+        <title>AI assistants and models - SMSD Pro</title>
       
     
 
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              AI assistants
+              AI assistants and models
             
           </span>
         </div>
@@ -1052,6 +1052,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/ai_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMSD Pro tools for AI models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1363,7 +1391,7 @@
   <span class="md-ellipsis">
     
   
-    AI assistants
+    AI assistants and models
   
 
     
@@ -1381,7 +1409,7 @@
   <span class="md-ellipsis">
     
   
-    AI assistants
+    AI assistants and models
   
 
     
@@ -1405,6 +1433,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-your-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose your model
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#install" class="md-nav__link">
@@ -1766,6 +1805,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#choose-your-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose your model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#install" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2003,6 +2053,46 @@ over the network. A hosted assistant sends your prompts, tool arguments and
 results, including any structures, to its model provider.</p>
 <p>The eight tools and their results are described in
 <a href="../MCP_SERVER/">Molecular tools and MCP</a>.</p>
+<h2 id="choose-your-model">Choose your model<a class="headerlink" href="#choose-your-model" title="Permanent link">&para;</a></h2>
+<p>Where your structures may go decides the model. For proprietary or
+unpublished chemistry, start with an open model on your own hardware: the
+prompts, structures and results never leave your site.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Where prompts, structures and results go</th>
+<th>Keys needed</th>
+<th>Read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open models on your own hardware: Ollama, vLLM, llama.cpp or LM Studio serving gpt-oss, Qwen 3 or Gemma 4</td>
+<td>Nowhere: they stay on your machine or your own servers</td>
+<td>None</td>
+<td><a href="#open-models">Open models</a>, <a href="#goose-with-a-local-model">Goose with a local model</a>, <a href="#mcp-with-a-local-model">MCP with a local model</a></td>
+</tr>
+<tr>
+<td>Hosted open models, such as the DeepSeek API</td>
+<td>The model provider's servers</td>
+<td>The provider's key, such as <code>DEEPSEEK_API_KEY</code></td>
+<td><a href="#one-loop-for-deepseek-and-local-runtimes">One loop for DeepSeek and local runtimes</a></td>
+</tr>
+<tr>
+<td>Hosted closed models: Claude, OpenAI, Gemini</td>
+<td>The model provider's servers</td>
+<td><code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code> or <code>GEMINI_API_KEY</code>; none for a desktop or terminal assistant you sign in to</td>
+<td><a href="#connect-the-mcp-server">Connect the MCP server</a>, <a href="#use-the-tool-definitions-from-python">Use the tool definitions from Python</a></td>
+</tr>
+</tbody>
+</table>
+<p>In each case SMSD runs the tools locally; only the model's side of the
+conversation differs. gpt-oss (20b and 120b) is released under the Apache 2.0
+licence, and the 20b model runs on a single workstation. The notebook
+<a href="../python/examples/ai_tools.ipynb"><code>python/examples/ai_tools.ipynb</code></a> runs the
+tools first without a model, then with a local model, and runs the hosted
+examples only when their keys are set.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[mcp]&gt;=8.1.0"</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>which<span class="w"> </span>smsd-mcp<span class="w">    </span><span class="c1"># Windows: where.exe smsd-mcp</span>
@@ -2050,8 +2140,9 @@ Reference: <a href="https://code.claude.com/docs/en/mcp">Claude Code MCP</a>.</p
 <p>Replace the command with the absolute path printed by <code>which smsd-mcp</code> or
 <code>where.exe smsd-mcp</code>, because Claude Desktop may not find commands on your
 shell's PATH. In JSON, write Windows paths with doubled backslashes or forward
-slashes. Quit Claude Desktop fully and restart it. The server then appears
-under Connectors in the chat <code>+</code> menu. Server output is logged to
+slashes. Quit Claude Desktop fully and restart it. The server then appears in
+the chat menu under Add files, connectors, and more &gt; Connectors &gt; Manage
+connectors. Server output is logged to
 <code>mcp-server-smsd.log</code> in <code>~/Library/Logs/Claude</code> (macOS) or
 <code>%APPDATA%\Claude\logs</code> (Windows). Reference:
 <a href="https://modelcontextprotocol.io/docs/develop/connect-local-servers">Connect to local MCP servers</a>.</p>
@@ -2100,9 +2191,10 @@ manager:</p>
 <code>goose configure</code>, choose Ollama as the provider, confirm the API host
 <code>http://localhost:11434</code> and choose a model with tool support, such as <code>qwen3</code>
 (<a href="https://ollama.com/search?c=tools">models with tools</a>). On machines with less
-than 24 GiB of VRAM, Ollama's default context is 4k, which is small for eight
-tool definitions; start Ollama with <code>OLLAMA_CONTEXT_LENGTH=8192 ollama serve</code>.
-Then add SMSD under <code>extensions:</code> in <code>~/.config/goose/config.yaml</code>
+than 24 GiB of VRAM, Ollama's default context is 4k. Ollama recommends at
+least 64,000 tokens for agents and tool use, so start it with
+<code>OLLAMA_CONTEXT_LENGTH=64000 ollama serve</code>; <code>ollama ps</code> shows the context in
+use. Then add SMSD under <code>extensions:</code> in <code>~/.config/goose/config.yaml</code>
 (Windows: <code>%APPDATA%\Block\goose\config\config.yaml</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">extensions</span><span class="p">:</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">smsd</span><span class="p">:</span>
@@ -2260,6 +2352,7 @@ request out of storage, which is on by default for new paid projects from
 a current model on 29 October 2026; see
 <a href="https://ai.google.dev/gemini-api/docs/models">Gemini models</a>. Google
 recommends its Interactions API for new projects
+and, on 31 October 2026, marked its Generate Content pages as legacy
 (<a href="https://ai.google.dev/gemini-api/docs/generate-content/get-started">Generate Content</a>);
 its function tools use the flat <code>type</code>, <code>name</code>, <code>description</code> and <code>parameters</code>
 shape of the <code>function</code> value. References:
@@ -2343,10 +2436,11 @@ Reference:
 <p>On 29 October 2026, OpenAI's
 <a href="https://developers.openai.com/api/docs/guides/migrate-to-responses">migration guide</a>
 stated that, from GPT-5.4 onwards, Chat Completions supports tool calls only
-with <code>reasoning_effort="none"</code>. <code>gpt-5.6-terra</code> was available on that date and
-supports this setting. GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra need the
-Responses API for tool calls; see
-<a href="https://developers.openai.com/api/docs/models">OpenAI models</a>. The same loop
+with <code>reasoning_effort="none"</code>. <code>gpt-5.6-terra</code> was available on that date;
+choose a current model from
+<a href="https://developers.openai.com/api/docs/models">OpenAI models</a>. On 31 October
+2026, GPT-6 Astra and GPT-6.1 Sol required the Responses API for tool calls
+(<a href="https://developers.openai.com/api/docs/deprecations">deprecations</a>). The same loop
 works with other Chat Completions services; see <a href="#open-models">Open models</a>.</p>
 <h2 id="open-models">Open models<a class="headerlink" href="#open-models" title="Permanent link">&para;</a></h2>
 <h3 id="one-loop-for-deepseek-and-local-runtimes">One loop for DeepSeek and local runtimes<a class="headerlink" href="#one-loop-for-deepseek-and-local-runtimes" title="Permanent link">&para;</a></h3>
@@ -2431,7 +2525,7 @@ listed in alphabetical order.</p>
 </tr>
 <tr>
 <td>Ollama</td>
-<td><code>ollama pull qwen3</code>, then <code>ollama serve</code></td>
+<td><code>ollama pull qwen3</code>, then <code>OLLAMA_CONTEXT_LENGTH=64000 ollama serve</code></td>
 <td><code>http://localhost:11434/v1/</code></td>
 <td><code>qwen3</code></td>
 </tr>
@@ -2443,7 +2537,7 @@ listed in alphabetical order.</p>
 </tr>
 </tbody>
 </table>
-<p>Notes on each runtime, as of 29 October 2026:</p>
+<p>Notes on each runtime, as of 31 October 2026:</p>
 <ul>
 <li>DeepSeek API: thinking mode is on by default and supports tool calls. The
   loop appends each assistant message whole, which passes back its
@@ -2452,24 +2546,34 @@ listed in alphabetical order.</p>
   DeepSeek also publishes open weights, such as <code>DeepSeek-V4.1-Flash-1017</code>
   (763B parameters;
   <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017">model card</a>).</li>
-<li>llama.cpp: native tool-call formats include Hermes 2 and 3, Llama 3.1 to
-  3.3, Mistral Nemo and Qwen 2.5. DeepSeek R1 is listed as work in progress.
+<li>llama.cpp: native tool-call formats include Command R7B, Firefunction v2,
+  Functionary v3.1 and v3.2, GPT-OSS (Harmony), Hermes 2 and 3, Llama 3.1 to
+  3.3, Mistral Nemo, Qwen 2.5 and Qwen 2.5 Coder. DeepSeek R1 is listed as
+  work in progress.
   Other models use a generic format. The default port changed from 8080 to
   9931, so the commands on this page set it. Reference:
   <a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/function-calling.md">function calling</a>.</li>
 <li>LM Studio: Qwen, Llama 3.1, Llama 3.2 and Mistral models have native tool
   use; other models use LM Studio's default tool format. Reference:
   <a href="https://lmstudio.ai/docs/developer/openai-compat/tools">LM Studio tool use</a>.</li>
-<li>Ollama: models with tool support in its library include <code>gemma4</code>, <code>gpt-oss</code>,
-  <code>llama3.1</code>, <code>mistral-small3.2</code>, <code>muse-glimmer</code>, <code>qwen3</code> and <code>qwen3.8</code>. Some
-  entries, such as <code>deepseek-v4.1-flash</code>, have only cloud tags; choose a local
-  tag to keep data on your machine. Ollama sets its default context from the
-  available VRAM: 4k below 24 GiB, 32k from 24 to 48 GiB and 256k from 48 GiB.
-  A 4k context is small for eight tool definitions; on such machines start the
-  server with <code>OLLAMA_CONTEXT_LENGTH=8192 ollama serve</code>. Ollama does not
-  support <code>tool_choice</code>, and the loop does not send it. References:
+<li>Ollama: models with tool support in its library include <code>gemma4</code>,
+  <code>gpt-oss</code>, <code>muse-glimmer</code>, <code>qwen3</code> and <code>qwen3.8</code>; <code>gemma4</code>, <code>gpt-oss</code> and
+  <code>qwen3</code> run locally. Some entries, such as <code>deepseek-v4.1-flash</code>, have only
+  cloud tags; choose a local tag to keep data on your machine. Ollama sets its
+  default context from the available VRAM: 4k below 24 GiB, 32k from 24 to
+  48 GiB and 256k from 48 GiB. Ollama recommends at least 64,000 tokens for
+  agents and tool use; start the server with
+  <code>OLLAMA_CONTEXT_LENGTH=64000 ollama serve</code> and check the CONTEXT column of
+  <code>ollama ps</code>. A longer context needs more memory. Ollama does not support
+  <code>tool_choice</code>, and the loop does not send it. From version 0.13.3, Ollama
+  also serves the Responses API at <code>http://localhost:11434/v1/</code>: the
+  <a href="#openai-responses-api">OpenAI Responses loop</a> runs against a local model
+  with <code>client = OpenAI(base_url="http://localhost:11434/v1/", api_key="local")</code>
+  and the Ollama model name. <code>https://ollama.com/v1</code> is Ollama's hosted
+  service, not your machine. References:
   <a href="https://ollama.com/search?c=tools">tools listing</a>,
-  <a href="https://docs.ollama.com/context-length">context length</a>.</li>
+  <a href="https://docs.ollama.com/context-length">context length</a>,
+  <a href="https://docs.ollama.com/api/openai-compatibility">compatibility endpoint</a>.</li>
 <li>vLLM: tool calls need <code>--enable-auto-tool-choice</code> and a <code>--tool-call-parser</code>
   that matches the model. The command above follows
   <a href="https://qwen.readthedocs.io/en/latest/framework/function_call.html">Qwen's vLLM instructions</a>;
@@ -2477,8 +2581,10 @@ listed in alphabetical order.</p>
   <a href="https://docs.vllm.ai/en/latest/features/reasoning_outputs.html">reasoning page</a>
   gives <code>--reasoning-parser qwen3</code> for the Qwen3 series. vLLM's
   <a href="https://docs.vllm.ai/en/latest/features/tool_calling.html">tool-calling page</a>
-  gives the parser for other families, including DeepSeek, Llama and Mistral.
-  For Gemma 4, the
+  gives the parser for other families, including DeepSeek, Llama and Mistral:
+  <code>openai</code> for gpt-oss, <code>qwen3_xml</code> for Qwen3-Coder and <code>deepseek_v31</code> for
+  DeepSeek V3.1. vLLM also accepts <code>tool_choice="required"</code> and a named
+  function in <code>tool_choice</code>, which the loop does not need. For Gemma 4, the
   <a href="https://docs.vllm.ai/projects/recipes/en/stable/Google/Gemma4.html">Gemma 4 recipe</a>
   gives <code>--enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4</code>, together with a chat template.</li>
 </ul>
@@ -2511,7 +2617,9 @@ servers under Settings &gt; MCP Servers (<a href="https://docs.jan.ai/desktop/mc
 In either, enter the absolute path to <code>smsd-mcp</code> as the command.</p>
 <h2 id="keeping-this-current">Keeping this current<a class="headerlink" href="#keeping-this-current" title="Permanent link">&para;</a></h2>
 <p>The commands, settings and model IDs on this page follow each vendor's
-documentation as of 29 October 2026. Assistants and model lists change
+documentation as of 29 October 2026; the open-model notes, the OpenAI and
+Gemini API notes and the Claude Desktop menu were rechecked on 31 October
+2026. Assistants and model lists change
 often, so check the vendor page before you rely on a command or model ID. The
 links follow the order of this page:</p>
 <ul>
@@ -2532,6 +2640,7 @@ links follow the order of this page:</p>
   <a href="https://ai.google.dev/gemini-api/docs/models">models</a></li>
 <li>OpenAI API: <a href="https://developers.openai.com/api/docs/guides/function-calling">function calling</a>,
   <a href="https://developers.openai.com/api/docs/guides/migrate-to-responses">migration to Responses</a>,
+  <a href="https://developers.openai.com/api/docs/deprecations">deprecations</a>,
   <a href="https://developers.openai.com/api/docs/models">models</a></li>
 <li>DeepSeek API: <a href="https://api-docs.deepseek.com/guides/tool_calls">tool calls</a>,
   <a href="https://api-docs.deepseek.com/quick_start/pricing">models</a></li>

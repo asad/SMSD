@@ -1192,6 +1192,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/ai_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMSD Pro tools for AI models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1489,7 +1517,7 @@
   <span class="md-ellipsis">
     
   
-    AI assistants
+    AI assistants and models
   
 
     
@@ -1807,8 +1835,20 @@ task and shows the calls that carry it out. The
 <td>Building and reopening an index file, threshold and nearest-neighbour searches, several queries in one pass, neighbours and pairs within the index, clustering, diverse selection and the file format</td>
 </tr>
 <tr>
+<td><a href="CLUSTERING/">Clustering and diversity</a></td>
+<td>Choosing between Butina clustering, MaxMin selection and nearest-neighbour pairs, preparing the input, thresholds and reordering, seeds, chunk size and cost, and the CPU and GPU backends</td>
+</tr>
+<tr>
 <td><a href="CPU_GPU/">CPU and GPU screening</a></td>
 <td>What runs where, checking the backend, installing the CUDA package, requesting or refusing the GPU, fallback and errors, and comparing the two devices</td>
+</tr>
+<tr>
+<td><a href="MACHINE_LEARNING/">Machine learning and data frames</a></td>
+<td>Fingerprints as NumPy and SciPy matrices, pandas and Polars columns, Arrow tables and PyTorch tensors, bit order and memory, scikit-learn transformers and a worked training and screening example</td>
+</tr>
+<tr>
+<td><a href="AI_TOOLS/">Chemistry tools for AI assistants</a></td>
+<td>The eight molecular tools, the local MCP server and client set-up, calling the tools from Python, reading a tool result, tool definitions for a model API, an offline tool loop and the limits on each call</td>
 </tr>
 <tr>
 <td><a href="COMMAND_LINE/">Command line and containers</a></td>
@@ -1832,9 +1872,14 @@ turns molecules into fingerprints and compares them.</p>
 <p><a href="SCREENING/">Screening a library</a> brings these together: fingerprint screens
 narrow a library, and the exact searches decide which molecules match.
 <a href="PACKED_INDEX/">Packed fingerprint index</a> keeps a library's fingerprints in a
-file that is built once and searched in later sessions, and
-<a href="CPU_GPU/">CPU and GPU screening</a> explains which screening steps can run on
-an NVIDIA GPU. The last two chapters leave Python:
+file that is built once and searched in later sessions,
+<a href="CLUSTERING/">Clustering and diversity</a> groups such an index into series or
+picks a diverse subset, and <a href="CPU_GPU/">CPU and GPU screening</a> explains which
+screening steps can run on an NVIDIA GPU.
+<a href="MACHINE_LEARNING/">Machine learning and data frames</a> hands fingerprints to
+data-frame and model-training libraries, and
+<a href="AI_TOOLS/">Chemistry tools for AI assistants</a> offers bounded molecular
+tools to an assistant or to your own code. The last two chapters leave Python:
 <a href="COMMAND_LINE/">Command line and containers</a> runs single searches and SDF
 batch searches from a shell or a Docker image, and
 <a href="OTHER_LANGUAGES/">C++ and Java</a> shows the same searches in the other
@@ -1881,6 +1926,10 @@ keep them in a temporary directory, and none downloads anything.</p>
 <li>programs that use a packed fingerprint index, clustering or NumPy arrays
   need NumPy, from the <code>numpy</code> extra;</li>
 <li>two programs take RDKit molecules, from the <code>rdkit</code> extra;</li>
+<li>the programs in <a href="MACHINE_LEARNING/">Machine learning and data frames</a> need
+  the extra named by each adapter, such as <code>scipy</code>, <code>pandas</code>, <code>polars</code>,
+  <code>arrow</code>, <code>sklearn</code> or <code>torch</code>, and the MCP server in
+  <a href="AI_TOOLS/">Chemistry tools for AI assistants</a> needs the <code>mcp</code> extra;</li>
 <li>the GPU branches in <a href="CPU_GPU/">CPU and GPU screening</a> run only where the
   <code>smsd-cuda</code> package and a usable NVIDIA GPU are present, and the same
   programs take their CPU path everywhere else.</li>
@@ -1919,6 +1968,10 @@ gives the command.</p>
 <tr>
 <td><a href="../../python/examples/cpu_gpu_screening.ipynb">CPU and GPU screening</a></td>
 <td>The screening backend, automatic and requested GPU use, packed-index backends, fallback and a CPU and GPU comparison, with every cell able to run without a GPU</td>
+</tr>
+<tr>
+<td><a href="../../python/examples/ai_tools.ipynb">Chemistry tools for AI assistants</a></td>
+<td>The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which is skipped when no model server is running</td>
 </tr>
 <tr>
 <td><a href="../../python/examples/feature_search.ipynb">MCS to a small library search</a></td>
