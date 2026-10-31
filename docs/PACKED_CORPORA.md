@@ -4,6 +4,10 @@
 rows in a read-only, memory-mapped file. NumPy is required for this API and for
 `smsd.clustering`; importing the modules does not import NumPy.
 
+For a task-based walk-through of building, reopening and searching an index,
+see the [packed fingerprint index](guide/PACKED_INDEX.md) chapter of the user
+guide.
+
 ```python
 from pathlib import Path
 from tempfile import TemporaryDirectory

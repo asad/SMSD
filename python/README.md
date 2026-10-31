@@ -124,8 +124,8 @@ assert 0.0 <= score <= 1.0
 ```
 
 `FingerprintOptions` configures circular, path, torsion and structural-key
-fingerprints, including the 166 MACCS keys, with the same bits as in C++ and
-Java:
+fingerprints, including the 166 MACCS keys, with the same bits as C++ and Java
+of the same version:
 
 ```python
 import smsd
@@ -195,8 +195,9 @@ keeping every result can need quadratic memory.
 chemistry. [SMARTS export](https://github.com/asad/SMSD/blob/master/docs/SMARTS_EXPORT.md)
 rejects stereo, tautomer-aware, complete-ring and strict ring-fusion constraints
 that the portable pattern cannot represent. The search result retains its
-completion and optimality flags. The deprecated 8.x APIs remain available and
-supported throughout the 8.x line.
+completion and optimality flags.
+
+The deprecated 8.x APIs remain available and supported throughout the 8.x line.
 
 ## RDKit molecules
 

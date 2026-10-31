@@ -685,9 +685,9 @@ A source build of the module `com.bioinceptionlabs:smsd-cli` writes the
 self-contained `smsd-cli-8.1.0-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
 the 8.0.3 JAR or depend on `SMSDcli`. From the repository root, after a
-source build,
-print the version and help, test whether benzene is a substructure of phenol,
-and find the MCS of N-methylacetamide and propanamide (`mcs_size` is 4):
+source build, print the version and help, test whether benzene is a
+substructure of phenol, and find the MCS of N-methylacetamide and propanamide
+(`mcs_size` is 4):
 
 ```bash
 java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar --version

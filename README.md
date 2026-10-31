@@ -21,7 +21,8 @@ Every result reports completion, proved optimality and the reason it stopped,
 and maps atoms by their zero-based indices in the input molecules.
 
 - **C++**: a header-only C++17 library.
-- **Java**: a library and command-line tool for CDK 2.13 molecules, running on Java 8 or later.
+- **Java**: a library and command-line tool for CDK 2.13 molecules, running on
+  Java 8 or later.
 - **Python**: a binding to the native library that accepts RDKit molecules when
   RDKit is installed and converts Open Babel molecules.
 
@@ -211,16 +212,17 @@ python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
 ECFP4 screens of a prepared `TargetCorpus` use the GPU automatically on a Tesla
 T4 when the corpus has at least 100,000 targets, with no change to your code,
 and the prepared fingerprints stay on the device between screens. Exact graph
-matching uses the CPU, as do smaller corpora and other devices unless
-`SMSD_CUDA_MIN_TARGETS` is set, which also replaces the T4 default (see
-[CUDA screening](docs/PYTHON.md#optional-cuda-screening)). On any NVIDIA GPU
-with compute capability 7.5 or later, request the device explicitly with the
-packed-corpus backend `"cuda"` or with `match_corpus(..., gpu_prefilter=True)`;
-the [GPU screening example](python/examples/gpu_screening.py) shows both.
-The native screen preserves CPU scores and hit order, with CPU fallback on a
-GPU error. See [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for
-that contract. The explicit packed-corpus backends have a separate
-[error and fallback contract](docs/PACKED_CORPORA.md#cpu-and-cuda-backends).
+matching always uses the CPU. Smaller corpora and other devices screen on the
+CPU unless `SMSD_CUDA_MIN_TARGETS` is set to a positive integer, which replaces
+the T4 default (see [CUDA screening](docs/PYTHON.md#optional-cuda-screening)).
+On any NVIDIA GPU with compute capability 7.5 or later, request the device
+explicitly with the packed-corpus backend `"cuda"` or with `match_corpus(...,
+gpu_prefilter=True)`; the [GPU screening
+example](python/examples/gpu_screening.py) shows both. The native screen
+preserves CPU scores and hit order, with CPU fallback on a GPU error. See [CUDA
+screening](docs/PYTHON.md#optional-cuda-screening) for that contract. The
+explicit packed-corpus backends have a separate [error and fallback
+contract](docs/PACKED_CORPORA.md#cpu-and-cuda-backends).
 
 The [`smsd-cuda` package](packaging/smsd-cuda/README.md) also provides kernel
 preloading, bounded retained workspaces, opt-in CUDA Graph replay and on-device
@@ -267,10 +269,10 @@ and SDF files as batch targets.
   topological-torsion and structural-key fingerprints, including the 166 MACCS
   keys, configured once with `FingerprintOptions` (rings, ring sizes, R/S and
   E/Z, fragments, Murcko framework) and giving the same bits in C++, Java and
-  Python. Batch searches can use every processor core. Optional NVIDIA CUDA
-  screening is provided separately by `smsd-cuda`; matching runs on the CPU.
-  See [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for its scope.
-  Native C++ source builds on macOS also include [optional Metal
+  Python of the same version. Batch searches can use every processor core.
+  Optional NVIDIA CUDA screening is provided separately by `smsd-cuda`; matching
+  runs on the CPU. See [CUDA screening](docs/PYTHON.md#optional-cuda-screening)
+  for its scope. Native C++ source builds on macOS also include [optional Metal
   support](docs/CPP.md#optional-metal-fingerprint-screening), used only by
   programs that link it; Metal fingerprint screening runs only when requested
   explicitly.
@@ -296,11 +298,12 @@ and optimality flags before treating it as a proved optimum.
 
 | Guide | Contents |
 | --- | --- |
+| [User guide](docs/guide/README.md) | Task-based chapters: getting started, substructure and SMARTS, MCS, fingerprints, screening, the packed index, CPU and GPU, command line, C++ and Java |
 | [Installation](docs/HOWTO-INSTALL.md) | Platform requirements, downloads and source builds |
 | [C++ guide](docs/CPP.md) | Header-only library, chemistry options and file input |
 | [Java guide](docs/JAVA.md) | CDK molecules, search, fingerprints, R-groups and the command-line tool |
 | [Python guide](docs/PYTHON.md) | Search, results, chemistry options and RDKit integration |
-| [Python examples](docs/EXAMPLES.md) | Fingerprints, screening, depiction, layout, stereo, files and R-groups |
+| [Python examples](docs/EXAMPLES.md) and [notebooks](python/examples/README.md) | Fingerprints, screening, depiction, layout, stereo, files and R-groups |
 | [Python adapters](docs/PYTHON_ADAPTERS.md) | NumPy, SciPy, pandas, Polars, Arrow, PyTorch, scikit-learn and PyTorch Geometric |
 | [Molecular tools and MCP](docs/MCP_SERVER.md) | Bounded local tools, proof/status fields, function definitions and framework adapters |
 | [Connecting AI assistants](docs/AI_ASSISTANTS.md) | Local MCP set-up for assistant clients and tool definitions for your own Python loop |

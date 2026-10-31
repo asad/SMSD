@@ -3,6 +3,20 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- A task-based [user guide](docs/guide/README.md) in `docs/guide` and five
+  topic notebooks in `python/examples`.
+
+### Changed
+
+- Clearer CUDA, conda, Python and SMARTS export guides: the 256 MiB limit
+  applies to each retained device workspace, CUDA Graph replay needs the
+  call's buffers to fit a free retained workspace, and identical fingerprint
+  bits hold for the same SMSD version.
+
 ## [8.1.0] - 2026-10-31
 
 Python data and machine-learning adapters, local MCP tools, packed fingerprint
@@ -94,10 +108,10 @@ The [release notes](docs/RELEASE_NOTES.md) list the downloads and upgrade notes.
   in C++, Java and Python and independent of time, thread count and hardware.
   Very large fused-ring systems, such as synthetic cages, can reach it. Some
   ring systems that 8.0.3 left incomplete now complete, so their ring-dependent
-  results can change. Where rings stay
-  incomplete, searches that need them report `LimitReached` and other calls
-  raise an error naming the cause, with the zero-based input index in C++ and
-  Python batch calls, where 8.0.3 computed such results from incomplete rings.
+  results can change. Where rings stay incomplete, searches that need them
+  report `LimitReached` and other calls raise an error naming the cause, with
+  the zero-based input index in C++ and Python batch calls, where 8.0.3
+  computed such results from incomplete rings.
 - Complete-ring matching uses all relevant cycles, so a relevant cycle outside
   the smallest set of smallest rings now counts as a complete ring; 8.0.3 could
   reject it and report a smaller result, even an empty one, as proved.

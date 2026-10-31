@@ -70,16 +70,17 @@ otherwise. Building requires `nvcc`; the `smsd` package itself never needs CUDA.
 
 ## Retained workspace and graph replay
 
-Fingerprint screening can keep up to 256 MiB of device workspace per prepared
-corpus between calls, in addition to the stored corpus fingerprints.
+Fingerprint screening can keep a device workspace between calls, in addition to
+the stored corpus fingerprints. Each workspace holds at most 256 MiB; a prepared
+corpus that also keeps GPU substructure fingerprints retains a second one.
 Concurrent calls use their own temporary memory. `SMSD_CUDA_POOL=0` turns the
-retained workspace off. The workspace is released with its corpus; finish
-every call on a corpus before releasing it.
+retained workspace off. Workspaces are released with their corpus; finish every
+call on a corpus before releasing it.
 
-`SMSD_CUDA_GRAPHS=1` opts into CUDA Graph replay for screening calls of at
-most 64 queries while the retained workspace is on; top-k calls are not
-replayed. Errors and CPU fallback behave as without these options, and
-neither option guarantees lower latency.
+`SMSD_CUDA_GRAPHS=1` opts into CUDA Graph replay for screening calls of at most
+64 queries when the retained workspace is on, the call's buffers fit in it and
+no other call is using it; top-k calls are not replayed. Errors and CPU fallback
+behave as without these options, and neither option guarantees lower latency.
 
 ## Explicit initialisation and device code
 

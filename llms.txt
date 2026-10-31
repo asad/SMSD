@@ -6,6 +6,9 @@
 
 ## Documentation
 
+- [User guide](docs/guide/README.md): task-based chapters on searching,
+  fingerprints, screening, the packed index, CPU and GPU use and the command
+  line.
 - [Consolidated API reference](docs/API_REFERENCE.md): interfaces, examples, options,
   proof/stopping status, I/O, fingerprints, optional data adapters and GPU scope.
 - [Python guide](python/README.md): installation and ordinary Python use.

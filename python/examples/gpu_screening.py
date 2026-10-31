@@ -17,10 +17,13 @@ try:
 except ImportError:
     smsd_cuda = None
 
-# Automatic GPU use for TargetCorpus screening needs a Tesla T4 and a prepared corpus of at
-# least 100,000 targets; smaller corpora and other devices screen on the CPU with the same
-# hits. On other NVIDIA GPUs, ask for the device with the packed backend="cuda" or with
-# match_corpus(..., gpu_prefilter=True). SMSD_DISABLE_GPU=1 keeps all screening on the CPU.
+# By default, automatic GPU use for TargetCorpus screening needs a Tesla T4 and a
+# prepared corpus of at least 100,000 targets. Setting SMSD_CUDA_MIN_TARGETS to a positive
+# integer N replaces that default and lets any supported device take corpora of at least
+# N targets. Other corpora and devices screen on the CPU with the same hits. On any NVIDIA
+# GPU with compute capability 7.5 or later, ask for the device explicitly with the packed
+# backend="cuda" or with match_corpus(..., gpu_prefilter=True). SMSD_DISABLE_GPU=1 keeps
+# all screening on the CPU.
 
 
 def cuda_status():

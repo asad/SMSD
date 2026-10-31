@@ -32,12 +32,12 @@ python packaging/conda/configure_source.py \
   --output smsd-conda-variants.yaml
 ```
 
-`RELEASE_COMMIT` is the reviewed full 40-character commit, not a branch or tag.
-The local archive must be the **exact bytes served by that immutable URL**.
-The configuration tool hashes those bytes, checks core/CUDA/native versions
-and writes a new YAML-compatible JSON variant file. It does not contact the
-URL or prove the Git-to-archive identity; those joins belong to final release
-review. Do not substitute a separately compressed `git archive` for the
+`RELEASE_COMMIT` is the full 40-character release commit, not a branch or tag.
+The local archive must be the **exact bytes served by that immutable URL**. The
+configuration tool hashes those bytes, checks core/CUDA/native versions and
+writes a new YAML-compatible JSON variant file. It does not download the URL or
+compare the archive with Git, so check that the archive matches the commit
+before building. Do not substitute a separately compressed `git archive` for the
 downloaded URL payload: its compressed hash can differ.
 
 The full archive must include `packaging/smsd-cuda`. The Python source
@@ -49,8 +49,8 @@ Python 3.11 and later use `tomllib`.
 ## Render and build
 
 Use native builders for each target; these commands do not establish cross
-compilation. A conda-build environment and a reviewed conda-forge toolchain
-must already be available. Select one Python variant initially:
+compilation. A conda-build environment and a conda-forge toolchain must
+already be available. Select one Python variant initially:
 
 ```sh
 conda render packaging/conda -m smsd-conda-variants.yaml --python 3.12
@@ -62,20 +62,20 @@ conda build packaging/conda/cuda -m smsd-conda-variants.yaml --python 3.12 \
 ```
 
 Build the CPU package first so the CUDA test environment can solve its exact
-core dependency from the local channel. Repeat only genuinely unbuilt
-Python/platform variants. Both build scripts use the activated compiler,
+core dependency from the local channel. Then repeat the build for each further
+Python version and platform. Both build scripts use the activated compiler,
 Ninja with one worker, installed backend dependencies and pip's no-index,
-no-dependency, no-build-isolation route. They verify source/package versions
-before compilation. They do not run or disable the public scientific tests;
-the recipes contain small package-level smoke checks.
+no-dependency, no-build-isolation route. They check the source and package
+versions before compiling. The recipes run small package smoke checks rather
+than the full test suite.
 
 The CUDA recipe's own `conda_build_config.yaml` selects `cuda-nvcc` 12.8 and
 GNU C++ 14, within that toolkit's documented host-compiler range. Host
 requirements use `cuda-version=12.8`, `cuda-cudart-dev` and `cuda-cccl` for CUB
 headers. Runtime requirements are `cuda-cudart` and `cuda-version>=12.8,<13`.
 Component packages have their own versions; select the toolkit through
-`cuda-version`. The actual solver, NVCC/host-compiler compatibility, fatbin
-contents and linkage remain build checks.
+`cuda-version`. Check the solved environment, the NVCC and host compiler
+pairing, the device code and the linkage of each build.
 
 ### CUDA packaging adaptation
 
@@ -86,23 +86,23 @@ the exact Python `smsd` dependency and does not alter the loader, CMake or
 kernel sources. No fake NVIDIA Python distribution or runtime shim is made.
 Conda-build's ordinary ELF relocation uses `lib/`; validate that the installed
 library resolves libcudart from the environment's prefix without an external
-`LD_LIBRARY_PATH`. The automatic CUDA smoke checks versions and actual loaded
-runtime paths/version, not GPU execution.
+`LD_LIBRARY_PATH`. The automatic CUDA smoke test checks the versions and the
+loaded runtime path and version, not GPU execution.
 
 A system NVIDIA driver is still required to execute CUDA. A GPU-free build
 host may use the documented `CONDA_OVERRIDE_CUDA=12.8` **solver override** for
-packaging checks; it does not emulate a device or validate GPU results. On an
-actual GPU validation host, unset that override and require a real device:
+packaging checks; it does not emulate a device or validate GPU results. On a
+GPU host, unset that override and require a device:
 
 ```sh
 python -c "import smsd_cuda; assert smsd_cuda.is_available(), smsd_cuda.unavailable_reason(); print(smsd_cuda.device_info())"
 python -m pytest /path/to/frozen-source/packaging/smsd-cuda/tests/test_resident_fingerprints.py -q
 ```
 
-The explicit availability assertion prevents device absence being mistaken
-for passing skipped GPU tests. Keep actual test/skipped records. Automatic
-dispatch thresholds and CPU fallback are unchanged; availability alone does
-not prove a normal screen ran on the GPU.
+The explicit availability assertion prevents device absence being mistaken for
+passing skipped GPU tests. Keep the test log, including skipped tests. Automatic
+dispatch thresholds and CPU fallback are unchanged; availability alone does not
+prove a normal screen ran on the GPU.
 
 ## Install the built outputs
 

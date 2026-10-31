@@ -10,13 +10,12 @@ files, R-groups and scaffolds.
 python -m pip install "smsd==8.1.0"
 ```
 
-The CPU/OpenMP wheels cover CPython 3.12–3.15; the
-[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) lists the
-operating systems and architectures. `smsd.__version__` gives the installed version. Core
-matching needs no other toolkit. RDKit is needed only for RDKit molecules,
-`to_rdkit`, `to_svg`, `depict_mcs` and `depict_substructure`
-(`python -m pip install "rdkit<2027"`); Open Babel only for
-`from_openbabel` and `to_openbabel`.
+The CPU/OpenMP wheels cover CPython 3.12–3.15; the [supported-platforms
+table](HOWTO-INSTALL.md#supported-platforms) lists the operating systems and
+architectures. `smsd.__version__` gives the installed version. Core matching
+needs no other toolkit. RDKit is needed only for RDKit molecules, `to_rdkit`,
+`to_svg`, `depict_mcs` and `depict_substructure` (`python -m pip install
+"rdkit<2027"`); Open Babel only for `from_openbabel` and `to_openbabel`.
 
 Deprecated compatibility aliases remain available in 8.1. Prefer their current
 replacement names in new code.
@@ -90,11 +89,11 @@ CUDA package requirements.
   rejected, together with unsupported conditional resonance cases. The pattern
   does not encode induced MCIS or establish that a search completed.
 - `stream_screen_smiles` consumes target chunks through the public native corpus
-  screen. `warm_start(corpus, query, threshold=...)` prepares and screens a real
+  screen. `warm_start(corpus, query, threshold=...)` prepares and screens a
   retained corpus. Both keep ordinary device crossovers and CPU fallback.
 
-The macOS wheel build targets 14.0 with a compatible OpenMP runtime. A deployment
-target setting alone does not demonstrate that an artefact runs on that OS.
+The macOS wheels need macOS 14 or later on Apple silicon and include their
+OpenMP runtime.
 
 ## Searches
 
@@ -932,6 +931,7 @@ attributes, on `opts` when given. Defaults: `bond_length` and `padding` 30 px;
 
 ## Further reading
 
-The [Python package README](../python/README.md),
+The [user guide](guide/README.md),
+[Python package README](../python/README.md),
 [installation guide](HOWTO-INSTALL.md), [C++ guide](CPP.md),
 [Java guide](JAVA.md) and [changelog](../CHANGELOG.md).

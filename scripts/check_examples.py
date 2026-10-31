@@ -39,6 +39,17 @@ GUIDES = (
     "docs/PACKED_CORPORA.md",
     "docs/SMARTS_EXPORT.md",
     "docs/PYTHON_ADAPTERS.md",
+    "docs/guide/README.md",
+    "docs/guide/GETTING_STARTED.md",
+    "docs/guide/SUBSTRUCTURE.md",
+    "docs/guide/SMARTS.md",
+    "docs/guide/MCS.md",
+    "docs/guide/FINGERPRINTS.md",
+    "docs/guide/SCREENING.md",
+    "docs/guide/PACKED_INDEX.md",
+    "docs/guide/CPU_GPU.md",
+    "docs/guide/COMMAND_LINE.md",
+    "docs/guide/OTHER_LANGUAGES.md",
 )
 ASSISTANT_GUIDE = "docs/AI_ASSISTANTS.md"
 EXAMPLE_DIRECTORY = "python/examples"

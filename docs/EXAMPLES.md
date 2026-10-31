@@ -387,7 +387,15 @@ server from Python.
 
 ## Further reading
 
-See the [Python guide](PYTHON.md), the [installation guide](HOWTO-INSTALL.md),
-the [C++ guide](CPP.md) and the [Java guide](JAVA.md). A C++ program that
-screens packed fingerprints on a Metal GPU, with the CPU screen as the fallback,
-is the [Metal screening example](../cpp/examples/metal_fingerprint_screen.cpp).
+See the [user guide](guide/README.md), the [Python guide](PYTHON.md), the
+[installation guide](HOWTO-INSTALL.md), the [C++ guide](CPP.md) and the
+[Java guide](JAVA.md). Five notebooks work through the guide's topics:
+[substructure and SMARTS search](../python/examples/substructure_search.ipynb),
+[maximum common substructure](../python/examples/mcs_search.ipynb),
+[fingerprints and similarity](../python/examples/fingerprints_similarity.ipynb),
+[library screening](../python/examples/library_screening.ipynb) and
+[CPU and GPU screening](../python/examples/cpu_gpu_screening.ipynb).
+
+A C++ program that screens packed fingerprints on a Metal GPU, with the CPU
+screen as the fallback, is the
+[Metal screening example](../cpp/examples/metal_fingerprint_screen.cpp).

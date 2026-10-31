@@ -1,10 +1,9 @@
 # SMARTS export
 
-`SmartsWriter` and `SearchResult.Match.toSmarts` are new in 8.1.0. Maven Central
-stays at 8.0.3 in this release, so compile this example against a
-[Java source build](HOWTO-INSTALL.md#java-source-build).
-
-Java can write a portable SMARTS query from an MCS match or a whole molecular graph:
+Java can write a portable SMARTS query from an MCS match or a whole molecular
+graph. `SmartsWriter` and `SearchResult.Match.toSmarts` are new in 8.1.0, while
+the published Java artefacts stay at 8.0.3 in this release, so compile this
+example against a [Java source build](HOWTO-INSTALL.md#java-source-build):
 
 ```java
 import com.bioinception.smsd.core.MCS;

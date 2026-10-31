@@ -35,8 +35,8 @@ only from a source build. The [changelog](../CHANGELOG.md) lists every change.
   intersections on the GPU, and `"auto"` does so when a supported GPU is
   available. Clustering decisions stay on the CPU, and `cuda_calls` counts
   completed CUDA calls. All-pairs work is quadratic.
-- [`smsd-cuda`](../packaging/smsd-cuda/README.md) adds `smsd_cuda.preload()`, a
-  retained device workspace per corpus, opt-in CUDA Graph replay
+- [`smsd-cuda`](../packaging/smsd-cuda/README.md) adds `smsd_cuda.preload()`,
+  retained device workspaces for prepared corpora, opt-in CUDA Graph replay
   (`SMSD_CUDA_GRAPHS=1`) and on-device top-k selection.
 - `stream_screen_smiles` and `stream_screen_many_smiles` screen target iterables
   in bounded chunks, and `warm_start` prepares a corpus and returns a first
@@ -66,8 +66,9 @@ only from a source build. The [changelog](../CHANGELOG.md) lists every change.
   and topology. Worker errors in `TargetCorpus.prewarm`, CPU corpus screening,
   C++ path-fingerprint `batchFingerprint` and `batchFingerprintScreen` now reach
   the caller instead of ending the process.
-- Conda recipes for CPU and Linux CUDA builds, with conda, mamba and Pixi
-  install routes; see the [conda guide](../packaging/conda/README.md).
+- Conda recipes build the CPU package and the Linux CUDA package; the
+  [conda guide](../packaging/conda/README.md) gives the conda, mamba and Pixi
+  install routes.
 - NOTICE now carries licence notices for the RDKit MACCS key definitions and
   pybind11. The `smsd-cuda` package now ships the CUB and CCCL licences, and its
   NOTICE points to them.
