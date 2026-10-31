@@ -10,7 +10,7 @@ This chapter starts with one molecule, then covers each family, count
 fingerprints, configurable specifications, substructure keys, batch
 generation, the similarity coefficients, encodings and NumPy arrays. The
 Options section lists every signature with its defaults. Each Python block is a
-complete program: run it as it stands with SMSD 8.1.0 and it prints the output
+complete program: run it as it stands with SMSD 8.2.0 and it prints the output
 shown below it. The block under NumPy arrays also needs NumPy.
 
 Compare fingerprints only when they were made with the same family, radius or
@@ -832,7 +832,7 @@ A fingerprint becomes a NumPy row by setting the listed positions to 1.
 natively: one row per molecule, `uint8` for bits and `int64` for counts. Like
 `fingerprints`, it defaults to `kind="mcs"`, so pass the kind or the options.
 A Tanimoto matrix then follows from one matrix product. These functions need
-NumPy (`python -m pip install "smsd[numpy]==8.1.0"`).
+NumPy (`python -m pip install "smsd[numpy]==8.2.0"`).
 
 ```python
 import numpy as np

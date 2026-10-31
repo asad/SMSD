@@ -1,41 +1,47 @@
 # CPU and GPU screening
 
 Graph matching in SMSD Pro, which covers every substructure, SMARTS and MCS
-search, always runs on the CPU. An NVIDIA GPU can take over screening steps:
-the ECFP4 screens of a prepared `TargetCorpus`, the pre-screen of a corpus
-search and the scans of a packed fingerprint index. Hits, scores and search
-decisions are identical on either device. Every Python program on this page
-runs on a CPU-only machine; the GPU branches run only where a device is ready.
+search, always runs on the CPU. A GPU can take over screening steps: an
+NVIDIA GPU through the `smsd-cuda` package, or the GPU of an Apple silicon Mac
+through the `smsd-metal` package. Both can run the ECFP4 screens of a prepared
+`TargetCorpus` and the pre-screen of a corpus search; the scans of a packed
+fingerprint index use CUDA only. Hits, scores and search decisions are
+identical on every device. Every Python program on this page runs on a
+CPU-only machine; the GPU branches run only where a device is ready.
 
 ## What runs where
 
-| Operation | CPU | NVIDIA GPU (`smsd-cuda`) | How it is chosen |
-| --- | --- | --- | --- |
-| Substructure, SMARTS and MCS matching | Always | Never | Not applicable |
-| Fingerprints, `batch_similarity` and similarity coefficients | Always | Never | Not applicable |
-| `screen_targets`, `TargetCorpus.screen_targets_many`, and `Substructure.match_many` on a `TargetCorpus` | Always | Never with `smsd-cuda` 8.1.0 | Not applicable |
-| ECFP4 screens of a prepared `TargetCorpus`: `screen`, `screen_many`, `warm_start`, `stream_screen_smiles` and `stream_screen_many_smiles` | Below the device rule, without a usable device, or after a device failure | A Tesla T4 for 100,000 targets or more, or any supported device from `SMSD_CUDA_MIN_TARGETS` targets | Automatically, for each screen |
-| Pre-screen of `Substructure.match_corpus` and `MCS.match_corpus` | `gpu_prefilter=False` (the default), or without a usable device | `gpu_prefilter=True` with an attached device | By the caller, with CPU fallback |
-| Packed `FingerprintCorpus` scans, `butina` and `maxmin` | `backend="cpu"` (the default), or `"auto"` without a usable device | `backend="cuda"`, or `"auto"` with a usable device | By the caller; `"cuda"` raises without a device |
+| Operation | CPU | NVIDIA GPU (`smsd-cuda`) | Apple GPU (`smsd-metal`) | How it is chosen |
+| --- | --- | --- | --- | --- |
+| Substructure, SMARTS and MCS matching | Always | Never | Never | Not applicable |
+| Fingerprints, `batch_similarity` and similarity coefficients | Always | Never | Never | Not applicable |
+| `screen_targets`, `TargetCorpus.screen_targets_many`, and `Substructure.match_many` on a `TargetCorpus` | Always | Never in 8.2.0 | Never in 8.2.0 | Not applicable |
+| ECFP4 screens of a prepared `TargetCorpus`: `screen`, `screen_many`, `warm_start`, `stream_screen_smiles` and `stream_screen_many_smiles` | Below the device rule, without a usable device, or after a device failure | A Tesla T4 for 100,000 targets or more, or any supported device from `SMSD_CUDA_MIN_TARGETS` targets | An Apple M5 for 100,000 targets or more, or any Apple GPU from `SMSD_METAL_MIN_TARGETS` targets | Automatically, for each screen |
+| Pre-screen of `Substructure.match_corpus` and `MCS.match_corpus` | `gpu_prefilter=False` (the default), or without a usable device | `gpu_prefilter=True` with an attached device | `gpu_prefilter=True` with an attached device | By the caller, with CPU fallback |
+| Packed `FingerprintCorpus` scans, `butina` and `maxmin` | `backend="cpu"` (the default), or `"auto"` without a usable CUDA device | `backend="cuda"`, or `"auto"` with a usable device | Never | By the caller; `"cuda"` raises without a CUDA device |
 
 The searches that follow a pre-screen, and every `match`, `match_all` and
-`match_many` call, use the CPU. Python never uses Metal; see
+`match_many` call, use the CPU. Native Metal support in C++ is described in
 [Metal and C++](#metal-and-c).
 
-The `smsd` package looks for `smsd-cuda` once per process, the first time a
-prepared screen, `warm_start`, a `gpu_prefilter=True` search,
-`gpu_is_available()` or `gpu_device_info()` needs it. Importing `smsd` does
-not load the CUDA runtime, so the first such call carries the device start-up
-cost; `smsd_cuda.preload()` moves that cost to a point the program chooses.
+The `smsd` package looks for `smsd-cuda` and `smsd-metal` once per process,
+the first time a prepared screen, `warm_start`, a `gpu_prefilter=True` search,
+`gpu_is_available()` or `gpu_device_info()` needs them. Importing `smsd` loads
+neither the CUDA runtime nor the Metal library, so the first such call carries
+the device start-up cost; `smsd_cuda.preload()` or `smsd_metal.preload()` moves
+that cost to a point the program chooses.
 
 ## Check the backend
 
-`smsd.gpu_is_available()` returns True when an attached `smsd-cuda` package
-has found a usable device. `smsd.gpu_device_info()` describes the backend: on
-a CPU-only machine it starts with `CPU:` and names the OpenMP version and
-thread count; with an attached device it starts with `GPU:`, followed by the
-device name, its compute capability, its memory and, in brackets, the CPU
-threading. Both report what is available, not which device a call used.
+`smsd.gpu_is_available()` returns True when an attached `smsd-cuda` or
+`smsd-metal` package has found a usable device. `smsd.gpu_device_info()`
+describes the backend: on a CPU-only machine it starts with `CPU:` and names
+the OpenMP version and thread count; with an attached device it starts with
+`GPU:`, followed by the device and, in brackets, the CPU threading. An NVIDIA
+device is described by its name, compute capability and memory, as in
+`Tesla T4 (compute 7.5, 14930 MB)`; an Apple GPU by its name and its
+recommended working-set size, as in `Apple M5 (Metal, 18186 MB)`. Both
+functions report what is available, not which device a call used.
 
 The `cuda_status()` helper below is the one in the
 [GPU screening example](../../python/examples/gpu_screening.py). It decides
@@ -73,7 +79,7 @@ available = smsd.gpu_is_available()
 print("GPU available:", available)
 assert isinstance(available, bool)
 
-# 'CPU: ...' without a device; 'GPU: <device>  [...]' once smsd-cuda is attached.
+# 'CPU: ...' without a device; 'GPU: <device>  [...]' once smsd-cuda or smsd-metal is attached.
 backend = smsd.gpu_device_info()
 assert isinstance(backend, str) and backend
 
@@ -82,7 +88,7 @@ if ready:
     assert "compute" in smsd_cuda.device_info()
 ```
 
-On a machine without `smsd-cuda`, the program prints:
+On a machine with neither package, the program prints:
 
 ```text
 CUDA screening: unavailable (smsd-cuda is not installed)
@@ -90,7 +96,9 @@ GPU available: False
 ```
 
 With `smsd-cuda` and a usable device, the program prints
-`CUDA screening: ready` and `GPU available: True`. Otherwise
+`CUDA screening: ready` and `GPU available: True`. On a Mac with `smsd-metal`
+it prints `GPU available: True` while CUDA screening stays unavailable, since
+packed indexes do not use Metal. Otherwise
 `smsd_cuda.unavailable_reason()` explains why, for example
 `no CUDA device was found`, or a reason that names a device below compute
 capability 7.5.
@@ -101,14 +109,14 @@ The `smsd-cuda` package adds NVIDIA screening to `smsd` on Linux x86_64.
 Install it with the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 Packed indexes and clustering also need NumPy, which neither package
 installs:
 
 ```bash
-python -m pip install "smsd[numpy]==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd[numpy]==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 - The package needs Linux x86_64 and CPython 3.12–3.15; the
@@ -117,12 +125,35 @@ python -m pip install "smsd[numpy]==8.1.0" "smsd-cuda==8.1.0"
 - The device must be an NVIDIA GPU of compute capability 7.5 or later, with a
   driver compatible with the CUDA 12 runtime. The runtime is installed as a
   dependency; the CUDA toolkit is not needed.
-- The versions must match exactly. `smsd-cuda` 8.1.0 requires `smsd` 8.1.0,
+- The versions must match exactly. `smsd-cuda` 8.2.0 requires `smsd` 8.2.0,
   and `smsd` does not attach a package built for another version.
-- No `smsd-cuda` wheel is published for Windows or macOS. On Windows, the GPU
-  container runs through WSL2; see [Containers](#containers).
+- No `smsd-cuda` wheel is published for Windows or macOS. On Windows, install
+  the Linux wheel or run the GPU container under WSL2; see
+  [GPU screening on Windows](GPU_ON_WINDOWS.md). On an Apple silicon Mac, use
+  the Metal package below.
 
 Prepared screens, the stream functions and `match_corpus` need no NumPy.
+
+## Install the Metal package
+
+The `smsd-metal` package adds Apple GPU screening to `smsd` on Apple silicon
+Macs. Install it with the same version of `smsd`:
+
+```bash
+python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+```
+
+- The package needs macOS 14 or later on Apple silicon and CPython 3.12–3.15.
+  Intel Macs are not supported.
+- It uses the Metal framework that macOS provides and needs nothing else.
+- The versions must match exactly, as for `smsd-cuda`.
+- Prepared ECFP4 screens and `match_corpus(..., gpu_prefilter=True)` can use
+  the Apple GPU. Packed indexes and clustering do not use Metal: `"auto"` runs
+  them on the CPU and `"cuda"` raises.
+
+The [`smsd-metal` package](../../packaging/smsd-metal/README.md) also provides
+`smsd_metal.preload()`, which compiles the screening kernels before any data is
+screened.
 
 ## Automatic use in prepared screens
 
@@ -133,12 +164,17 @@ use the GPU when `smsd-cuda` is attached and the corpus is large enough.
 Otherwise, and whenever device work fails, they run on the CPU with the same
 hits. The code is the same on every machine.
 
-By default the GPU is used only on a Tesla T4 (compute capability 7.5), and
-only for a prepared corpus of at least 100,000 targets. Setting
-`SMSD_CUDA_MIN_TARGETS` to a positive whole number N lets any supported device
-take corpora of N targets or more; on a Tesla T4, N replaces 100,000. The
-stream functions apply the rule to each chunk of targets (4,096 by default),
-so they use the device only when a chunk is large enough.
+With `smsd-cuda`, the GPU is used by default only on a Tesla T4 (compute
+capability 7.5), and only for a prepared corpus of at least 100,000 targets.
+Setting `SMSD_CUDA_MIN_TARGETS` to a positive whole number N lets any
+supported device take corpora of N targets or more; on a Tesla T4, N replaces
+100,000. With `smsd-metal`, the GPU is used by default only on an Apple M5,
+and only for a prepared corpus of at least 100,000 targets. Smaller corpora
+and other Apple GPUs use the CPU unless `SMSD_METAL_MIN_TARGETS` is set to a
+positive whole number N: automatic screening then uses the Apple GPU for
+corpora of at least N targets; on an Apple M5, N replaces 100,000. The stream
+functions apply the rule to each chunk of targets (4,096 by default), so they
+use the device only when a chunk is large enough.
 
 ```python
 import os
@@ -180,10 +216,11 @@ assert smsd.warm_start(fresh, queries[0], 0.4) == hits[0]
 streamed = list(stream_screen_smiles(queries[0], iter(library), 0.4, chunk_size=5))
 assert streamed == hits[0]
 
-# Let any supported GPU take corpora of one target or more; the CPU ignores it.
+# Let any supported GPU take corpora of one target or more; the CPU ignores both.
 os.environ["SMSD_CUDA_MIN_TARGETS"] = "1"
+os.environ["SMSD_METAL_MIN_TARGETS"] = "1"
 same = corpus.screen_many(queries, 0.4) == hits
-print("same hits with SMSD_CUDA_MIN_TARGETS=1:", same)
+print("same hits with a one-target minimum:", same)
 assert same
 ```
 
@@ -192,11 +229,12 @@ The program prints:
 ```text
 diazepam: diazepam, nordazepam, temazepam, tetrazepam, clobazam
 alprazolam: alprazolam, triazolam, midazolam
-same hits with SMSD_CUDA_MIN_TARGETS=1: True
+same hits with a one-target minimum: True
 ```
 
-A CPU-only machine ignores `SMSD_CUDA_MIN_TARGETS`. No public record shows
-which device ran a prepared screen; the hits are the same either way.
+A CPU-only machine ignores `SMSD_CUDA_MIN_TARGETS` and
+`SMSD_METAL_MIN_TARGETS`. No public record shows which device ran a prepared
+screen; the hits are the same either way.
 
 ## Request the GPU for a corpus pre-screen
 
@@ -292,9 +330,11 @@ and `maxmin` take a `backend` argument:
 | `"cuda"` | The scan runs on the GPU. It raises `RuntimeError` when no device is usable and `ValueError` for fingerprints wider than 65,536 bits. |
 | `"auto"` | The scan runs on the GPU whenever a device is usable and the width is supported, for an index of any size, and on the CPU otherwise. |
 
-Hits, scores, their order, clusters and selections are identical for all
-three. Once device work has started, an error is raised rather than retried
-on the CPU, under `"auto"` as well. A packed index needs NumPy; see
+Packed indexes use `smsd-cuda` only: on a Mac, `"auto"` runs on the CPU
+whether or not `smsd-metal` is installed. Hits, scores, their order, clusters
+and selections are identical for all three. Once device work has started, an
+error is raised rather than retried on the CPU, under `"auto"` as well. A
+packed index needs NumPy; see
 [Packed fingerprint index](PACKED_INDEX.md) for building and reopening one.
 
 ```python
@@ -534,10 +574,11 @@ The `RuntimeError` message gives the cause after the colon:
 capability 7.5. A `backend` value other than `"cpu"`, `"cuda"` or `"auto"`
 raises `ValueError`.
 
-If the installed `smsd-cuda` serves another version of `smsd`, the first call
-that looks for it issues one `RuntimeWarning`. The warning names both versions,
-asks for `smsd-cuda==8.1.0` and says that screening runs on the CPU; prepared
-screens and pre-screens then stay on the CPU.
+If the installed `smsd-cuda` or `smsd-metal` serves another version of
+`smsd`, the first call that looks for it issues one `RuntimeWarning`. The
+warning names both versions, asks for the matching package, such as
+`smsd-cuda==8.2.0`, and says that screening runs on the CPU; prepared screens
+and pre-screens then stay on the CPU.
 
 ## Prove that the GPU ran
 
@@ -659,22 +700,25 @@ packed hits: 12
 
 A prepared screen gives no public record of the device it used, so the
 harness labels its second timing "GPU allowed". The packed timing is backed by
-the `cuda_calls` assertion.
+the `cuda_calls` assertion. On a Mac with `smsd-metal`, time a prepared screen
+in the same way: call `smsd_metal.preload()` first and set
+`SMSD_METAL_MIN_TARGETS` in place of `SMSD_CUDA_MIN_TARGETS`.
 
 ## Containers
 
-The GPU image `smsd:8.1.0-cuda12.8` (linux/amd64) contains `smsd`, the
+The GPU image `smsd:8.2.0-cuda12.8` (linux/amd64) contains `smsd`, the
 matching `smsd-cuda` and the CUDA 12 runtime, with Python as its entry point.
 It has no Java command-line tool, no CUDA toolkit and no NumPy. As shipped,
 it supports prepared screens, `warm_start`, the stream functions and
 `match_corpus(..., gpu_prefilter=True)`; packed indexes and clustering need
 NumPy added in an image built from it. The image needs the NVIDIA Container
-Toolkit and a compatible host driver, including under WSL2 on Windows.
+Toolkit and a compatible host driver; on Windows it runs under WSL2, as
+described in [GPU screening on Windows](GPU_ON_WINDOWS.md).
 
 After loading the image archive from the release:
 
 ```bash
-docker run --rm --gpus all smsd:8.1.0-cuda12.8 \
+docker run --rm --gpus all smsd:8.2.0-cuda12.8 \
   -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 
@@ -685,10 +729,11 @@ loading and building every image.
 
 ## Metal and C++
 
-Python never screens on Metal, and the published wheels include neither
-Metal nor native CUDA support. A Python source build with Metal or CUDA
-switched on changes only what `gpu_is_available()` and `gpu_device_info()`
-report. In C++, a program built from source can link the Metal library and
+Python screens on an Apple GPU only through the `smsd-metal` package; the
+`smsd` wheels include neither Metal nor native CUDA support. A Python source
+build of `smsd` with Metal or CUDA switched on changes only what
+`gpu_is_available()` and `gpu_device_info()` report. In C++, a program built
+from source can link the Metal library and
 request Metal fingerprint screening explicitly; see
 [Optional Metal fingerprint screening](../CPP.md#optional-metal-fingerprint-screening).
 Matching stays on the CPU there as well.
@@ -713,11 +758,17 @@ Matching stays on the CPU there as well.
 | `smsd_cuda.device_info()` | `str` | Device name, compute capability and memory; raises `RuntimeError` without a usable device |
 | `smsd_cuda.preload()` | `None` | Initialises the device and loads the screening kernels, without uploading data or changing automatic use |
 | `smsd_cuda.__version__` | `str` | Must equal `smsd.__version__` |
+| `smsd_metal.is_available()` | `bool` | Whether a Metal device can be used |
+| `smsd_metal.unavailable_reason()` | `str` or `None` | Why no Metal device can be used, or `None` |
+| `smsd_metal.device_info()` | `str` | Device name and its recommended working-set size; raises `RuntimeError` without a usable device |
+| `smsd_metal.preload()` | `None` | Compiles the screening kernels, without uploading data or changing automatic use |
+| `smsd_metal.__version__` | `str` | Must equal `smsd.__version__` |
 
 | Limit | Value |
 | --- | --- |
 | Compute capability | 7.5 or later |
-| Automatic device rule | A Tesla T4 and 100,000 targets, unless `SMSD_CUDA_MIN_TARGETS` is set |
+| Automatic device rule, `smsd-cuda` | A Tesla T4 and 100,000 targets, unless `SMSD_CUDA_MIN_TARGETS` is set |
+| Automatic device rule, `smsd-metal` | An Apple M5 and 100,000 targets, unless `SMSD_METAL_MIN_TARGETS` is set |
 | Packed fingerprint width on the GPU | 65,536 bits; wider indexes use the CPU under `"auto"` and raise `ValueError` under `"cuda"` |
 | Queries in one packed `screen_many` call | 32, on either device |
 | Byte order for packed GPU scans | Little-endian host |
@@ -728,6 +779,7 @@ Matching stays on the CPU there as well.
 | --- | --- | --- |
 | `SMSD_DISABLE_GPU` | Unset | Unset, empty or `0` allows the GPU. Any other value keeps every route on the CPU and makes `backend="cuda"` raise. Read at each call. |
 | `SMSD_CUDA_MIN_TARGETS` | Unset | A positive whole number N, written in decimal digits only, lets automatic prepared screens use any supported device for corpora of N targets or more; on a Tesla T4 it replaces 100,000. Signs, spaces, exponents, `0` and values too large for 64 bits are ignored. Read at each screen. It does not affect `gpu_prefilter` or `backend`. |
+| `SMSD_METAL_MIN_TARGETS` | Unset | A positive whole number N, read in the same way as `SMSD_CUDA_MIN_TARGETS`, lets automatic prepared screens use any Apple GPU for corpora of N targets or more; on an Apple M5 it replaces 100,000. Read at each screen. It does not affect `gpu_prefilter`. |
 | `OMP_NUM_THREADS` | Unset | The CPU threads used when `num_threads` is `0`; when unset, OpenMP chooses. |
 
 `SMSD_CUDA_POOL` and `SMSD_CUDA_GRAPHS` tune the device workspace; see
@@ -748,7 +800,8 @@ Matching stays on the CPU there as well.
 - `cuda_calls` counts packed calls only; it stays at 0 for CPU and fallback
   work.
 - The automatic rule is narrow by default, so a small demonstration corpus
-  stays on the CPU unless `SMSD_CUDA_MIN_TARGETS` is set.
+  stays on the CPU unless `SMSD_CUDA_MIN_TARGETS` or `SMSD_METAL_MIN_TARGETS`
+  is set.
 
 ## See also
 
@@ -759,7 +812,9 @@ Matching stays on the CPU there as well.
   Python guide
 - [CPU and CUDA backends](../PACKED_CORPORA.md#cpu-and-cuda-backends) for
   packed corpora
-- [The smsd-cuda package](../../packaging/smsd-cuda/README.md)
+- [The smsd-cuda package](../../packaging/smsd-cuda/README.md) and
+  [the smsd-metal package](../../packaging/smsd-metal/README.md)
+- [GPU screening on Windows](GPU_ON_WINDOWS.md)
 - [GPU screening example](../../python/examples/gpu_screening.py) and the
   [CPU and GPU screening notebook](../../python/examples/cpu_gpu_screening.ipynb)
 - [Supported platforms](../HOWTO-INSTALL.md#supported-platforms)

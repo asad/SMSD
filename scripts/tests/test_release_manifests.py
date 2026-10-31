@@ -90,7 +90,7 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.manifest = self.directory / "SOURCE_MANIFEST.json"
         self.manifest.write_text(json.dumps(self.source))
         self.proofs = []
-        self.cuda_sources = {}
+        self.addon_sources = {}
         self.targets = {}
         self.attributes = {}
         self.info_attributes = self.root / "info-attributes"
@@ -115,7 +115,7 @@ class ReleaseManifestsTest(unittest.TestCase):
             return ("\0".join(values) + "\0").encode()
         if "ls-tree" in arguments:
             entries = []
-            for name, data in {**self.sources, **self.cuda_sources}.items():
+            for name, data in {**self.sources, **self.addon_sources}.items():
                 if name == "PKG-INFO":
                     continue
                 blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
@@ -161,22 +161,30 @@ class ReleaseManifestsTest(unittest.TestCase):
         BUILD.record_build(self.source, wheel, path.parent, "cibuildwheel", identifier, validation)
         return wheel, path
 
-    def cuda_wheel(self, changes=None):
-        root = "packaging/smsd-cuda/"
-        files = {"pyproject.toml": b'[project]\nname="smsd-cuda"\nversion="7.2.0"\nrequires-python=">=3.12"\ndependencies=["smsd==7.2.0", "nvidia-cuda-runtime-cu12>=12.8,<13"]\n',
-                 "README.md": b"CUDA package description\n", "LICENSE": b"CUDA licence\n", "NOTICE": b"CUDA notice\n",
-                 "python/smsd_cuda/__init__.py": b'__version__ = "7.2.0"\n__smsd_version__ = "7.2.0"\n'}
-        self.cuda_sources = {root + name: data for name, data in files.items()}
+    def addon_wheel(self, changes=None, package="smsd-cuda"):
+        addon = GATE.ADDONS[package]
+        root, label, module = f"packaging/{package}/", addon["name"], addon["module"]
+        cuda = package == "smsd-cuda"
+        runtime = ', "nvidia-cuda-runtime-cu12>=12.8,<13"' if cuda else ""
+        files = {"pyproject.toml": f'[project]\nname="{package}"\nversion="7.2.0"\nrequires-python=">=3.12"\ndependencies=["smsd==7.2.0"{runtime}]\n'.encode(),
+                 "README.md": f"{label} package description\n".encode(), "LICENSE": f"{label} licence\n".encode(),
+                 "NOTICE": f"{label} notice\n".encode(), f"python/{module}/__init__.py": b'__version__ = "7.2.0"\n__smsd_version__ = "7.2.0"\n'}
+        self.addon_sources = {root + name: data for name, data in files.items()}
         for name, data in files.items():
             path = self.checkout / root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
-        prefix = "smsd_cuda-7.2.0.dist-info/"
-        binary = bytearray(64); binary[:6] = b"\x7fELF\x02\x01"; binary[18:20] = b"\x3e\x00"
-        entries = {"smsd_cuda/__init__.py": files["python/smsd_cuda/__init__.py"],
-                   "smsd_cuda/libsmsd_cuda_screen.so": bytes(binary),
-                   prefix + "METADATA": b"Metadata-Version: 2.4\nName: smsd-cuda\nVersion: 7.2.0\nRequires-Python: >=3.12\nRequires-Dist: smsd==7.2.0\nRequires-Dist: nvidia-cuda-runtime-cu12<13,>=12.8\n\n" + files["README.md"],
-                   prefix + "WHEEL": b"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-manylinux_2_34_x86_64\n",
+        prefix = f"{module}-7.2.0.dist-info/"
+        binary = bytearray(64)
+        if cuda:
+            binary[:6] = b"\x7fELF\x02\x01"; binary[18:20] = b"\x3e\x00"
+        else:
+            binary[:8] = b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01"
+        requires = b"Requires-Dist: smsd==7.2.0\n" + (b"Requires-Dist: nvidia-cuda-runtime-cu12<13,>=12.8\n" if cuda else b"")
+        entries = {f"{module}/__init__.py": files[f"python/{module}/__init__.py"],
+                   f"{module}/{addon['library']}": bytes(binary),
+                   prefix + "METADATA": f"Metadata-Version: 2.4\nName: {package}\nVersion: 7.2.0\nRequires-Python: >=3.12\n".encode() + requires + b"\n" + files["README.md"],
+                   prefix + "WHEEL": f"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-{addon['tag']}\n".encode(),
                    prefix + "licenses/LICENSE": files["LICENSE"], prefix + "licenses/NOTICE": files["NOTICE"]}
         entries.update(changes or {})
         record = io.StringIO()
@@ -187,14 +195,14 @@ class ReleaseManifestsTest(unittest.TestCase):
                 writer.writerow([name, "sha256=" + digest, str(len(data))])
         writer.writerow([prefix + "RECORD", "", ""])
         entries.setdefault(prefix + "RECORD", record.getvalue().encode())
-        wheel = self.directory / GATE.cuda_wheel_name("7.2.0")
+        wheel = self.directory / GATE.addon_wheel_name(package, "7.2.0")
         with zipfile.ZipFile(wheel, "w") as output:
             for name, data in entries.items():
                 output.writestr(name, data)
         proof = {"schema_version": 1, "source_commit": SHA, "sdist_sha256": self.source["sdist_sha256"],
                  "smsd_version": "7.2.0", "wheel": wheel.name, "wheel_sha256": BUILD.sha256(wheel),
                  "installed_wheel_tests": "passed", "native_gpu_tests": "passed"}
-        (self.directory / "CUDA_WHEEL_MANIFEST.json").write_text(json.dumps(proof))
+        (self.directory / addon["manifest"]).write_text(json.dumps(proof))
         return wheel, proof
 
     def collect(self, *extra):
@@ -557,37 +565,85 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.all_wheels()
         self.collect()
         metadata = self.published_metadata()
-        cuda = "smsd_cuda-7.2.0-py3-none-manylinux_2_34_x86_64.whl"
-        metadata["assets"].append({"name": cuda, "state": "uploaded", "size": 7, "digest": "sha256:" + "a" * 64})
+        addons = ["smsd_cuda-7.2.0-py3-none-manylinux_2_34_x86_64.whl", "smsd_cuda-7.2.0-py3-none-manylinux_2_34_aarch64.whl",
+                  "smsd_metal-7.2.0-py3-none-macosx_14_0_arm64.whl"]
+        metadata["assets"] += [{"name": name, "state": "uploaded", "size": 7, "digest": "sha256:" + "a" * 64} for name in addons]
         version, selected, targets = GATE.selected_assets(metadata, "v7.2.0")
         self.assertEqual(version, "7.2.0")
         self.assertEqual(set(targets), set(BUILD.BUILD_IDENTIFIERS))
         self.assertEqual(len(selected), 20)
-        self.assertNotIn(cuda, selected)
+        self.assertFalse(set(addons) & set(selected))
         metadata["assets"] = [row for row in metadata["assets"] if row["name"] != targets["cp312-win_amd64"]]
         with self.assertRaisesRegex(ValueError, "Missing release wheels"):
             GATE.selected_assets(metadata, "v7.2.0")
 
     def test_cuda_publish_selects_only_the_declared_wheel_and_source_evidence(self):
-        wheel, _ = self.cuda_wheel()
+        wheel, _ = self.addon_wheel()
         (self.directory / "SHA256SUMS").write_text("fixture\n")
         metadata = self.published_metadata()
         _, selected, targets = GATE.selected_assets(metadata, "v7.2.0", "smsd-cuda")
-        self.assertEqual(targets, {"cuda": wheel.name})
+        self.assertEqual(targets, {"cuda-x86_64": wheel.name})
         self.assertEqual(set(selected), {wheel.name, self.sdist.name, "SOURCE_MANIFEST.json", "CUDA_WHEEL_MANIFEST.json", "SHA256SUMS"})
         with self.assertRaisesRegex(ValueError, "Missing release wheels"):
             GATE.selected_assets(metadata, "v7.2.0")
         for name in (wheel.name, "CUDA_WHEEL_MANIFEST.json", "SOURCE_MANIFEST.json"):
             with self.subTest(missing=name), self.assertRaises(ValueError):
                 GATE.selected_assets({**metadata, "assets": [row for row in metadata["assets"] if row["name"] != name]}, "v7.2.0", "smsd-cuda")
-        for extra in (wheel.name.replace("2_34", "2_35"), wheel.name.replace("x86_64", "aarch64"), "smsd_cuda-7.2.0.tar.gz"):
+        for extra in (wheel.name.replace("2_34", "2_35"), wheel.name.replace("x86_64", "riscv64"),
+                      wheel.name.replace("x86_64", "x86_64.manylinux_2_34_aarch64"), "smsd_cuda-7.2.0.tar.gz"):
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 GATE.selected_assets({**metadata, "assets": metadata["assets"] + [{"name": extra}]}, "v7.2.0", "smsd-cuda")
 
+    def test_an_attached_aarch64_cuda_wheel_is_checked_by_name_and_not_uploaded(self):
+        wheel, _ = self.addon_wheel()
+        self.addon_wheel(package="smsd-metal")
+        (self.directory / "SHA256SUMS").write_text("fixture\n")
+        metadata = self.published_metadata()
+        aarch64 = wheel.name.replace("x86_64", "aarch64")
+        attached = {**metadata, "assets": metadata["assets"] + [
+            {"name": aarch64, "state": "uploaded", "size": 7, "digest": "sha256:" + "a" * 64}]}
+        for package in ("smsd-cuda", "smsd-metal"):
+            with self.subTest(package=package):
+                self.assertEqual(GATE.selected_assets(attached, "v7.2.0", package),
+                                 GATE.selected_assets(metadata, "v7.2.0", package))
+        self.assertEqual(GATE.selected_assets(attached, "v7.2.0", "smsd-cuda")[2], {"cuda-x86_64": wheel.name})
+        twice = {**attached, "assets": attached["assets"] + [{"name": aarch64.replace("2_34", "2_39")}]}
+        with self.assertRaisesRegex(ValueError, "Multiple CUDA aarch64 release wheels"):
+            GATE.selected_assets(twice, "v7.2.0", "smsd-cuda")
+        only = {**attached, "assets": [row for row in attached["assets"] if row["name"] != wheel.name]}
+        with self.assertRaisesRegex(ValueError, "Missing release wheels: cuda-x86_64"):
+            GATE.selected_assets(only, "v7.2.0", "smsd-cuda")
+        self.assertEqual(GATE.addon_architecture("smsd-cuda", "manylinux_2_28_aarch64.manylinux_2_34_aarch64"), "aarch64")
+        self.assertIsNone(GATE.addon_architecture("smsd-cuda", "manylinux_2_34_x86_64.manylinux_2_34_aarch64"))
+
+    def test_add_on_library_must_match_the_machine_of_its_wheel_tag(self):
+        library = "smsd_cuda/libsmsd_cuda_screen.so"
+        for machine in (b"\xb7\x00", b"\x28\x00", b"\x00\x00"):
+            with self.subTest(machine=machine):
+                self.addon_wheel({library: b"\x7fELF\x02\x01" + bytes(12) + machine + bytes(44)})
+                with self.assertRaisesRegex(ValueError, "CUDA library must be Linux x86_64 ELF"):
+                    GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
+        headers = {architecture: header for architecture, (_, header, _) in GATE.ADDONS["smsd-cuda"]["architectures"].items()}
+        self.assertEqual(headers, {"x86_64": ((0, b"\x7fELF\x02\x01"), (18, b"\x3e\x00")),
+                                   "aarch64": ((0, b"\x7fELF\x02\x01"), (18, b"\xb7\x00"))})
+
+    def test_add_on_wheel_holds_only_its_sources_library_metadata_and_licence_texts(self):
+        prefix = "smsd_cuda-7.2.0.dist-info/"
+        self.addon_wheel({"share/licenses/smsd-cuda/LICENSE": b"licence\n",
+                          "share/licenses/smsd-cuda/licenses/cccl/LICENSE": b"licence\n"})
+        GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
+        for name in ("smsd_cuda.pth", "smsd_cuda/startup.pth", "share/licenses/smsd-cuda/hook.pth",
+                     "smsd_cuda/libsmsd_cuda_extra.so", "smsd_cuda.libs/libcudart.so.12",
+                     "share/licenses/smsd-cuda/libsmsd_cuda_screen.so", prefix + "entry_points.txt", "smsd_cuda/kernels.bin"):
+            with self.subTest(member=name):
+                self.addon_wheel({name: b"unexpected\n"})
+                with self.assertRaisesRegex(ValueError, "Unexpected CUDA wheel member: " + name.replace(".", "\\.")):
+                    GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
+
     def test_cuda_proof_requires_exact_source_wheel_and_successful_actual_checks(self):
-        _, proof = self.cuda_wheel()
+        _, proof = self.addon_wheel()
         path = self.directory / "CUDA_WHEEL_MANIFEST.json"
-        GATE.check_cuda_wheel(self.directory, "7.2.0", self.source, self.cuda_sources)
+        GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
         mutations = [{key: value for key, value in proof.items() if key != missing} for missing in proof]
         mutations += [{**proof, key: value} for key, value in (("schema_version", True), ("source_commit", "0" * 40),
                       ("sdist_sha256", "0" * 64), ("wheel_sha256", "0" * 64), ("smsd_version", "7.2.1"),
@@ -596,7 +652,7 @@ class ReleaseManifestsTest(unittest.TestCase):
             with self.subTest(index=index):
                 path.write_text(json.dumps(changed))
                 with self.assertRaisesRegex(ValueError, "proof"):
-                    GATE.check_cuda_wheel(self.directory, "7.2.0", self.source, self.cuda_sources)
+                    GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
 
     def test_cuda_wheel_rejects_changed_metadata_source_binary_and_record(self):
         prefix = "smsd_cuda-7.2.0.dist-info/"
@@ -607,13 +663,13 @@ class ReleaseManifestsTest(unittest.TestCase):
                    {"../unexpected.py": b"unsafe\n"}]
         for change in changes:
             with self.subTest(change=list(change)):
-                self.cuda_wheel(change)
+                self.addon_wheel(change)
                 with self.assertRaises(ValueError):
-                    GATE.check_cuda_wheel(self.directory, "7.2.0", self.source, self.cuda_sources)
+                    GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-cuda")
 
     def test_cuda_package_inputs_come_from_the_frozen_checkout_not_the_core_sdk(self):
         source_hash = self.source["sdist_sha256"]
-        self.cuda_wheel()
+        self.addon_wheel()
         files = GATE.check_source(self.directory, "7.2.0", self.source)
         self.assertFalse(any(name.startswith("packaging/") for name in files))
         self.assertEqual(BUILD.sha256(self.sdist), source_hash)
@@ -621,35 +677,35 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.assertIn("packaging/**", project["tool"]["scikit-build"]["sdist"]["exclude"])
         listing = self.git(["git", "ls-tree"])
         with mock.patch.object(GATE, "git", return_value=listing) as git:
-            cuda_files = GATE.check_cuda_source(self.checkout, self.source)
+            cuda_files = GATE.check_addon_source(self.checkout, self.source, "smsd-cuda")
         git.assert_called_once_with(self.checkout, "ls-tree", "-r", "-z", "--full-tree", SHA)
-        self.assertEqual(cuda_files, self.cuda_sources)
-        GATE.check_cuda_wheel(self.directory, "7.2.0", self.source, cuda_files)
+        self.assertEqual(cuda_files, self.addon_sources)
+        GATE.check_addon_wheel(self.directory, "7.2.0", self.source, cuda_files, "smsd-cuda")
 
     def test_cuda_checkout_rejects_stale_missing_and_untracked_package_inputs(self):
-        self.cuda_wheel()
+        self.addon_wheel()
         listing = self.git(["git", "ls-tree"])
-        for name, original in self.cuda_sources.items():
+        for name, original in self.addon_sources.items():
             with self.subTest(stale=name), mock.patch.object(GATE, "git", return_value=listing):
                 path = self.checkout / name
                 path.write_bytes(original + b"stale\n")
                 with self.assertRaisesRegex(ValueError, "differs from frozen source"):
-                    GATE.check_cuda_source(self.checkout, self.source)
+                    GATE.check_addon_source(self.checkout, self.source, "smsd-cuda")
                 path.write_bytes(original)
         name = "packaging/smsd-cuda/NOTICE"
         path = self.checkout / name
         path.unlink()
         with mock.patch.object(GATE, "git", return_value=listing):
             with self.assertRaisesRegex(ValueError, "Missing or unsafe"):
-                GATE.check_cuda_source(self.checkout, self.source)
-        path.write_bytes(self.cuda_sources[name])
+                GATE.check_addon_source(self.checkout, self.source, "smsd-cuda")
+        path.write_bytes(self.addon_sources[name])
         entries = [entry for entry in listing.split(b"\0") if entry and not entry.endswith(b"\t" + name.encode())]
         with mock.patch.object(GATE, "git", return_value=b"\0".join(entries) + b"\0"):
             with self.assertRaisesRegex(ValueError, "Frozen commit is missing"):
-                GATE.check_cuda_source(self.checkout, self.source)
+                GATE.check_addon_source(self.checkout, self.source, "smsd-cuda")
 
     def test_cuda_validation_stages_one_unchanged_wheel_and_rejects_stage_mutations(self):
-        wheel, _ = self.cuda_wheel()
+        wheel, _ = self.addon_wheel()
         (self.directory / "SHA256SUMS").write_text("".join(BUILD.sha256(path) + "  " + path.name + "\n" for path in self.directory.iterdir()))
         metadata = self.root / "release-metadata.json"
         metadata.write_text(json.dumps(self.published_metadata()))
@@ -690,29 +746,72 @@ class ReleaseManifestsTest(unittest.TestCase):
             GATE.verify_staged(args)
 
     def test_cuda_source_description_and_paired_version_must_match(self):
-        self.cuda_wheel()
-        changed = dict(self.cuda_sources)
+        self.addon_wheel()
+        changed = dict(self.addon_sources)
         changed["packaging/smsd-cuda/python/smsd_cuda/__init__.py"] = b'__version__ = "7.2.1"\n__smsd_version__ = "7.2.0"\n'
         with self.assertRaisesRegex(ValueError, "module version"):
-            GATE.check_cuda_wheel(self.directory, "7.2.0", self.source, changed)
+            GATE.check_addon_wheel(self.directory, "7.2.0", self.source, changed, "smsd-cuda")
         with mock.patch.object(GATE, "git", side_effect=lambda checkout, *args: b"packaging/smsd-cuda/README.md\0" if args[0] == "diff" else SHA.encode()), mock.patch.object(GATE.subprocess, "run", return_value=types.SimpleNamespace(returncode=0)):
             with self.assertRaisesRegex(ValueError, "CUDA package description"):
                 GATE.check_git(self.checkout, "v7.2.0", self.source, self.sources, "smsd-cuda")
 
-    def test_cuda_download_requires_linux_before_any_service_call(self):
-        for package, platform in (("smsd-cuda", "windows"), ("smsd-cuda", "all"), ("smsd", "linux")):
+    def test_add_on_download_requires_its_platform_before_any_service_call(self):
+        for package, platform in (("smsd-cuda", "windows"), ("smsd-cuda", "all"), ("smsd-cuda", "macos"), ("smsd", "linux"),
+                                  ("smsd-metal", "linux"), ("smsd-metal", "all")):
             with self.subTest(package=package, platform=platform), mock.patch.object(GATE.subprocess, "check_output") as service:
                 with self.assertRaisesRegex(ValueError, "platform"):
                     GATE.download(types.SimpleNamespace(package=package, platform=platform))
                 service.assert_not_called()
 
-    def test_cuda_selection_cannot_start_a_core_build_matrix(self):
+    def test_add_on_selection_cannot_start_a_core_build_matrix(self):
         workflow = (SCRIPTS.parent / ".github/workflows/python-publish.yml").read_text()
         snippet = workflow.split("          python - <<'PY'\n", 1)[1].split("          PY\n", 1)[0]
-        with mock.patch.dict(os.environ, {"DISTRIBUTION": "smsd-cuda"}), mock.patch.object(subprocess, "check_output") as git:
-            with self.assertRaisesRegex(SystemExit, "only publishes an existing"):
-                exec(compile(textwrap.dedent(snippet), "workflow-cuda-selection", "exec"), {})
-            git.assert_not_called()
+        for package, platform in (("smsd-cuda", "linux"), ("smsd-metal", "macos")):
+            with self.subTest(package=package), mock.patch.dict(os.environ, {"DISTRIBUTION": package}), mock.patch.object(subprocess, "check_output") as git:
+                with self.assertRaisesRegex(SystemExit, "only publishes an existing.*platform=" + platform):
+                    exec(compile(textwrap.dedent(snippet), "workflow-add-on-selection", "exec"), {})
+                git.assert_not_called()
+
+    def test_metal_publish_selects_only_the_declared_wheel_and_source_evidence(self):
+        wheel, _ = self.addon_wheel(package="smsd-metal")
+        self.addon_wheel()
+        (self.directory / "SHA256SUMS").write_text("fixture\n")
+        metadata = self.published_metadata()
+        _, selected, targets = GATE.selected_assets(metadata, "v7.2.0", "smsd-metal")
+        self.assertEqual(targets, {"metal-arm64": wheel.name})
+        self.assertEqual(set(selected), {wheel.name, self.sdist.name, "SOURCE_MANIFEST.json", "METAL_WHEEL_MANIFEST.json", "SHA256SUMS"})
+        for extra in (wheel.name.replace("arm64", "x86_64"), wheel.name.replace("14_0", "15_0"), "smsd_metal-7.2.0.tar.gz"):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                GATE.selected_assets({**metadata, "assets": metadata["assets"] + [{"name": extra}]}, "v7.2.0", "smsd-metal")
+
+    def test_metal_wheel_must_hold_an_arm64_mach_o_library_and_its_macos_tag(self):
+        self.addon_wheel(package="smsd-metal")
+        GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-metal")
+        library, prefix = "smsd_metal/libsmsd_metal_screen.dylib", "smsd_metal-7.2.0.dist-info/"
+        changes = [{library: b"\xcf\xfa\xed\xfe\x07\x00\x00\x01" + bytes(56)}, {library: b"\x7fELF\x02\x01" + bytes(58)},
+                   {prefix + "WHEEL": b"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: py3-none-macosx_14_0_x86_64\n"}]
+        for change in changes:
+            with self.subTest(change=list(change)):
+                self.addon_wheel(change, "smsd-metal")
+                with self.assertRaisesRegex(ValueError, "Metal"):
+                    GATE.check_addon_wheel(self.directory, "7.2.0", self.source, self.addon_sources, "smsd-metal")
+
+    def test_metal_validation_stages_one_unchanged_wheel(self):
+        wheel, _ = self.addon_wheel(package="smsd-metal")
+        (self.directory / "SHA256SUMS").write_text("".join(BUILD.sha256(path) + "  " + path.name + "\n" for path in self.directory.iterdir()))
+        metadata = self.root / "release-metadata.json"
+        metadata.write_text(json.dumps(self.published_metadata()))
+        args = types.SimpleNamespace(tag="v7.2.0", package="smsd-metal", release_dir=self.directory, metadata_file=metadata,
+                                     source_checkout=self.checkout, dist_dir=self.root / "upload", receipt_file=self.root / "receipt.json")
+        answers = {"rev-parse": SHA.encode(), "diff": b"", "ls-tree": self.git(["git", "ls-tree"])}
+        with mock.patch.object(GATE, "git", side_effect=lambda checkout, *arguments: answers[arguments[0]]), mock.patch.object(GATE.subprocess, "run", return_value=types.SimpleNamespace(returncode=0)):
+            GATE.validate(args)
+        self.assertEqual([path.name for path in args.dist_dir.iterdir()], [wheel.name])
+        self.assertEqual((args.dist_dir / wheel.name).read_bytes(), wheel.read_bytes())
+        GATE.verify_staged(args)
+        args.package = "smsd-cuda"
+        with self.assertRaisesRegex(ValueError, "package"):
+            GATE.verify_staged(args)
 
     def test_staged_upload_requires_the_sixteen_targets_and_original_sdist(self):
         self.all_wheels()

@@ -241,6 +241,8 @@ inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph
                 return collector.finish(budget, true, true);
         }
     }
+    // A search that has stopped by now ends here, before the full search sets up its domains.
+    if (budget.stopped()) return collector.finish(budget, false, false);
     const QueryView view(query);
     VertexSearch search(view, target, options.chemistry, &options, true, all, budget, collector, -1, required,
                         true, 0, true, allowInjectiveBound && !all, allowInjectiveBound && !all);

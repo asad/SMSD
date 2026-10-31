@@ -215,7 +215,7 @@ def _fingerprint_parameters(kind, fp_size, radius, path_length, counts):
         raise ValueError("MCP fingerprint limits are fp_size <= 65536, radius <= 8 and path_length <= 8")
     _switch(counts, "counts")
     if kind not in _KINDS:
-        raise ValueError("Unknown fingerprint kind")
+        raise ValueError("Unknown fingerprint kind; allowed values: " + ", ".join(repr(value) for value in _KINDS))
     if counts and kind == "mcs":
         raise ValueError("The MCS fingerprint has no count mode")
     return FingerprintOptions(family=kind, size=fp_size, radius=radius,

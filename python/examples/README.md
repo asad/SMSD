@@ -5,7 +5,7 @@ status, SVG highlighting, optional NumPy features and a scikit-learn
 pipeline, followed by a temporary mapped fingerprint corpus, top-k
 neighbours, Butina clustering and MaxMin selection.
 
-Use a kernel containing the matching SMSD 8.1.0 package, installed from PyPI,
+Use a kernel containing the matching SMSD 8.2.0 package, installed from PyPI,
 a GitHub wheel or a source checkout. Install NumPy
 for feature arrays and mapped storage, and scikit-learn for the pipeline;
 those cells report when an optional dependency is missing. Install Jupyter

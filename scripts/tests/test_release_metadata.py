@@ -25,6 +25,13 @@ def test_version_update_preserves_citation_article_date():
             'version: 8.1.0\ndate-released: 2026-10-25\npreferred-citation:\n  date-published: 2026-04-02\n')
 
 
+def test_every_version_file_names_the_current_version():
+    root = Path(__file__).parents[2]
+    version = METADATA.re.search(r'^version = "([^"]+)"$', (root / "pyproject.toml").read_text(), METADATA.re.M)[1]
+    stale = [name for name in METADATA.VERSION_FILES if version not in (root / name).read_text()]
+    assert not stale, f"{version} is missing from {stale}"
+
+
 def test_notes_select_one_release_and_keep_subheadings(tmp_path):
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs/RELEASE_NOTES.md").write_text(

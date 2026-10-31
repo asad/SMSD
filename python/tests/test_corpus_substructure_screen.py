@@ -124,6 +124,7 @@ class Provider:
 def provider(monkeypatch):
     monkeypatch.delenv("SMSD_DISABLE_GPU", raising=False)
     monkeypatch.setitem(sys.modules, "smsd_cuda", None)
+    monkeypatch.setitem(sys.modules, "smsd_metal", None)
     _accelerator._reset()
     value = Provider()
     value.attach()
@@ -220,6 +221,7 @@ def test_cancelled_query_bypasses_prefilter(provider):
 def _concurrent_append():
     os.environ.pop("SMSD_DISABLE_GPU", None)
     sys.modules["smsd_cuda"] = None
+    sys.modules["smsd_metal"] = None
     _accelerator._reset()
     provider = Provider()
     provider.attach()

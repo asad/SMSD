@@ -1,8 +1,8 @@
 # Python feature adapters and MCP
 
 The optional modules `smsd.adapters`, `smsd.mcp_server` and `smsd.highlight`
-leave the core API unchanged. They are part of `smsd` 8.1.0
-(`python -m pip install "smsd==8.1.0"`). NumPy, PyTorch, scikit-learn and the
+leave the core API unchanged. They are part of `smsd` from 8.1.0
+(`python -m pip install "smsd==8.2.0"`). NumPy, PyTorch, scikit-learn and the
 MCP SDK are loaded only by the functions that need them.
 
 ## NumPy and PyTorch
@@ -290,10 +290,10 @@ MCS-to-SMARTS search, SVG highlighting, native fingerprint features, a small
 scikit-learn pipeline and a temporary packed corpus. Its example labels are
 illustrative, not a predictive-performance evaluation.
 
-Use a local kernel with SMSD 8.1.0, NumPy and scikit-learn already installed.
+Use a local kernel with SMSD 8.2.0, NumPy and scikit-learn already installed.
 The setup cell detects an actual Colab shell; ordinary local execution performs
 no upload or installation. Upload the notebook file to Colab and select a fresh
-Linux x86_64 runtime. There, the cell prompts for one user-uploaded SMSD 8.1.0
+Linux x86_64 runtime. There, the cell prompts for one user-uploaded SMSD 8.2.0
 core wheel. The distribution name, version, CPython ABI and compatible Linux
 x86_64 platform tags are checked
 before installation with `sys.executable -m pip --no-index --no-deps --force-reinstall`.

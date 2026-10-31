@@ -26,11 +26,22 @@ and maps atoms by their zero-based indices in the input molecules.
 - **Python**: a binding to the native library that accepts RDKit molecules when
   RDKit is installed and converts Open Babel molecules.
 
-## Version 8.1.0
+## Version 8.2.0
 
 The deprecated 8.x APIs remain available and supported throughout the 8.x line.
 
-The additive APIs include [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
+Version 8.2.0 adds `smsd-metal`, optional GPU screening on Apple silicon Macs.
+On Windows, GPU screening runs under WSL2 with the Linux CUDA package or the
+GPU Docker image; see [GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md).
+When the local molecular tools refuse a call, the message now names the tools,
+arguments or values they accept. The [release notes](docs/RELEASE_NOTES.md)
+list the changes.
+
+From 8.2.0, the Java library and command-line tool receive bug fixes only;
+new features are added to C++ and Python. Maven Central carries the Java
+artefacts at 8.0.3, and a [source build](#java) gives the current library.
+
+The additive 8.x APIs include [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
 [local molecular tools and MCP](docs/MCP_SERVER.md),
 [packed fingerprint corpora and clustering](docs/PACKED_CORPORA.md), and
 [SMARTS export](docs/SMARTS_EXPORT.md). Optional dependencies load only when used.
@@ -49,13 +60,15 @@ conda, mamba and Pixi.
 | Language | Package | Requirements |
 | --- | --- | --- |
 | Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.12–3.15; RDKit optional |
-| Python, GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
-| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.0.3 in this release | Java 8 or later; CDK 2.13 |
+| Python, NVIDIA GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
+| Python, Apple GPU (optional) | `smsd-metal` on [PyPI](https://pypi.org/project/smsd-metal/) | macOS 14 or later on Apple silicon; the same version as `smsd` |
+| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.0.3 | Java 8 or later; CDK 2.13 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
 The [supported-platforms table](docs/HOWTO-INSTALL.md#supported-platforms)
-covers CPU wheels, the optional CUDA package and the Java CLI installers. The
+covers CPU wheels, the optional CUDA and Metal packages and the Java CLI
+installers. The
 [installation guide](docs/HOWTO-INSTALL.md) explains downloads and source builds.
 
 ## Quick start
@@ -104,9 +117,9 @@ repository:
 mvn -f java/pom.xml install
 ```
 
-Maven projects can use the library from Maven Central, where it stays at 8.0.3
-in this release and lacks the 8.1.0 Java changes. It brings only the CDK
-modules it needs:
+Maven projects can use the library from Maven Central, where it is at 8.0.3
+and lacks the Java changes made since then. It brings only the CDK modules it
+needs:
 
 ```xml
 <dependency>
@@ -151,8 +164,8 @@ Compile with Java 25 and run on Java 8 or later, here against the self-contained
 JAR of the build, which includes CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar QuickStart.java
-java -cp "java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:." QuickStart
+javac --release 8 -cp java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar QuickStart.java
+java -cp "java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:." QuickStart
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
@@ -206,7 +219,7 @@ On Linux x86_64 with an NVIDIA GPU, install `smsd-cuda` next to `smsd` of the
 same version:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 ECFP4 screens of a prepared `TargetCorpus` use the GPU automatically on a Tesla
@@ -228,15 +241,32 @@ The [`smsd-cuda` package](packaging/smsd-cuda/README.md) also provides kernel
 preloading, bounded retained workspaces, opt-in CUDA Graph replay and on-device
 top-k filtering.
 
-The [8.1.0 release](https://github.com/asad/SMSD/releases/tag/v8.1.0) has a GPU
-Docker image, `smsd-8.1.0-cuda-linux-amd64.tar.xz`, with Python, `smsd`,
-`smsd-cuda` and the CUDA runtime. The image needs the NVIDIA Container Toolkit,
-also under WSL2 on Windows:
+On an Apple silicon Mac, install [`smsd-metal`](packaging/smsd-metal/README.md)
+instead:
 
 ```bash
-docker load -i smsd-8.1.0-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.1.0-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
+python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
 ```
+
+The same prepared ECFP4 screens then use the Apple GPU automatically on an
+Apple M5 for corpora of at least 100,000 targets. `SMSD_METAL_MIN_TARGETS`
+extends this to other Apple GPUs and smaller corpora, and
+`match_corpus(..., gpu_prefilter=True)` requests the Apple GPU for a
+pre-screen. Packed fingerprint indexes do not use Metal. [CPU and GPU
+screening](docs/guide/CPU_GPU.md) describes both packages side by side.
+
+The [8.2.0 release](https://github.com/asad/SMSD/releases/tag/v8.2.0) has a GPU
+Docker image, `smsd-8.2.0-cuda-linux-amd64.tar.xz`, with Python, `smsd`,
+`smsd-cuda` and the CUDA runtime. The image needs the NVIDIA Container Toolkit:
+
+```bash
+docker load -i smsd-8.2.0-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.2.0-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
+```
+
+Native Windows CUDA is not provided. On Windows, use the Linux CUDA package or
+this image under WSL2, as described in
+[GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md).
 
 The [installation guide](docs/HOWTO-INSTALL.md#docker) covers the CPU images
 for amd64 and arm64.
@@ -246,7 +276,7 @@ for amd64 and arm64.
 The Java build also produces the command-line tool, as a self-contained JAR:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -270,12 +300,12 @@ and SDF files as batch targets.
   keys, configured once with `FingerprintOptions` (rings, ring sizes, R/S and
   E/Z, fragments, Murcko framework) and giving the same bits in C++, Java and
   Python of the same version. Batch searches can use every processor core.
-  Optional NVIDIA CUDA screening is provided separately by `smsd-cuda`; matching
-  runs on the CPU. See [CUDA screening](docs/PYTHON.md#optional-cuda-screening)
-  for its scope. Native C++ source builds on macOS also include [optional Metal
+  Optional GPU screening is provided separately by `smsd-cuda` for NVIDIA GPUs
+  and `smsd-metal` for Apple silicon Macs; matching runs on the CPU. See
+  [CPU and GPU screening](docs/guide/CPU_GPU.md) for its scope. Native C++
+  source builds on macOS also include [optional Metal
   support](docs/CPP.md#optional-metal-fingerprint-screening), used only by
-  programs that link it; Metal fingerprint screening runs only when requested
-  explicitly.
+  programs that link it.
 - **Utilities**, including R-group decomposition, MOL and SDF input,
   SVG depiction (C++ and Python) and molecular standardisation (Java).
 

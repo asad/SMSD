@@ -68,6 +68,7 @@ class CorpusProvider(Provider):
 def provider(monkeypatch):
     monkeypatch.delenv("SMSD_DISABLE_GPU", raising=False)
     monkeypatch.setitem(sys.modules, "smsd_cuda", None)
+    monkeypatch.setitem(sys.modules, "smsd_metal", None)
     _accelerator._reset()
     value = CorpusProvider()
     value.attach()
@@ -260,6 +261,7 @@ def test_corpus_results_keep_captured_external_atom_indices(provider):
 def _concurrent_append(kind):
     os.environ.pop("SMSD_DISABLE_GPU", None)
     sys.modules["smsd_cuda"] = None
+    sys.modules["smsd_metal"] = None
     _accelerator._reset()
     provider = CorpusProvider()
     provider.attach()

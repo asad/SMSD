@@ -3,23 +3,59 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [8.2.0] - 2026-11-01
+
+Optional GPU screening on Apple silicon Macs with the new `smsd-metal`
+package, GPU screening on Windows through WSL2, clearer refusals from the
+local molecular tools and a time-limit correction for MCS searches on very
+large inputs. The 8.x APIs are unchanged. From 8.2.0, the Java library and
+command-line tool receive bug fixes only; new features are added to C++ and
+Python. Maven Central carries the Java artefacts at 8.0.3, and a source build
+gives the current library. The [release notes](docs/RELEASE_NOTES.md) list the
+downloads and upgrade notes.
 
 ### Added
 
+- `smsd-metal`, an optional package for Apple silicon Macs with macOS 14 or
+  later, screens prepared `TargetCorpus` libraries on the Apple GPU with the
+  same hits as the CPU. `smsd` finds it at run time when it is installed at
+  the same version, after `smsd-cuda`. Automatic ECFP4 screening uses it on an
+  Apple M5 for corpora of at least 100,000 targets; `SMSD_METAL_MIN_TARGETS`
+  sets that minimum for any Apple GPU, and `match_corpus(...,
+  gpu_prefilter=True)` requests a GPU pre-screen. Packed fingerprint indexes
+  do not use Metal, and `smsd_metal.preload()` prepares the device before the
+  first screen.
+- [GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md): an NVIDIA GPU is
+  used through WSL2, with the Linux `smsd-cuda` wheel or the GPU Docker image.
+  No native Windows CUDA package is provided.
 - Three user-guide chapters: [clustering and diversity](docs/guide/CLUSTERING.md),
   [machine learning and data frames](docs/guide/MACHINE_LEARNING.md) and
   [chemistry tools for AI assistants](docs/guide/AI_TOOLS.md).
 - An AI tools notebook, `python/examples/ai_tools.ipynb`, that calls the
   molecular tools directly, from a scripted tool loop and from local or hosted
   models.
+- Release checks and PyPI publishing cover `smsd-metal` as they do
+  `smsd-cuda`.
 
 ### Changed
 
+- When the local molecular tools refuse a call, through `call_tool` or the MCP
+  server, the message names the arguments concerned and lists the tools,
+  arguments, values or range that are accepted, so the call can be corrected.
+- `smsd.gpu_is_available()` and `smsd.gpu_device_info()` report a device found
+  through `smsd-metal` as they do one found through `smsd-cuda`.
+- The installation guides cover `smsd-metal` and GPU use on Windows, and note
+  that the conda `smsd` package is currently built without OpenMP.
 - The [AI assistants guide](docs/AI_ASSISTANTS.md) opens with a model choice
   table and reflects current provider interfaces and local runtimes.
 - `scripts/check_examples.py` removes API key variables before it runs any
   example.
+
+### Fixed
+
+- An MCS search with a short time limit on very large inputs now stops within
+  the limit, where it could previously finish preparing the search first.
+- Two native allocation-failure tests build cleanly without OpenMP.
 
 ## [8.1.0] - 2026-10-31
 

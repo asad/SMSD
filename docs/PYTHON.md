@@ -1,13 +1,13 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.1.0. The
+Reference for the `smsd` Python package, version 8.2.0. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 ```
 
 The CPU/OpenMP wheels cover CPython 3.12–3.15; the [supported-platforms
@@ -17,8 +17,8 @@ needs no other toolkit. RDKit is needed only for RDKit molecules, `to_rdkit`,
 `to_svg`, `depict_mcs` and `depict_substructure` (`python -m pip install
 "rdkit<2027"`); Open Babel only for `from_openbabel` and `to_openbabel`.
 
-Deprecated compatibility aliases remain available in 8.1. Prefer their current
-replacement names in new code.
+Deprecated compatibility aliases remain available throughout 8.x. Prefer their
+current replacement names in new code.
 
 ### Build from source
 
@@ -41,7 +41,7 @@ search do not run on them, so they change only what `gpu_is_available()` and
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -69,9 +69,11 @@ report backend availability, not whether a call used the device. Missing
 devices, allocation failure and device loss use the CPU.
 Setting `SMSD_DISABLE_GPU` to anything but an empty string or `0` disables the
 GPU at run time; an explicit packed `backend="cuda"` call then raises
-`RuntimeError`. macOS uses the CPU; the
+`RuntimeError`. On Apple silicon Macs, the separate `smsd-metal` package screens
+prepared corpora on the Apple GPU instead; see
+[CPU and GPU screening](guide/CPU_GPU.md#install-the-metal-package). The
 [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) gives the
-CUDA package requirements.
+requirements of both packages.
 
 ## Additions in 8.1.0
 

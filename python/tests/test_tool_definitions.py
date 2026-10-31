@@ -74,6 +74,60 @@ def test_dispatch_rejects_unknown_coerced_or_unbounded_json(name, arguments):
         call_tool(name, arguments)
 
 
+def test_refusals_name_the_argument_and_list_what_is_allowed():
+    pair = {"query_smiles": "CCO", "target_smiles": "CCN"}
+    arguments = ", ".join(TOOL_REGISTRY["find_mcs"].input_schema["properties"])
+    cases = (
+        ("find_mcs", {**pair, "objective": "MCS"},
+         "objective is not an allowed value; allowed values: 'mcis', 'mces'"),
+        ("molecular_similarity", {**pair, "metric": "jaccard"},
+         "metric is not an allowed value; allowed values: 'tanimoto', 'dice', 'cosine'"),
+        ("find_mcs", {**pair, "timeout": 500},
+         f"Unknown tool argument 'timeout' for find_mcs; allowed arguments: {arguments}"),
+        ("find_mcs", {**pair, "timeout": 500, "nodes": 1},
+         f"Unknown tool arguments 'timeout', 'nodes' for find_mcs; allowed arguments: {arguments}"),
+        ("find_mcs", {"query_smiles": "CCO"},
+         "Missing required tool argument 'target_smiles' for find_mcs; "
+         "required arguments: query_smiles, target_smiles"),
+        ("find_mcs", {},
+         "Missing required tool arguments 'query_smiles', 'target_smiles' for find_mcs; "
+         "required arguments: query_smiles, target_smiles"),
+        ("find_mcs", {**pair, "timeout_ms": 30001},
+         "timeout_ms is outside its supported range; allowed range: 0 to 30000"),
+        ("find_mc", pair, "Unknown molecular tool; available tools: " + ", ".join(TOOL_REGISTRY)),
+    )
+    for name, call, message in cases:
+        with pytest.raises(ValueError) as refusal:
+            call_tool(name, call)
+        assert str(refusal.value) == message
+
+
+def test_refusals_echo_a_bounded_part_of_unknown_argument_names():
+    pair = {"query_smiles": "CCO", "target_smiles": "CCN"}
+    with pytest.raises(ValueError) as refusal:
+        call_tool("find_mcs", {**pair, "x" * 1000: 1})
+    assert str(refusal.value).startswith("Unknown tool argument '" + "x" * 63 + " for find_mcs;")
+    with pytest.raises(ValueError) as refusal:
+        call_tool("find_mcs", {**pair, **{f"extra{index}": index for index in range(20)}})
+    assert str(refusal.value).startswith(
+        "Unknown tool arguments " + ", ".join(repr(f"extra{index}") for index in range(8)) + ", ... for find_mcs;")
+
+
+@pytest.mark.parametrize("name", sorted(TOOL_REGISTRY))
+def test_each_fixed_choice_and_unknown_argument_refusal_lists_the_choices(name):
+    schema = TOOL_REGISTRY[name].input_schema
+    required = {key: ["C"] if schema["properties"][key]["type"] == "array" else "C" for key in schema["required"]}
+    for argument, choices in ((key, value["enum"]) for key, value in schema["properties"].items() if "enum" in value):
+        with pytest.raises(ValueError) as refusal:
+            call_tool(name, {**required, argument: "other"})
+        assert str(refusal.value) == (f"{argument} is not an allowed value; allowed values: "
+                                      + ", ".join(repr(choice) for choice in choices))
+    with pytest.raises(ValueError) as refusal:
+        call_tool(name, {**required, "other": 1})
+    assert str(refusal.value).endswith("allowed arguments: " + ", ".join(schema["properties"]))
+    assert all(key in str(refusal.value) for key in schema["required"])
+
+
 def test_unknown_export_provider_is_rejected():
     with pytest.raises(ValueError):
         get_tool_definitions("other")

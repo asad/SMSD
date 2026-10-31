@@ -18,9 +18,9 @@ the API reference. The
 [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
 lists the release packages.
 
-## Version 8.1.0
+## Version 8.2.0
 
-The header archive `smsd-cpp-8.1.0-headers.tar.gz` is on the
+The header archive `smsd-cpp-8.2.0-headers.tar.gz` is on the
 [GitHub releases page](https://github.com/asad/SMSD/releases). The
 [SMARTS export guide](../docs/SMARTS_EXPORT.md) describes the selected common
 graph and its export limits. `MCS::matchWithSmarts(target)` retains the prepared
@@ -118,7 +118,7 @@ program as `example/main.cpp` and this file as `example/CMakeLists.txt`:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 project(smsd_example LANGUAGES CXX)
-find_package(smsd 8.1.0 CONFIG REQUIRED)
+find_package(smsd 8.2.0 CONFIG REQUIRED)
 add_executable(smsd_example main.cpp)
 target_link_libraries(smsd_example PRIVATE smsd::smsd)
 ```
@@ -133,7 +133,7 @@ cmake --build build/example --config Release
 
 Run `build/example/smsd_example` on macOS or Linux, or
 `build/example/Release/smsd_example.exe` with a Visual Studio generator. The
-package uses same-major-version compatibility, so `find_package(smsd 8.1.0)`
+package uses same-major-version compatibility, so `find_package(smsd 8.2.0)`
 accepts any later 8.x installation.
 
 ## Documentation

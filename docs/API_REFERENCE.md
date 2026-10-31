@@ -1,6 +1,6 @@
-# SMSD Pro 8.1.0 API reference
+# SMSD Pro 8.2.0 API reference
 
-This reference describes the 8.1.0 source API. Use a matching wheel or build;
+This reference describes the 8.2.0 source API. Use a matching wheel or build;
 an earlier installed native extension cannot provide new Python APIs.
 
 The Python package provides molecular graphs, exact searches, fingerprints,
@@ -300,12 +300,14 @@ build-, device- and package-dependent; availability alone does not prove a
 particular call dispatched to a device. `gpu_is_available` and
 `gpu_device_info` describe discovery. `warm_start` explicitly prepares a
 reusable corpus/query path. Packed corpus APIs expose explicit backends and
-retain deterministic CPU-defined score/hit semantics. Native Metal packed
-fingerprint screening is available only in C++ and runs only when requested
-explicitly; Python screening and search never run on Metal. See
-[CUDA operation scope](PYTHON.md#optional-cuda-screening),
+retain deterministic CPU-defined score/hit semantics. The optional `smsd-cuda`
+and `smsd-metal` packages let prepared ECFP4 screens and requested corpus
+pre-screens use an NVIDIA or Apple GPU; packed corpora use CUDA only. The C++
+Metal packed-fingerprint provider runs only when requested explicitly. See
+[CPU and GPU screening](guide/CPU_GPU.md),
 [native Metal scope](CPP.md#optional-metal-fingerprint-screening) and the optional
-[`smsd-cuda` package](../packaging/smsd-cuda/README.md) for build and device
+[`smsd-cuda`](../packaging/smsd-cuda/README.md) and
+[`smsd-metal`](../packaging/smsd-metal/README.md) packages for build and device
 requirements; the [supported-platforms table](HOWTO-INSTALL.md#supported-platforms)
 lists the GPU that automatic screening uses by default.
 
@@ -524,7 +526,7 @@ Source: [_screening.py](../python/smsd/_screening.py).
 | `smsd.TargetCorpus.screen_targets_many(queries, threshold, chemistry=None, *, num_threads=0)` | Return similarity-bound hit indices for each query in input order. |
 | `smsd.batch_similarity(query, targets, fp_size=2048, radius=2)` | Rank targets by ECFP Tanimoto similarity to a query. |
 | `smsd.gpu_device_info()` | Human-readable compute backend string, including a CPU-only backend. |
-| `smsd.gpu_is_available()` | True when a GPU is available at run time: through an installed smsd-cuda package that finds a device, or through a native module built with CUDA or Metal. Python screening and search never run on Metal; a Metal-enabled source build changes only what this function and `gpu_device_info()` report. |
+| `smsd.gpu_is_available()` | True when a GPU is available at run time: through an installed smsd-cuda or smsd-metal package that finds a device, or through a native module built with CUDA or Metal. A CUDA- or Metal-enabled source build of `smsd` itself changes only what this function and `gpu_device_info()` report. |
 | `smsd.screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_threads=0)` | Indices of the targets whose similarity bound to the query reaches threshold. |
 | `smsd.similarity(mol1, mol2)` | Upper bound on the similarity of two molecules, in [0.0, 1.0]. |
 | `smsd.similarity_upper_bound(g1, g2, chemistry=None, *, chem=None)` | Linear-time upper bound on the similarity of two molecules, in [0.0, 1.0]. |
@@ -682,3 +684,15 @@ Source: [__init__.py](../packaging/smsd-cuda/python/smsd_cuda/__init__.py).
 | `smsd_cuda.is_available()` | Whether a CUDA device can be used. |
 | `smsd_cuda.preload()` | Initialise the current CUDA device and load screening kernels without screening data. |
 | `smsd_cuda.unavailable_reason()` | Why no CUDA device can be used, or None when one can. |
+
+### Metal package entry points
+
+Source: [__init__.py](../packaging/smsd-metal/python/smsd_metal/__init__.py).
+
+| Callable | Contract |
+| --- | --- |
+| `smsd_metal.capsule()` | A capsule holding the accelerator's table, which smsd attaches. |
+| `smsd_metal.device_info()` | A description of the device, such as 'Apple M2 Pro (Metal, 21845 MB)'. |
+| `smsd_metal.is_available()` | Whether a Metal device can be used: this is an Apple silicon Mac with a GPU. |
+| `smsd_metal.preload()` | Compile the Metal screening kernels without screening data. |
+| `smsd_metal.unavailable_reason()` | Why no Metal device can be used, or None when one can. |

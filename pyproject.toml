@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "8.1.0"
+version = "8.2.0"
 description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
@@ -62,7 +62,7 @@ wheel.license-files = ["LICENSE", "NOTICE", "licenses/rdkit/LICENSE", "licenses/
 # benchmark corpus benchmarks/data/chembl_mcs_benchmark.smi, is skipped there. The Python
 # tests in the sdist read the four shared fixtures and three benchmark modules, and the native
 # ring candidate test reads the shared ring search golden file. The separately built smsd-cuda
-# package is left out too.
+# and smsd-metal packages are left out too.
 sdist.exclude = ["benchmarks/**", "java/src/test/**", "java/cli/src/test/**", "scripts/tests/**", "packaging/**"]
 sdist.include = [
     "benchmarks/generate_dalke_pairs.py",

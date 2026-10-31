@@ -34,8 +34,8 @@ def checked_inputs(args):
         raise ValueError("Source manifest filename is not a basename")
     sdist = args.release_dir / source_manifest["sdist"]
     source = BUILD.checked_source(sdist)
-    if source["version"] != "8.1.0":
-        raise ValueError("Expected SMSD 8.1.0")
+    if source["version"] != "8.2.0":
+        raise ValueError("Expected SMSD 8.2.0")
     manifest = BUILD.read_manifest(args.release_dir / "WHEEL_MANIFEST.json")
     selected = {}
     for entry in manifest["wheels"]:

@@ -13,6 +13,7 @@ from smsd import _accelerator
 def cpu_only(monkeypatch):
     monkeypatch.setenv("SMSD_DISABLE_GPU", "1")
     monkeypatch.setitem(sys.modules, "smsd_cuda", None)
+    monkeypatch.setitem(sys.modules, "smsd_metal", None)
     _accelerator._reset()
     yield
     _accelerator._reset()

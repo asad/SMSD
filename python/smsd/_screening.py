@@ -18,8 +18,8 @@ __all__ = [
 
 
 def gpu_is_available():
-    """True when a GPU is available at run time: through an installed smsd-cuda package that
-    finds a device, or through a native module built with CUDA or Metal.
+    """True when a GPU is available at run time: through an installed smsd-cuda or smsd-metal
+    package that finds a device, or through a native module built with CUDA or Metal.
 
     Example::
 

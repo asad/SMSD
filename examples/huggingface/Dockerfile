@@ -5,11 +5,11 @@ ARG SMSD_WHEEL
 WORKDIR /app
 COPY wheelhouse/ /opt/wheelhouse/
 COPY requirements.txt app.py ./
-RUN case "${SMSD_WHEEL}" in smsd-8.1.0-*.whl) ;; *) echo 'Supply a matching SMSD 8.1.0 CPython 3.12 Linux wheel' >&2; exit 1 ;; esac \
+RUN case "${SMSD_WHEEL}" in smsd-8.2.0-*.whl) ;; *) echo 'Supply a matching SMSD 8.2.0 CPython 3.12 Linux wheel' >&2; exit 1 ;; esac \
     && test "${SMSD_WHEEL##*/}" = "${SMSD_WHEEL}" \
     && python -m pip install --no-cache-dir --no-index --find-links=/opt/wheelhouse \
        "/opt/wheelhouse/${SMSD_WHEEL}" -r requirements.txt \
-    && python -c "from importlib.metadata import version; assert version('smsd') == '8.1.0'" \
+    && python -c "from importlib.metadata import version; assert version('smsd') == '8.2.0'" \
     && rm -rf /opt/wheelhouse
 
 ENV HOME=/tmp PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 GRADIO_ANALYTICS_ENABLED=False \

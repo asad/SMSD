@@ -252,6 +252,21 @@ class VertexSearch {
             throw std::length_error("Domain matrix is too large");
         return static_cast<size_t>(queryAtoms) * words;
     }
+    /**
+     * The zeroed domain rows. A large matrix is filled in blocks between reads of the clock and
+     * is left short once the search stops; the constructor then returns at its first stop check,
+     * before it reads a row.
+     */
+    static std::vector<uint64_t> takeDomains(int queryAtoms, int targetAtoms, Budget& budget) {
+        constexpr size_t block = size_t(1) << 16;
+        const size_t size = domainSize(queryAtoms, targetAtoms);
+        if (size <= block) return SpareVectors<uint64_t>::take(size, 0);
+        auto rows = SpareVectors<uint64_t>::take();
+        if (budget.stopped()) return rows;
+        rows.reserve(size);
+        while (rows.size() < size && !budget.stopped()) rows.resize(std::min(size, rows.size() + block), 0);
+        return rows;
+    }
     size_t domainWords() const { return (static_cast<size_t>(target_.n) + 63) >> 6; }
     size_t domainIndex(int queryAtom, size_t word) const {
         return static_cast<size_t>(queryAtom) * domainWords() + word;
@@ -1274,7 +1289,7 @@ public:
           budget_(budget), collector_(collector),
           queryRings_(query.molecule ? *query.molecule : target, chemistry.completeRingsOnly && query.molecule),
           targetRings_(target, chemistry.completeRingsOnly),
-          domains_(SpareVectors<uint64_t>::take(domainSize(query.size(), target.n), 0)),
+          domains_(takeDomains(query.size(), target.n, budget)),
           domainCounts_(SpareVectors<int>::take(static_cast<size_t>(query.size()), 0)),
           mapping_(SpareVectors<int>::take(static_cast<size_t>(query.size()), -2)),
           used_(SpareVectors<bool>::take(static_cast<size_t>(target.n), false)),

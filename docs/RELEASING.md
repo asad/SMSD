@@ -1,6 +1,6 @@
 # Preparing release assets
 
-Before freezing, set the package, native, Java, CUDA and citation versions together:
+Before freezing, set the package, native, Java, CUDA, Metal and citation versions together:
 
 ```bash
 python scripts/release_metadata.py set-version VERSION --date YYYY-MM-DD
@@ -10,8 +10,8 @@ This also sets the citation's release date without changing the cited article da
 Set the same date in the version's `CHANGELOG.md` heading, in place of `Unreleased`.
 Release assembly extracts the selected version's text from `docs/RELEASE_NOTES.md`
 into the asset `RELEASE_NOTES.md`, suitable for the GitHub release description.
-Version 8.1.0 is published on GitHub and PyPI; its Java library and command-line
-tool stay at 8.0.3 on Maven Central. PyPI uploads need the full schema 2 wheel
+From 8.2.0, the Java library and command-line tool receive bug fixes only, and
+Maven Central carries them at 8.0.3. PyPI uploads need the full schema 2 wheel
 collection described below. Releases in the 8.x line keep the deprecated APIs.
 
 Use a dedicated CPython 3.14 environment. Release tooling pins pip 26.2.2
@@ -63,7 +63,7 @@ alone does not establish compatibility. Delocate checks bundled binaries.
 
 CPU collection writes `WHEEL_MANIFEST.json` from checked build results.
 The default schema 2 mode requires full native Debug and installed Python tests
-for each wheel; PyPI publication, including 8.1.0, needs this mode. For
+for each wheel; PyPI publication needs this mode. For
 GitHub-only collection, the optional lean mode instead shares
 the completed frozen-source checks and runs each platform's build, repair, audit
 and installed-wheel smoke checks. It does not repeat the full suites per wheel.
@@ -118,6 +118,24 @@ and hashes, writes `CUDA_WHEEL_MANIFEST.json`, and updates `SHA256SUMS`.
 Set `SMSD_RELEASE_CUDA_WHEEL` and `SMSD_RELEASE_CUDA_PROVENANCE` to include
 this step in `prepare-release.sh`.
 
+Build the Metal wheel on an Apple silicon Mac with
+`packaging/smsd-metal/scripts/build-and-test.sh`, which uses pinned build
+tools. Then test and collect it, with the `smsd` macOS wheel of the same
+release and a new working directory outside the release directory:
+
+```bash
+python scripts/metal_wheel_provenance.py --release-dir RELEASE_DIRECTORY \
+  --wheel METAL_WHEEL --cpu-wheel SMSD_MACOS_WHEEL --work NEW_WORK_DIRECTORY
+```
+
+The checkout's `packaging/smsd-metal`, `cpp/metal`, `cpp/include` and
+`cpp/CMakeLists.txt` must match the frozen commit. The script builds and runs
+the native Metal tests from the canonical source distribution and runs the
+core and `smsd-metal` Python suites against the two installed wheels on the
+device. Only when every case passes does it write the proof, collect the wheel
+with `METAL_WHEEL_MANIFEST.json` and update `SHA256SUMS`. `prepare-release.sh`
+does not run this step.
+
 The default Java test run includes `AlgorithmTest` and `StressTest`. Tests
 tagged `SlowTest` are excluded unless explicitly selected; see the
 [Java build instructions](../java/README.md#build-and-test).
@@ -127,8 +145,12 @@ tagged `SlowTest` are excluded unless explicitly selected; see the
 The manual `python-publish.yml` workflow has separate publishing paths.
 For `smsd`, select `distribution=smsd`, `platform=all` and `publish=true`.
 For the Linux CUDA add-on, select `distribution=smsd-cuda`, `platform=linux`
-and `publish=true`. Both use the `pypi` environment and trusted publishing;
-each PyPI project needs its own GitHub publisher registration.
+and `publish=true`; for the Metal add-on, select `distribution=smsd-metal`,
+`platform=macos` and `publish=true`. The Metal job runs on Linux: it only
+checks and uploads the collected wheel. All three use the `pypi` environment
+and trusted publishing; each PyPI project needs its own GitHub publisher
+registration, so register a pending publisher for `smsd-metal` before its
+first upload.
 
 The CUDA path uploads only the unchanged published
 `smsd_cuda-VERSION-py3-none-manylinux_2_34_x86_64.whl`. Its release must also
@@ -150,6 +172,11 @@ same frozen commit and the release checkout. The CUDA wheel proof still binds
 that commit and the canonical source distribution hash. Missing checks or an
 incomplete CPU matrix are not repaired by the CUDA publishing path. PyPI
 publisher registration must be complete before requesting a publishing run.
+
+The Metal path checks and uploads only the unchanged published
+`smsd_metal-VERSION-py3-none-macosx_14_0_arm64.whl` in the same way, with
+`METAL_WHEEL_MANIFEST.json` in place of the CUDA manifest. Its fields are
+those listed above; `native_gpu_tests` records the native Metal suite.
 
 ## Publishing to other channels
 

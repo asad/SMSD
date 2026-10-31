@@ -17,7 +17,7 @@ ARG TARGETARCH
 ARG SMSD_REVISION
 LABEL org.opencontainers.image.title="SMSD Pro CUDA" \
       org.opencontainers.image.description="Python substructure and MCS search with NVIDIA CUDA fingerprint screening and GPU pre-screens" \
-      org.opencontainers.image.version="8.1.0" \
+      org.opencontainers.image.version="8.2.0" \
       org.opencontainers.image.revision="${SMSD_REVISION}" \
       org.opencontainers.image.source="https://github.com/asad/SMSD" \
       org.opencontainers.image.licenses="Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception AND PSF-2.0 AND LicenseRef-NVIDIA-CUDA" \

@@ -1,3 +1,84 @@
+# SMSD Pro 8.2.0
+
+SMSD Pro 8.2.0 adds Apple GPU screening on Apple silicon Macs and describes
+GPU screening on Windows through WSL2. The local molecular tools now say what
+they accept when they refuse a call, and MCS searches on very large molecules
+now respect short time limits. From 8.2.0, the Java library and command-line
+tool receive bug fixes only; new features are added to C++ and Python. The
+deprecated 8.x APIs remain available and supported throughout the 8.x line.
+The [changelog](../CHANGELOG.md) lists every change.
+
+## Changes
+
+- [`smsd-metal`](../packaging/smsd-metal/README.md) adds optional Apple GPU
+  screening on Apple silicon Macs with macOS 14 or later. Installed beside
+  `smsd` of the same version, it lets prepared ECFP4 screens of a
+  `TargetCorpus` use the GPU automatically on an Apple M5 for corpora of at
+  least 100,000 targets, or on any Apple GPU from `SMSD_METAL_MIN_TARGETS`
+  targets, and lets `match_corpus(..., gpu_prefilter=True)` run its pre-screen
+  there. Hits and scores are those of the CPU, matching stays on the CPU, and
+  packed fingerprint corpora do not use Metal. See
+  [CPU and GPU screening](guide/CPU_GPU.md#install-the-metal-package).
+- [GPU screening on Windows](guide/GPU_ON_WINDOWS.md) sets up NVIDIA GPU
+  screening under WSL2, with the Linux CUDA package or the GPU Docker image.
+  Native Windows CUDA packages are not provided.
+- When `call_tool` or the MCP server refuses a call, the message names the
+  argument and, where a list helps, what is accepted: the available tools, the
+  tool's allowed or required arguments, the allowed values or the allowed
+  range, so the caller can correct the call; see
+  [Read a tool result](guide/AI_TOOLS.md#read-a-tool-result).
+- C++ and Python MCS searches on very large molecules now respect short time
+  limits: preparing the search no longer runs past a limit of a few
+  milliseconds.
+
+## Upgrading from 8.1.0
+
+Refusal messages from `call_tool` and the MCP server are longer. Code that
+compares one with fixed text, such as `Unknown tool argument`, should test how
+the message starts: it now continues with the argument and what is accepted.
+
+`smsd-cuda` and `smsd-metal` serve only the `smsd` of the same version, so
+upgrade them together, for example with
+`python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"`.
+
+Maven Central carries the Java library and command-line tool at 8.0.3. A
+[Java source build](HOWTO-INSTALL.md#java-source-build) gives the current
+library and tool, with the Java changes described under
+[Upgrading from 8.0.3](#upgrading-from-803), including the ring-perception
+refusals, complete-ring matching and the SMARTS `R<n>` basis.
+
+## Downloads
+
+SMSD Pro 8.2.0 is available from PyPI and GitHub. Install it with
+`python -m pip install "smsd==8.2.0"`, adding `"smsd-cuda==8.2.0"` for NVIDIA
+GPU screening on Linux x86_64, or `"smsd-metal==8.2.0"` for Apple GPU
+screening on Apple silicon Macs. Python wheels cover CPython 3.12–3.15 on
+Linux x86_64 and aarch64, Windows x86_64 and macOS arm64 (macOS 14 or later).
+For Java, Maven Central carries the library `com.bioinceptionlabs:smsd:8.0.3`
+and the command-line tool `com.bioinceptionlabs:smsd-cli:8.0.3`, and the
+[8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3) has the CLI
+files and installers; the CPU Docker images below carry the 8.2.0
+command-line tool, and a Java source build gives the current library. The
+conda `smsd` package is currently built without OpenMP. Multi-GPU screening
+and native Windows CUDA wheels are not provided. See the
+[installation guide](HOWTO-INSTALL.md#supported-platforms) for requirements, its
+[Docker section](HOWTO-INSTALL.md#docker) for the Docker images and the
+[GitHub releases page](https://github.com/asad/SMSD/releases) for the files and
+`SHA256SUMS`:
+
+| File | Contents |
+| --- | --- |
+| `smsd-8.2.0.tar.gz` | Python source distribution |
+| `smsd-8.2.0-cp312-cp312-*.whl` to `smsd-8.2.0-cp315-cp315-*.whl` | Python CPU wheels, one per CPython version on each platform: Linux x86_64 (`manylinux_2_27_x86_64.manylinux_2_28_x86_64`), Linux aarch64 (`manylinux_2_26_aarch64.manylinux_2_28_aarch64`), macOS arm64 (`macosx_14_0_arm64`) and Windows x86_64 (`win_amd64`) |
+| `smsd_cuda-8.2.0-py3-none-manylinux_2_34_x86_64.whl` | Optional CUDA package for Linux x86_64 |
+| `smsd_metal-8.2.0-py3-none-macosx_14_0_arm64.whl` | Optional Metal package for macOS arm64 |
+| `smsd-cpp-8.2.0-headers.tar.gz` | Header-only C++17 library |
+| `smsd-8.2.0-cpu-linux-amd64.tar.xz` and `smsd-8.2.0-cpu-linux-arm64.tar.xz` | Docker CPU images for Linux amd64 and arm64 with `smsd` and the 8.2.0 Java command-line tool |
+| `smsd-8.2.0-cuda-linux-amd64.tar.xz` | Docker GPU image for Linux amd64 with `smsd-cuda` and the CUDA runtime |
+| `SOURCE_MANIFEST.json`, `WHEEL_MANIFEST.json`, `CUDA_WHEEL_MANIFEST.json` and `METAL_WHEEL_MANIFEST.json` | Source commit and checksums of the source distribution and wheels |
+| `RELEASE_NOTES.md` | These release notes |
+| `SHA256SUMS` | SHA-256 checksums of the release files |
+
 # SMSD Pro 8.1.0
 
 SMSD Pro 8.1.0 adds Python data and machine-learning adapters, local MCP tools,

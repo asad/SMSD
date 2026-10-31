@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "smsd-cuda"
 # Always the smsd version it serves, which the build checks against the SMSD sources.
-version = "8.1.0"
+version = "8.2.0"
 description = "NVIDIA CUDA fingerprint screening and GPU pre-screens for SMSD Pro"
 readme = "README.md"
 license = {text = "Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception"}
@@ -14,7 +14,7 @@ authors = [
     {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
 ]
 dependencies = [
-    "smsd==8.1.0",
+    "smsd==8.2.0",
     "nvidia-cuda-runtime-cu12>=12.8,<13",
 ]
 classifiers = [

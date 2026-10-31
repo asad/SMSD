@@ -1,0 +1,49 @@
+[build-system]
+requires = ["scikit-build-core>=0.10,<2"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "smsd-metal"
+# Always the smsd version it serves, which the build checks against the SMSD sources.
+version = "8.2.0"
+description = "Apple Metal fingerprint screening and GPU pre-screens for SMSD Pro"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.12"
+authors = [
+    {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
+]
+dependencies = [
+    "smsd==8.2.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: GPU",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Programming Language :: C++",
+    "Programming Language :: Objective C",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+keywords = ["cheminformatics", "similarity", "screening", "metal", "gpu", "apple silicon"]
+
+[project.urls]
+Homepage = "https://github.com/asad/SMSD"
+Repository = "https://github.com/asad/SMSD"
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+wheel.packages = ["python/smsd_metal"]
+# The library is loaded with ctypes, not imported as an extension, so one wheel serves every Python 3.
+wheel.py-api = "py3"
+wheel.license-files = ["LICENSE", "NOTICE"]
+minimum-version = "0.10"
+
+[tool.scikit-build.cmake.define]
+CMAKE_OSX_ARCHITECTURES = "arm64"

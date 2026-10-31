@@ -1,26 +1,32 @@
 # Installation and source builds
 
-This guide covers installing SMSD Pro 8.1.0 and building it from source.
+This guide covers installing SMSD Pro 8.2.0 and building it from source.
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases);
 the [README](../README.md) lists the Python and Maven packages and the conda
 recipes.
 
-## Install SMSD Pro 8.1.0
+## Install SMSD Pro 8.2.0
 
 Install the Python package from PyPI:
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 ```
 
 For NVIDIA GPU screening on Linux x86_64, add the optional CUDA package of the
-same version: `python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"`. The
-Java library and command-line tool stay at 8.0.3 on Maven Central, as
+same version:
+`python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"`. For Apple GPU
+screening on an Apple silicon Mac, add the Metal package instead:
+`python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"`. On Windows, GPU
+screening runs under WSL2, with the Linux CUDA package or the GPU Docker image;
+see [GPU screening on Windows](guide/GPU_ON_WINDOWS.md). From 8.2.0, the Java
+library and command-line tool receive bug fixes only; new features are added
+to C++ and Python. Maven Central carries them at 8.0.3, as
 `com.bioinceptionlabs:smsd:8.0.3` and `com.bioinceptionlabs:smsd-cli:8.0.3`;
 the [Java module README](../java/README.md#installation) gives their Maven and
-Gradle dependencies. The [CPU Docker images](#docker) carry the 8.1.0
+Gradle dependencies. The [CPU Docker images](#docker) carry the 8.2.0
 command-line tool, and a [Java source build](#java-source-build) produces the
-8.1.0 Java library and tool. The C++ headers need a C++17 compiler and no
+8.2.0 Java library and tool. The C++ headers need a C++17 compiler and no
 Python or Java runtime.
 
 See [Python adapters and MCP](PYTHON_ADAPTERS.md),
@@ -31,7 +37,8 @@ rejects unsupported matching constraints instead of silently dropping them.
 
 The [conda guide](../packaging/conda/README.md) describes the recipes that
 build `smsd` and, on Linux x86_64, `smsd-cuda` for NVIDIA GPU screening. It
-also covers the conda, mamba and Pixi install routes.
+also covers the conda, mamba and Pixi install routes. The conda `smsd` package
+is currently built without OpenMP; the PyPI wheels use OpenMP for batch work.
 
 <a id="platform-requirements"></a>
 
@@ -43,22 +50,26 @@ also covers the conda, mamba and Pixi install routes.
 | `smsd` wheel | Linux with glibc 2.28 or later, x86_64 or aarch64 | CPython 3.12–3.15 | CPU/OpenMP |
 | `smsd` wheel | macOS 14 or later, arm64 (Apple silicon) | CPython 3.12–3.15 | CPU/OpenMP |
 | `smsd-cuda` wheel | Linux with glibc 2.34 or later, x86_64 | CPython 3.12–3.15; matching `smsd`; NVIDIA driver compatible with the installed CUDA 12 runtime | Automatic ECFP4 screening on Tesla T4 (compute capability 7.5) |
+| `smsd-metal` wheel | macOS 14 or later, arm64 (Apple silicon) | CPython 3.12–3.15; matching `smsd` | Automatic ECFP4 screening on Apple M5 |
 | Java library, CLI JAR and portable CLI | Windows, macOS or Linux | Java 8 or later; Java 25 LTS preferred | CPU |
 | Java CLI installers (8.0.3 release) | Windows x86_64 (MSI), macOS arm64 (DMG), Linux amd64 (DEB) | Bundled Java 25 runtime | CPU |
-| Python source build | A platform with a C++17 compiler | Python 3.12 or later; CMake 3.18 or later | CPU; optional CUDA package built separately |
+| Python source build | A platform with a C++17 compiler | Python 3.12 or later; CMake 3.18 or later | CPU; optional CUDA or Metal package built separately |
 | C++ headers | A platform with a C++17 compiler | No Python or Java runtime needed | CPU; native CUDA or macOS Metal source build optional |
 
 Minimum operating-system versions are build targets. The standard wheel matrix
 has four CPython versions on four platforms. Free-threaded CPython and Intel
-macOS need source builds. Python wheels do not include macOS GPU support or
-native Windows CUDA. Native C++ source builds on macOS include [optional Metal
+macOS need source builds. The `smsd` wheels screen on the CPU; GPU screening
+comes from the separate `smsd-cuda` and `smsd-metal` packages. Native Windows
+CUDA is not provided: on Windows, use the Linux CUDA wheel or the GPU Docker
+image under WSL2, as described in [GPU screening on Windows](guide/GPU_ON_WINDOWS.md).
+Native C++ source builds on macOS include [optional Metal
 support](CPP.md#optional-metal-fingerprint-screening), which a program uses only
-when it links `smsd_metal`; Metal fingerprint screening runs only when requested
-explicitly. Search matching runs on the CPU in every package. By default,
-automatic ECFP4 screening of a prepared `TargetCorpus` uses the GPU only on a
-Tesla T4 and only for a corpus of at least 100,000 targets; the
-[CUDA screening](PYTHON.md#optional-cuda-screening) section gives the explicit
-routes for other devices.
+when it links `smsd_metal`. Search matching runs on the CPU in every package.
+By default, automatic ECFP4 screening of a prepared `TargetCorpus` uses the
+GPU only on a Tesla T4 with `smsd-cuda` or an Apple M5 with `smsd-metal`, and
+only for a corpus of at least 100,000 targets;
+[CPU and GPU screening](guide/CPU_GPU.md#automatic-use-in-prepared-screens)
+gives the settings for other devices and the explicit routes.
 
 ## Verify downloads
 
@@ -68,14 +79,14 @@ directory as the release files, then check each file you use.
 macOS or Linux:
 
 ```bash
-grep ' smsd-cpp-8.1.0-headers.tar.gz$' SHA256SUMS | shasum -a 256 -c
+grep ' smsd-cpp-8.2.0-headers.tar.gz$' SHA256SUMS | shasum -a 256 -c
 ```
 
 Windows PowerShell (prints `True` when the checksum matches):
 
 ```powershell
-$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-cpp-8.1.0-headers.tar.gz'
-(Get-FileHash .\smsd-cpp-8.1.0-headers.tar.gz -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
+$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-cpp-8.2.0-headers.tar.gz'
+(Get-FileHash .\smsd-cpp-8.2.0-headers.tar.gz -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
 ```
 
 Replace the file name to check another download.
@@ -84,9 +95,9 @@ Replace the file name to check another download.
 
 ## Portable Java CLI
 
-The standalone Java command-line tool stays at 8.0.3 in this release, so this
-section uses the files of the [8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3);
-the [CPU Docker images](#docker) carry the 8.1.0 tool, and a
+The standalone Java command-line tool is at 8.0.3, so this section uses the
+files of the [8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3);
+the [CPU Docker images](#docker) carry the 8.2.0 tool, and a
 [Java source build](#java-source-build) produces it.
 
 `smsd-cli-8.0.3-jar-with-dependencies.jar` contains the SMSD library, CDK 2.13
@@ -123,14 +134,14 @@ root:
 
 ```bash
 mvn -f java/pom.xml clean package
-java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar --version
 ```
 
 The build runs the default tests, writes the library JAR to `java/core/target`,
 and writes the CLI JARs and the portable launchers to `java/cli/target`.
-`mvn -f java/pom.xml install` also installs `com.bioinceptionlabs:smsd:8.1.0`
-and `com.bioinceptionlabs:smsd-cli:8.1.0` in the local Maven repository. To
-use them, set version 8.1.0 in the Maven or Gradle dependencies of the
+`mvn -f java/pom.xml install` also installs `com.bioinceptionlabs:smsd:8.2.0`
+and `com.bioinceptionlabs:smsd-cli:8.2.0` in the local Maven repository. To
+use them, set version 8.2.0 in the Maven or Gradle dependencies of the
 [Java module README](../java/README.md#installation); Gradle also needs
 `mavenLocal()` in its repositories.
 
@@ -153,7 +164,7 @@ See the [Java guide](JAVA.md) for the API and CLI reference.
 ## C++ source build
 
 The C++ library is header-only: use `cpp/include`, or the release archive
-`smsd-cpp-8.1.0-headers.tar.gz`. The CMake build needs CMake 3.18 or later, and
+`smsd-cpp-8.2.0-headers.tar.gz`. The CMake build needs CMake 3.18 or later, and
 `ctest --test-dir` needs CMake 3.20 or later. On Windows, use Developer
 PowerShell for Visual Studio with the Desktop development with C++ workload.
 From the repository root:
@@ -177,7 +188,7 @@ reference.
 Install the release wheel for your platform from PyPI or the GitHub release:
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 python -c "import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"
 ```
 
@@ -206,7 +217,8 @@ Source builds leave Metal and CUDA out by default. Python screening and search
 do not run on them, so `-Ccmake.define.SMSD_BUILD_METAL=ON` or
 `-Ccmake.define.SMSD_BUILD_CUDA=ON` (or `AUTO`, which includes each one when it
 is available) changes only what `gpu_is_available()` and `gpu_device_info()`
-report. NVIDIA screening comes from the separate `smsd-cuda` package.
+report. NVIDIA screening comes from the separate `smsd-cuda` package, and Apple
+GPU screening from the separate `smsd-metal` package.
 The wheel is written to `dist/`; install it with the same environment's Python.
 For development, install the checkout in editable mode with the test
 dependencies, then run the tests:
@@ -221,42 +233,45 @@ The standard wheels use CPU/OpenMP. For optional NVIDIA CUDA screening on a
 supported Linux system, install the matching package:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 The CUDA runtime is installed as a package dependency; the host still needs a
-compatible NVIDIA driver. See [CUDA screening](PYTHON.md#optional-cuda-screening)
-for dispatch and CPU fallback behaviour. RDKit is needed only for RDKit
-molecule conversion and RDKit depiction
-(`python -m pip install "smsd[rdkit]==8.1.0"`). See the
+compatible NVIDIA driver. On an Apple silicon Mac, install
+`"smsd-metal==8.2.0"` in place of `smsd-cuda`; it uses the Metal framework of
+macOS. See [CPU and GPU screening](guide/CPU_GPU.md) for dispatch and CPU
+fallback behaviour. RDKit is needed only for RDKit molecule conversion and
+RDKit depiction (`python -m pip install "smsd[rdkit]==8.2.0"`). See the
 [Python guide](PYTHON.md) for examples and build options.
 
 ## Docker
 
-The CPU images include the 8.1.0 Java CLI and the Python package. The default
+The CPU images include the 8.2.0 Java CLI and the Python package. The default
 command is the Java CLI; use `--entrypoint python` for Python. After loading
 the image archive from the release:
 
 ```bash
-docker load --input smsd-8.1.0-cpu-linux-amd64.tar.xz
-docker run --rm smsd:8.1.0-cpu-amd64 \
+docker load --input smsd-8.2.0-cpu-linux-amd64.tar.xz
+docker run --rm smsd:8.2.0-cpu-amd64 \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-docker run --rm --entrypoint python smsd:8.1.0-cpu-amd64 \
+docker run --rm --entrypoint python smsd:8.2.0-cpu-amd64 \
   -c "import smsd; assert smsd.Substructure.find('CC').match('CCC').found"
 ```
 
-On an arm64 host, load `smsd-8.1.0-cpu-linux-arm64.tar.xz` and use
-`smsd:8.1.0-cpu-arm64`. The GPU image includes the Python
+On an arm64 host, load `smsd-8.2.0-cpu-linux-arm64.tar.xz` and use
+`smsd:8.2.0-cpu-arm64`. The GPU image includes the Python
 package, matching `smsd-cuda` and CUDA runtime, with Python as its entry point:
 
 ```bash
-docker load --input smsd-8.1.0-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.1.0-cuda12.8 \
+docker load --input smsd-8.2.0-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.2.0-cuda12.8 \
   -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 
-It needs the NVIDIA Container Toolkit and a compatible host driver, including
-when used through WSL2 on Windows. The final image contains no CUDA toolkit.
+It needs the NVIDIA Container Toolkit and a compatible host driver; on Windows
+it runs under WSL2, as described in
+[GPU screening on Windows](guide/GPU_ON_WINDOWS.md). The final image contains
+no CUDA toolkit.
 Backend availability does not prove that a screening call used the GPU.
 
 Source builds use a prepared context containing the matching release wheels
@@ -269,15 +284,15 @@ python scripts/prepare_docker_context.py \
   --release-dir release --output docker-context --architecture amd64
 docker buildx build --load --platform linux/amd64 \
   --build-arg SMSD_REVISION=SOURCE_COMMIT \
-  -f docker-context/Dockerfile -t smsd:8.1.0-cpu-amd64 docker-context
+  -f docker-context/Dockerfile -t smsd:8.2.0-cpu-amd64 docker-context
 ```
 
 Replace `SOURCE_COMMIT` with that recorded value. For arm64, use a separate
 context with `--architecture arm64`, platform `linux/arm64` and tag
-`smsd:8.1.0-cpu-arm64`. To prepare the GPU context, add `--cuda-wheel`,
+`smsd:8.2.0-cpu-arm64`. To prepare the GPU context, add `--cuda-wheel`,
 `--cuda-provenance` and `--runtime-wheel` with the matching `smsd-cuda` wheel,
 its provenance record and the pinned runtime wheel. Build that context with
-`Dockerfile.cuda`, platform `linux/amd64` and tag `smsd:8.1.0-cuda12.8`.
+`Dockerfile.cuda`, platform `linux/amd64` and tag `smsd:8.2.0-cuda12.8`.
 The GPU Dockerfile needs BuildKit with its bundled Dockerfile frontend 1.2
 or later. Its wheel inputs are mounted for installation rather than copied
 into final image layers; the same installed-file and runtime checks still run.
@@ -289,21 +304,21 @@ bundled runtimes.
 To save a built image as a release archive:
 
 ```bash
-python scripts/archive_docker_image.py --image smsd:8.1.0-cuda12.8 \
+python scripts/archive_docker_image.py --image smsd:8.2.0-cuda12.8 \
   --revision SOURCE_COMMIT --architecture amd64 \
-  --output smsd-8.1.0-cuda-linux-amd64.tar.xz
-docker load --input smsd-8.1.0-cuda-linux-amd64.tar.xz
+  --output smsd-8.2.0-cuda-linux-amd64.tar.xz
+docker load --input smsd-8.2.0-cuda-linux-amd64.tar.xz
 ```
 
 If the Docker engine has no xz decompressor, decompress on the host before
 loading:
 
 ```bash
-xz --decompress --stdout smsd-8.1.0-cuda-linux-amd64.tar.xz | docker load
+xz --decompress --stdout smsd-8.2.0-cuda-linux-amd64.tar.xz | docker load
 ```
 
-For a CPU image, use `--image smsd:8.1.0-cpu-amd64` and output
-`smsd-8.1.0-cpu-linux-amd64.tar.xz`; replace both architecture values with
+For a CPU image, use `--image smsd:8.2.0-cpu-amd64` and output
+`smsd-8.2.0-cpu-linux-amd64.tar.xz`; replace both architecture values with
 `arm64` for that platform. The helper saves the documented tag and checks that
 its image identity, revision label and platform stay unchanged during export.
 It requires the xz archive to be smaller than 2,000,000,000 bytes. An existing
@@ -317,7 +332,7 @@ main guides; examples that need RDKit are skipped when it is absent:
 
 ```bash
 python scripts/check_examples.py \
-  --jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
+  --jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
   --report build/example-check.json
 ```
 

@@ -22,6 +22,7 @@ WIDER_ACCESS = {
     ("installers.yml", "windows"): {"contents: write"},  # draft releases are visible only with write access
     ("python-publish.yml", "publish"): {"id-token: write", "contents: read"},  # trusted publishing to PyPI
     ("python-publish.yml", "publish-cuda"): {"id-token: write", "contents: read"},
+    ("python-publish.yml", "publish-metal"): {"id-token: write", "contents: read"},
     ("release.yml", "docker-cli"): {"contents: read", "actions: read"},  # checked SDK and wheel artifacts from an explicit build run
 }
 
@@ -41,22 +42,24 @@ def permissions(job):
 
 
 class WorkflowTest(unittest.TestCase):
-    def test_cuda_publishing_uses_a_separate_manual_validated_release_path(self):
+    def test_gpu_add_on_publishing_uses_a_separate_manual_validated_release_path(self):
         text = (ROOT / ".github/workflows/python-publish.yml").read_text()
         workflow_jobs = jobs(text)
-        cuda = workflow_jobs["publish-cuda"]
-        self.assertIn("options: [smsd, smsd-cuda]", text)
-        self.assertIn("inputs.publish && inputs.distribution == 'smsd-cuda'", cuda)
+        self.assertIn("options: [smsd, smsd-cuda, smsd-metal]", text)
         self.assertIn("inputs.publish && inputs.distribution == 'smsd'", workflow_jobs["publish"])
-        self.assertIn("environment: pypi", cuda)
-        for command in ("download", "validate", "verify-staged"):
-            self.assertIn("check_pypi_release.py " + command + " --package smsd-cuda", cuda)
-        self.assertIn("--source-checkout release-checkout", cuda)
-        self.assertLess(cuda.index("verify-staged"), cuda.index("uses: pypa/gh-action-pypi-publish@"))
-        self.assertNotIn("pip install", cuda)
-        self.assertNotIn("build_python_wheels.py build", cuda)
-        self.assertNotIn("password:", cuda)
-        self.assertIn("smsd-cuda only publishes an existing validated release wheel", workflow_jobs["source"])
+        self.assertIn("only publishes an existing validated release wheel", workflow_jobs["source"])
+        for package, name in (("smsd-cuda", "publish-cuda"), ("smsd-metal", "publish-metal")):
+            job = workflow_jobs[name]
+            self.assertIn(f"inputs.publish && inputs.distribution == '{package}'", job)
+            self.assertIn("runs-on: ubuntu-24.04", job)
+            self.assertIn("environment: pypi", job)
+            for command in ("download", "validate", "verify-staged"):
+                self.assertIn("check_pypi_release.py " + command + " --package " + package, job)
+            self.assertIn("--source-checkout release-checkout", job)
+            self.assertLess(job.index("verify-staged"), job.index("uses: pypa/gh-action-pypi-publish@"))
+            self.assertNotIn("pip install", job)
+            self.assertNotIn("build_python_wheels.py build", job)
+            self.assertNotIn("password:", job)
 
     def test_every_workflow_runs_only_on_request(self):
         self.assertEqual(len(WORKFLOWS), 5)
@@ -122,6 +125,21 @@ class PackagingTest(unittest.TestCase):
         self.assertLess(setup.index(pip), setup.index(tools))
         self.assertIn("auditwheel==6.8.2 cmake==4.4.3 ninja==1.13.2", setup)
         self.assertNotIn("--upgrade pip >", setup)
+
+    def test_metal_build_pins_pip_and_the_cuda_build_tools(self):
+        script = (ROOT / "packaging/smsd-metal/scripts/build-and-test.sh").read_text()
+        cuda = (ROOT / "packaging/smsd-cuda/scripts/setup.sh").read_text()
+        pip = '"$venv" -m pip install -q --upgrade pip==26.2.2'
+        tools = '"$venv" -m pip install -q scikit-build-core==1.1.1 pytest==9.1.1 pytest-timeout==2.4.0'
+        self.assertLess(script.index(pip), script.index(tools))
+        self.assertLess(script.index(tools), script.index('"$venv" -m pip wheel'))
+        self.assertIn("cmake==4.4.3 ninja==1.13.2 delocate==0.13.0", script)
+        for pin in ("pip==26.2.2", "scikit-build-core==1.1.1", "pytest==9.1.1", "pytest-timeout==2.4.0",
+                    "cmake==4.4.3", "ninja==1.13.2"):
+            self.assertIn(pin, cuda)
+        installs = [line for line in script.splitlines() if " pip install" in line and "--no-deps" not in line]
+        self.assertEqual(len(installs), 2)
+        self.assertNotRegex(script, r"pip install[^\n]*(?:>=|<|~=)")
 
     def test_docker_base_images_are_pinned_and_the_image_is_labelled(self):
         text = (ROOT / "Dockerfile").read_text(encoding="utf-8")

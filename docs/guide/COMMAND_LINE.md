@@ -10,11 +10,12 @@ similarity screening are not available on the command line; the
 
 ## Get the command-line tool
 
-The 8.1.0 tool comes from a Java source build or from the CPU
+The 8.2.0 tool comes from a Java source build or from the CPU
 [Docker images](#docker-images). Maven Central and the 8.0.3 release carry the
 8.0.3 tool, which the
-[installation guide](../HOWTO-INSTALL.md#portable-java-cli) describes. To build
-8.1.0, use a JDK (Java 25 LTS preferred) and Maven 3.9 or later, and from the
+[installation guide](../HOWTO-INSTALL.md#portable-java-cli) describes. From
+8.2.0, the tool and the Java library receive bug fixes only. To build 8.2.0,
+use a JDK (Java 25 LTS preferred) and Maven 3.9 or later, and from the
 repository root run:
 
 ```bash
@@ -24,9 +25,9 @@ smsd --version
 ```
 
 The build runs the default tests and writes
-`java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar`, which holds the
+`java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar`, which holds the
 tool and all its dependencies and runs on Java 8 or later, also as
-`java -jar smsd-cli-8.1.0-jar-with-dependencies.jar`. The launcher script
+`java -jar smsd-cli-8.2.0-jar-with-dependencies.jar`. The launcher script
 `java/cli/src/scripts/smsd` runs the newest such JAR in `java/cli/target`, or
 one next to the script; `smsd.bat` and `smsd.ps1` in the same folder do the
 same on Windows. The examples in this chapter call the tool as `smsd`.
@@ -544,19 +545,19 @@ The release provides three image archives:
 
 | Image | Archive | Platform | Entry point | Contents |
 | --- | --- | --- | --- | --- |
-| `smsd:8.1.0-cpu-amd64` | `smsd-8.1.0-cpu-linux-amd64.tar.xz` | linux/amd64 | The command-line tool | Java 25 runtime, CPython 3.14.9 and the `smsd` package |
-| `smsd:8.1.0-cpu-arm64` | `smsd-8.1.0-cpu-linux-arm64.tar.xz` | linux/arm64 | The command-line tool | As for amd64 |
-| `smsd:8.1.0-cuda12.8` | `smsd-8.1.0-cuda-linux-amd64.tar.xz` | linux/amd64 | `python` | CPython 3.14.9, `smsd`, `smsd-cuda` and the CUDA 12 runtime; no Java |
+| `smsd:8.2.0-cpu-amd64` | `smsd-8.2.0-cpu-linux-amd64.tar.xz` | linux/amd64 | The command-line tool | Java 25 runtime, CPython 3.14.9 and the `smsd` package |
+| `smsd:8.2.0-cpu-arm64` | `smsd-8.2.0-cpu-linux-arm64.tar.xz` | linux/arm64 | The command-line tool | As for amd64 |
+| `smsd:8.2.0-cuda12.8` | `smsd-8.2.0-cuda-linux-amd64.tar.xz` | linux/amd64 | `python` | CPython 3.14.9, `smsd`, `smsd-cuda` and the CUDA 12 runtime; no Java |
 
 Load a CPU image and pass the tool's options after the image name; use
 `--entrypoint python` for Python:
 
 ```bash
-docker load --input smsd-8.1.0-cpu-linux-amd64.tar.xz
-docker run --rm smsd:8.1.0-cpu-amd64 --version
-docker run --rm smsd:8.1.0-cpu-amd64 \
+docker load --input smsd-8.2.0-cpu-linux-amd64.tar.xz
+docker run --rm smsd:8.2.0-cpu-amd64 --version
+docker run --rm smsd:8.2.0-cpu-amd64 \
   --Q SMI --q "c1ccccc1" --T SMI --t "Oc1ccccc1" --json -
-docker run --rm --entrypoint python smsd:8.1.0-cpu-amd64 \
+docker run --rm --entrypoint python smsd:8.2.0-cpu-amd64 \
   -c "import smsd; assert smsd.Substructure.find('CC').match('CCC').found"
 ```
 
@@ -566,7 +567,7 @@ the user `smsd` in the working directory `/work`. If `docker load` stops with
 decompress the archive; decompress it on the host instead:
 
 ```bash
-xz --decompress --stdout smsd-8.1.0-cpu-linux-amd64.tar.xz | docker load
+xz --decompress --stdout smsd-8.2.0-cpu-linux-amd64.tar.xz | docker load
 ```
 
 The tool in the container reads only the files it is given. To search the
@@ -574,7 +575,7 @@ file of the [SDF batch search](#sdf-batch-search), mount the current directory
 on `/work` and run as yourself, so the report belongs to you:
 
 ```bash
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" smsd:8.1.0-cpu-amd64 \
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" smsd:8.2.0-cpu-amd64 \
   --Q SMI --q "c1ccccc1" --T SDF --t targets.sdf --threads 2 --json benzene.json
 ```
 
@@ -588,8 +589,8 @@ The GPU image runs Python on an NVIDIA host with the NVIDIA Container Toolkit
 and a compatible driver:
 
 ```bash
-docker load --input smsd-8.1.0-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.1.0-cuda12.8 \
+docker load --input smsd-8.2.0-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.2.0-cuda12.8 \
   -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 
@@ -602,7 +603,7 @@ the images from source.
 
 ## Molecular tools server
 
-`smsd-mcp`, installed with `python -m pip install "smsd[mcp]==8.1.0"`, serves
+`smsd-mcp`, installed with `python -m pip install "smsd[mcp]==8.2.0"`, serves
 eight molecular tools over standard input and output, with no network
 listener. Without the extra it exits with status 1 after a Python traceback
 that ends with
