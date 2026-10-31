@@ -7,15 +7,19 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- A task-based [user guide](docs/guide/README.md) in `docs/guide` and five
-  topic notebooks in `python/examples`.
+- Three user-guide chapters: [clustering and diversity](docs/guide/CLUSTERING.md),
+  [machine learning and data frames](docs/guide/MACHINE_LEARNING.md) and
+  [chemistry tools for AI assistants](docs/guide/AI_TOOLS.md).
+- An AI tools notebook, `python/examples/ai_tools.ipynb`, that calls the
+  molecular tools directly, from a scripted tool loop and from local or hosted
+  models.
 
 ### Changed
 
-- Clearer CUDA, conda, Python and SMARTS export guides: the 256 MiB limit
-  applies to each retained device workspace, CUDA Graph replay needs the
-  call's buffers to fit a free retained workspace, and identical fingerprint
-  bits hold for the same SMSD version.
+- The [AI assistants guide](docs/AI_ASSISTANTS.md) opens with a model choice
+  table and reflects current provider interfaces and local runtimes.
+- `scripts/check_examples.py` removes API key variables before it runs any
+  example.
 
 ## [8.1.0] - 2026-10-31
 
@@ -29,6 +33,8 @@ The [release notes](docs/RELEASE_NOTES.md) list the downloads and upgrade notes.
 
 ### Added
 
+- A task-based [user guide](docs/guide/README.md) in `docs/guide` and five
+  topic notebooks in `python/examples`.
 - `relevantCyclesTruncated` (C++ and Java) and Python
   `relevant_cycles_truncated` report incomplete full relevant-cycle enumeration
   separately from the existing `ringsTruncated`/`rings_truncated` basis flag.

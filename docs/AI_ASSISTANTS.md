@@ -15,6 +15,25 @@ results, including any structures, to its model provider.
 The eight tools and their results are described in
 [Molecular tools and MCP](MCP_SERVER.md).
 
+## Choose your model
+
+Where your structures may go decides the model. For proprietary or
+unpublished chemistry, start with an open model on your own hardware: the
+prompts, structures and results never leave your site.
+
+| Option | Where prompts, structures and results go | Keys needed | Read |
+| --- | --- | --- | --- |
+| Open models on your own hardware: Ollama, vLLM, llama.cpp or LM Studio serving gpt-oss, Qwen 3 or Gemma 4 | Nowhere: they stay on your machine or your own servers | None | [Open models](#open-models), [Goose with a local model](#goose-with-a-local-model), [MCP with a local model](#mcp-with-a-local-model) |
+| Hosted open models, such as the DeepSeek API | The model provider's servers | The provider's key, such as `DEEPSEEK_API_KEY` | [One loop for DeepSeek and local runtimes](#one-loop-for-deepseek-and-local-runtimes) |
+| Hosted closed models: Claude, OpenAI, Gemini | The model provider's servers | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `GEMINI_API_KEY`; none for a desktop or terminal assistant you sign in to | [Connect the MCP server](#connect-the-mcp-server), [Use the tool definitions from Python](#use-the-tool-definitions-from-python) |
+
+In each case SMSD runs the tools locally; only the model's side of the
+conversation differs. gpt-oss (20b and 120b) is released under the Apache 2.0
+licence, and the 20b model runs on a single workstation. The notebook
+[`python/examples/ai_tools.ipynb`](../python/examples/ai_tools.ipynb) runs the
+tools first without a model, then with a local model, and runs the hosted
+examples only when their keys are set.
+
 ## Install
 
 ```sh
@@ -77,8 +96,9 @@ Add the server to `claude_desktop_config.json`:
 Replace the command with the absolute path printed by `which smsd-mcp` or
 `where.exe smsd-mcp`, because Claude Desktop may not find commands on your
 shell's PATH. In JSON, write Windows paths with doubled backslashes or forward
-slashes. Quit Claude Desktop fully and restart it. The server then appears
-under Connectors in the chat `+` menu. Server output is logged to
+slashes. Quit Claude Desktop fully and restart it. The server then appears in
+the chat menu under Add files, connectors, and more > Connectors > Manage
+connectors. Server output is logged to
 `mcp-server-smsd.log` in `~/Library/Logs/Claude` (macOS) or
 `%APPDATA%\Claude\logs` (Windows). Reference:
 [Connect to local MCP servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
@@ -141,9 +161,10 @@ Goose is an open-source agent that can use a model served by Ollama. Run
 `goose configure`, choose Ollama as the provider, confirm the API host
 `http://localhost:11434` and choose a model with tool support, such as `qwen3`
 ([models with tools](https://ollama.com/search?c=tools)). On machines with less
-than 24 GiB of VRAM, Ollama's default context is 4k, which is small for eight
-tool definitions; start Ollama with `OLLAMA_CONTEXT_LENGTH=8192 ollama serve`.
-Then add SMSD under `extensions:` in `~/.config/goose/config.yaml`
+than 24 GiB of VRAM, Ollama's default context is 4k. Ollama recommends at
+least 64,000 tokens for agents and tool use, so start it with
+`OLLAMA_CONTEXT_LENGTH=64000 ollama serve`; `ollama ps` shows the context in
+use. Then add SMSD under `extensions:` in `~/.config/goose/config.yaml`
 (Windows: `%APPDATA%\Block\goose\config\config.yaml`):
 
 ```yaml
@@ -295,6 +316,7 @@ request out of storage, which is on by default for new paid projects from
 a current model on 29 October 2026; see
 [Gemini models](https://ai.google.dev/gemini-api/docs/models). Google
 recommends its Interactions API for new projects
+and, on 31 October 2026, marked its Generate Content pages as legacy
 ([Generate Content](https://ai.google.dev/gemini-api/docs/generate-content/get-started));
 its function tools use the flat `type`, `name`, `description` and `parameters`
 shape of the `function` value. References:
@@ -388,10 +410,11 @@ print(message.content)
 On 29 October 2026, OpenAI's
 [migration guide](https://developers.openai.com/api/docs/guides/migrate-to-responses)
 stated that, from GPT-5.4 onwards, Chat Completions supports tool calls only
-with `reasoning_effort="none"`. `gpt-5.6-terra` was available on that date and
-supports this setting. GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra need the
-Responses API for tool calls; see
-[OpenAI models](https://developers.openai.com/api/docs/models). The same loop
+with `reasoning_effort="none"`. `gpt-5.6-terra` was available on that date;
+choose a current model from
+[OpenAI models](https://developers.openai.com/api/docs/models). On 31 October
+2026, GPT-6 Astra and GPT-6.1 Sol required the Responses API for tool calls
+([deprecations](https://developers.openai.com/api/docs/deprecations)). The same loop
 works with other Chat Completions services; see [Open models](#open-models).
 
 ## Open models
@@ -459,10 +482,10 @@ print(message.content)
 | DeepSeek API | none: set `DEEPSEEK_API_KEY` | `https://api.deepseek.com` | `deepseek-flash` or `deepseek-v4-pro` |
 | llama.cpp | `llama-server --jinja -hf bartowski/Qwen2.5-7B-Instruct-GGUF:Q4_K_M --port 9931` | `http://localhost:9931/v1` | the model name listed at `http://localhost:9931/v1/models` |
 | LM Studio | `lms server start` | `http://localhost:1234/v1` | a model identifier listed at `http://localhost:1234/v1/models` |
-| Ollama | `ollama pull qwen3`, then `ollama serve` | `http://localhost:11434/v1/` | `qwen3` |
+| Ollama | `ollama pull qwen3`, then `OLLAMA_CONTEXT_LENGTH=64000 ollama serve` | `http://localhost:11434/v1/` | `qwen3` |
 | vLLM | `vllm serve Qwen/Qwen3-8B --host 127.0.0.1 --enable-auto-tool-choice --tool-call-parser hermes --reasoning-parser deepseek_r1` | `http://localhost:8000/v1` | `Qwen/Qwen3-8B` |
 
-Notes on each runtime, as of 29 October 2026:
+Notes on each runtime, as of 31 October 2026:
 
 - DeepSeek API: thinking mode is on by default and supports tool calls. The
   loop appends each assistant message whole, which passes back its
@@ -471,24 +494,34 @@ Notes on each runtime, as of 29 October 2026:
   DeepSeek also publishes open weights, such as `DeepSeek-V4.1-Flash-1017`
   (763B parameters;
   [model card](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017)).
-- llama.cpp: native tool-call formats include Hermes 2 and 3, Llama 3.1 to
-  3.3, Mistral Nemo and Qwen 2.5. DeepSeek R1 is listed as work in progress.
+- llama.cpp: native tool-call formats include Command R7B, Firefunction v2,
+  Functionary v3.1 and v3.2, GPT-OSS (Harmony), Hermes 2 and 3, Llama 3.1 to
+  3.3, Mistral Nemo, Qwen 2.5 and Qwen 2.5 Coder. DeepSeek R1 is listed as
+  work in progress.
   Other models use a generic format. The default port changed from 8080 to
   9931, so the commands on this page set it. Reference:
   [function calling](https://github.com/ggml-org/llama.cpp/blob/master/docs/function-calling.md).
 - LM Studio: Qwen, Llama 3.1, Llama 3.2 and Mistral models have native tool
   use; other models use LM Studio's default tool format. Reference:
   [LM Studio tool use](https://lmstudio.ai/docs/developer/openai-compat/tools).
-- Ollama: models with tool support in its library include `gemma4`, `gpt-oss`,
-  `llama3.1`, `mistral-small3.2`, `muse-glimmer`, `qwen3` and `qwen3.8`. Some
-  entries, such as `deepseek-v4.1-flash`, have only cloud tags; choose a local
-  tag to keep data on your machine. Ollama sets its default context from the
-  available VRAM: 4k below 24 GiB, 32k from 24 to 48 GiB and 256k from 48 GiB.
-  A 4k context is small for eight tool definitions; on such machines start the
-  server with `OLLAMA_CONTEXT_LENGTH=8192 ollama serve`. Ollama does not
-  support `tool_choice`, and the loop does not send it. References:
+- Ollama: models with tool support in its library include `gemma4`,
+  `gpt-oss`, `muse-glimmer`, `qwen3` and `qwen3.8`; `gemma4`, `gpt-oss` and
+  `qwen3` run locally. Some entries, such as `deepseek-v4.1-flash`, have only
+  cloud tags; choose a local tag to keep data on your machine. Ollama sets its
+  default context from the available VRAM: 4k below 24 GiB, 32k from 24 to
+  48 GiB and 256k from 48 GiB. Ollama recommends at least 64,000 tokens for
+  agents and tool use; start the server with
+  `OLLAMA_CONTEXT_LENGTH=64000 ollama serve` and check the CONTEXT column of
+  `ollama ps`. A longer context needs more memory. Ollama does not support
+  `tool_choice`, and the loop does not send it. From version 0.13.3, Ollama
+  also serves the Responses API at `http://localhost:11434/v1/`: the
+  [OpenAI Responses loop](#openai-responses-api) runs against a local model
+  with `client = OpenAI(base_url="http://localhost:11434/v1/", api_key="local")`
+  and the Ollama model name. `https://ollama.com/v1` is Ollama's hosted
+  service, not your machine. References:
   [tools listing](https://ollama.com/search?c=tools),
-  [context length](https://docs.ollama.com/context-length).
+  [context length](https://docs.ollama.com/context-length),
+  [compatibility endpoint](https://docs.ollama.com/api/openai-compatibility).
 - vLLM: tool calls need `--enable-auto-tool-choice` and a `--tool-call-parser`
   that matches the model. The command above follows
   [Qwen's vLLM instructions](https://qwen.readthedocs.io/en/latest/framework/function_call.html);
@@ -496,8 +529,10 @@ Notes on each runtime, as of 29 October 2026:
   [reasoning page](https://docs.vllm.ai/en/latest/features/reasoning_outputs.html)
   gives `--reasoning-parser qwen3` for the Qwen3 series. vLLM's
   [tool-calling page](https://docs.vllm.ai/en/latest/features/tool_calling.html)
-  gives the parser for other families, including DeepSeek, Llama and Mistral.
-  For Gemma 4, the
+  gives the parser for other families, including DeepSeek, Llama and Mistral:
+  `openai` for gpt-oss, `qwen3_xml` for Qwen3-Coder and `deepseek_v31` for
+  DeepSeek V3.1. vLLM also accepts `tool_choice="required"` and a named
+  function in `tool_choice`, which the loop does not need. For Gemma 4, the
   [Gemma 4 recipe](https://docs.vllm.ai/projects/recipes/en/stable/Google/Gemma4.html)
   gives `--enable-auto-tool-choice --tool-call-parser gemma4 --reasoning-parser gemma4`, together with a chat template.
 
@@ -539,7 +574,9 @@ In either, enter the absolute path to `smsd-mcp` as the command.
 ## Keeping this current
 
 The commands, settings and model IDs on this page follow each vendor's
-documentation as of 29 October 2026. Assistants and model lists change
+documentation as of 29 October 2026; the open-model notes, the OpenAI and
+Gemini API notes and the Claude Desktop menu were rechecked on 31 October
+2026. Assistants and model lists change
 often, so check the vendor page before you rely on a command or model ID. The
 links follow the order of this page:
 
@@ -560,6 +597,7 @@ links follow the order of this page:
   [models](https://ai.google.dev/gemini-api/docs/models)
 - OpenAI API: [function calling](https://developers.openai.com/api/docs/guides/function-calling),
   [migration to Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses),
+  [deprecations](https://developers.openai.com/api/docs/deprecations),
   [models](https://developers.openai.com/api/docs/models)
 - DeepSeek API: [tool calls](https://api-docs.deepseek.com/guides/tool_calls),
   [models](https://api-docs.deepseek.com/quick_start/pricing)

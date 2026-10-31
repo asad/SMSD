@@ -24,6 +24,15 @@ conventions: a kernel with SMSD 8.1.0 or later, empty saved outputs, no
 downloads, no files left behind, and a notice when an optional package such as
 NumPy, pandas or IPython is missing.
 
+`ai_tools.ipynb` calls the molecular tools from Python with no model, prints
+their tool definitions and runs an assistant tool loop against a model served
+on your own machine, so that no molecule leaves it. When no local model server
+is running, the loop cells say so and the rest of the notebook still runs. The
+[user guide](../../docs/guide/README.md) also has chapters on
+[clustering and diversity](../../docs/guide/CLUSTERING.md),
+[machine learning and data frames](../../docs/guide/MACHINE_LEARNING.md) and
+[chemistry tools for AI assistants](../../docs/guide/AI_TOOLS.md).
+
 `feature_adapters.py` computes binary and count feature matrices with NumPy.
 `mcs_highlight.py` sends an SVG to standard output and its native proof status
 to standard error. `packed_corpus.py` creates a temporary packed library and

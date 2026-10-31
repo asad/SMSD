@@ -50,6 +50,9 @@ GUIDES = (
     "docs/guide/CPU_GPU.md",
     "docs/guide/COMMAND_LINE.md",
     "docs/guide/OTHER_LANGUAGES.md",
+    "docs/guide/CLUSTERING.md",
+    "docs/guide/MACHINE_LEARNING.md",
+    "docs/guide/AI_TOOLS.md",
 )
 ASSISTANT_GUIDE = "docs/AI_ASSISTANTS.md"
 EXAMPLE_DIRECTORY = "python/examples"
@@ -77,6 +80,11 @@ def run(command, directory, timeout, extra_environment=None):
     environment = os.environ.copy()
     environment.pop("PYTHONOPTIMIZE", None)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    # No example sends a request during a check: hosted-API keys are removed and the
+    # local model server address points at a closed port, so those cells skip.
+    for key in [key for key in environment if key.upper().endswith("_API_KEY")]:
+        del environment[key]
+    environment["SMSD_LOCAL_BASE_URL"] = "http://127.0.0.1:9/v1"
     environment.update(extra_environment or {})
     result = subprocess.run(
         [str(part) for part in command],
@@ -181,6 +189,8 @@ def example_scripts():
     directory = ROOT / EXAMPLE_DIRECTORY
     for path in sorted(directory.glob("*.py")):
         yield path, path.read_text(encoding="utf-8")
+    # Every notebook is run by name order, ai_tools.ipynb included; a notebook that
+    # needs a model server reports its absence and carries on without one.
     for path in sorted(directory.glob("*.ipynb")):
         yield path, notebook_source(path)
 

@@ -7,8 +7,17 @@
 ## Documentation
 
 - [User guide](docs/guide/README.md): task-based chapters on searching,
-  fingerprints, screening, the packed index, CPU and GPU use and the command
-  line.
+  fingerprints, screening, the packed index, clustering, CPU and GPU use,
+  machine learning, AI assistant tools and the command line.
+- [Clustering and diversity](docs/guide/CLUSTERING.md): Butina clustering,
+  MaxMin selection and nearest-neighbour pairs on a packed index, with cost
+  and CPU and GPU backends.
+- [Machine learning and data frames](docs/guide/MACHINE_LEARNING.md):
+  fingerprints as NumPy, SciPy, pandas, Polars, Arrow and PyTorch data, and
+  scikit-learn transformers.
+- [Chemistry tools for AI assistants](docs/guide/AI_TOOLS.md): the eight
+  bounded molecular tools, the local MCP server, tool definitions and result
+  fields.
 - [Consolidated API reference](docs/API_REFERENCE.md): interfaces, examples, options,
   proof/stopping status, I/O, fingerprints, optional data adapters and GPU scope.
 - [Python guide](python/README.md): installation and ordinary Python use.
