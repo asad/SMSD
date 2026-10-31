@@ -18,6 +18,10 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+#ifdef _MSC_VER
+#include <crtdbg.h>
+#include <stdlib.h>
+#endif
 
 static std::atomic<bool> failWorkerAllocation{false};
 static std::atomic<int> failedAllocations{0};
@@ -48,6 +52,14 @@ void operator delete(void* allocation, const std::nothrow_t&) noexcept { std::fr
 void operator delete[](void* allocation, const std::nothrow_t&) noexcept { std::free(allocation); }
 
 int main() {
+#ifdef _MSC_VER
+    // A failed check reports on stderr and ends the run instead of waiting on a dialog.
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
 #ifdef _OPENMP
     omp_set_dynamic(0);
     // Two workers even when OMP_NUM_THREADS=1, as in the wheel builds.
@@ -77,7 +89,9 @@ int main() {
     for (int i = 0; i < 64; ++i)
         molecules.push_back(smsd::parseSMILES(i % 2 ? "CC(=O)Oc1ccccc1C(=O)O" : "c1ccc2ccccc2c1"));
     const auto serial = smsd::batch::batchFingerprint(molecules, 7, 1024, 1);
-#ifdef _OPENMP
+    // Failing the first allocation made inside a worker depends on where the standard library
+    // allocates, which differs under MSVC, so this check runs with the other compilers.
+#if defined(_OPENMP) && !defined(_MSC_VER)
     // A worker whose allocation fails reports to the caller instead of ending the process.
     failWorkerAllocation = true;
     bool propagated = false;
