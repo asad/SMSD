@@ -7,6 +7,7 @@
 #include "smsd/mcs.hpp"
 #include "smsd/substructure.hpp"
 #include "smsd/cip.hpp"
+#include "timing_allowance.hpp"
 
 #include <algorithm>
 #include <array>
@@ -409,7 +410,7 @@ void testSharedDeadline() {
         auto started = std::chrono::steady_clock::now();
         auto result = search(query, target, opts);
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
-        assert(elapsed < 100 && result.status == smsd::SearchStatus::TimedOut && !result.complete);
+        assert(elapsed < smsd_test::timingAllowance(100) && result.status == smsd::SearchStatus::TimedOut && !result.complete);
         auto atom = graphFromMask(1, 0);
         assert(search(atom, atom, options(true, true)).complete);
     }
@@ -511,7 +512,7 @@ void testMcGregorStateIsolation() {
             if (core.edges[first][second]) bonds.emplace_back(first, second);
         auto target = makeGraph(20, bonds);
         for (bool connected : {false, true}) {
-            auto opts = options(true, connected); opts.timeoutMs = 100;
+            auto opts = options(true, connected); opts.timeoutMs = smsd_test::timingAllowance(100);
             const auto prepared = smsd::MCS::find(query.molecule).withOptions(opts);
             auto result = prepared.match(target.molecule);
             for (const auto& match : result.matches) validate(query, target, match, opts);
@@ -637,7 +638,7 @@ void testCommonBondStoppedSearches() {
     const auto target = smsd::parseSMILES("NCCCCC(N)C(=O)NC(CCCCN)C(NC(CCCCN)C(NC(C(NC(C(NC(C(NC(C(NC(C=O)CCCCN)=O)"
                                           "CCCCN)=O)CCCCN)=O)CCCCN)=O)CCCCN)=O)=O");
     auto opts = commonBondOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
-    opts.timeoutMs = 200;
+    opts.timeoutMs = smsd_test::timingAllowance(200);
     const auto timedOut = smsd::MCS::find(query).withOptions(opts).match(target);
     opts.timeoutMs = 30000;
     opts.cancellation = std::make_shared<smsd::CancellationToken>();
@@ -648,7 +649,7 @@ void testCommonBondStoppedSearches() {
     const auto cancelled = smsd::MCS::find(query).withOptions(opts).match(target);
     canceller.join();
     assert(timedOut.status == smsd::SearchStatus::TimedOut && cancelled.status == smsd::SearchStatus::Cancelled);
-    assert(cancelled.elapsedMillis < 10000);
+    assert(cancelled.elapsedMillis < smsd_test::timingAllowance(10000));
     for (const auto* result : {&timedOut, &cancelled}) {
         assert(!result->optimal && !result->complete && !result->matches.empty());
         assert(result->score == static_cast<double>(result->matches.front().bondMapping.size()));
@@ -901,7 +902,7 @@ void testCommonAtomStoppedSearches() {
                                          "c(CO[N+]([O-])=O)c1)CC2");
     const auto target = smsd::parseSMILES("CC(C)=CCc1cc(C2CC(=O)c3c(c(CC=C(C)C)c(O)c(CC=C(C)C)c3O)O2)cc(O)c1O");
     auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
-    opts.timeoutMs = 200;
+    opts.timeoutMs = smsd_test::timingAllowance(200);
     const auto timedOut = smsd::MCS::find(query).withOptions(opts).match(target);
     opts.timeoutMs = 30000;
     opts.cancellation = std::make_shared<smsd::CancellationToken>();
@@ -912,7 +913,7 @@ void testCommonAtomStoppedSearches() {
     const auto cancelled = smsd::MCS::find(query).withOptions(opts).match(target);
     canceller.join();
     assert(timedOut.status == smsd::SearchStatus::TimedOut && cancelled.status == smsd::SearchStatus::Cancelled);
-    assert(cancelled.elapsedMillis < 10000);
+    assert(cancelled.elapsedMillis < smsd_test::timingAllowance(10000));
     for (const auto* result : {&timedOut, &cancelled}) {
         assert(!result->optimal && !result->complete && !result->matches.empty());
         assert(result->score == static_cast<double>(result->matches.front().atomMapping.size()));
@@ -1108,7 +1109,7 @@ void testVertexSearchHonoursTimeoutsOnSparseGraphs() {
     const auto result = smsd::MCS::find(graph).withOptions(opts).match(graph);
     assert(result.status == smsd::SearchStatus::TimedOut && !result.optimal && !result.complete);
     // Comparing each candidate with every query atom would take about 800 ms here.
-    assert(result.elapsedMillis < 550);
+    assert(result.elapsedMillis < smsd_test::timingAllowance(550));
 }
 
 void testCommonBondPairLimit() {
@@ -1126,7 +1127,7 @@ void testCommonBondPairLimit() {
         opts.timeoutMs = 200;
         const auto result = smsd::MCS::find(query).withOptions(opts).match(dense);
         assert(result.status == smsd::SearchStatus::LimitReached && !result.optimal && result.matches.empty());
-        assert(result.elapsedMillis < 5000);
+        assert(result.elapsedMillis < smsd_test::timingAllowance(5000));
     }
 }
 

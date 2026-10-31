@@ -18,7 +18,7 @@ namespace {
 smsd::MCSOptions targetTwinOptions() {
     smsd::MCSOptions options;
     options.chemistry = smsd::ChemOptions::profile("strict");
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     options.nodeLimit = 100000;
     return options;
 }

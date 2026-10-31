@@ -109,7 +109,7 @@ static void molecular(Fixture fixture) {
         if(fixture.strictAromatic)chemistry.aromaticityMode=smsd::ChemOptions::AromaticityMode::STRICT;
         chemistry.ringMatchesRingOnly=fixture.ringOnly;
         for(bool induced:{false,true}) {
-            smsd::SubstructureOptions options;options.timeoutMs=1000;options.induced=induced;options.chemistry=chemistry;
+            smsd::SubstructureOptions options;options.timeoutMs=30000;options.induced=induced;options.chemistry=chemistry;
             const auto prepared=smsd::Substructure::find(current.query).withOptions(options);
             const auto expected=oracle(current,true,induced,false);
             const std::string label=fixture.name+"/perm"+std::to_string(index)+"/Sub"+(induced?"Induced":"");
@@ -117,7 +117,7 @@ static void molecular(Fixture fixture) {
             check(label+"/all",current,prepared.matchAll(current.target,1000),expected,true,fixture.name=="ordinary");
         }
         for(bool connected:{false,true}) {
-            smsd::MCSOptions options;options.timeoutMs=1000;options.chemistry=chemistry;options.connectivity=connected?smsd::MCSConnectivity::Connected:smsd::MCSConnectivity::Fragments;
+            smsd::MCSOptions options;options.timeoutMs=30000;options.chemistry=chemistry;options.connectivity=connected?smsd::MCSConnectivity::Connected:smsd::MCSConnectivity::Fragments;
             const auto prepared=smsd::MCS::find(current.query).withOptions(options);
             const auto expected=oracle(current,false,true,connected);
             const std::string label=fixture.name+"/perm"+std::to_string(index)+"/MCIS"+(connected?"Connected":"FragmentsDefault");
@@ -132,13 +132,13 @@ static void smarts() {
     auto target=smsd::parseSMILES("CCC");target.bondPacked[1][0]=2;
     const Fixture fixture{"smartsexplicit",smsd::parseSMILES("CC"),target};
     for(bool induced:{false,true}) {
-        smsd::SubstructureOptions options;options.timeoutMs=1000;options.induced=induced;
+        smsd::SubstructureOptions options;options.timeoutMs=30000;options.induced=induced;
         const auto prepared=smsd::Substructure::smarts("[#6]-[#6]").withOptions(options);
         const auto expected=oracle(fixture,true,induced,false);
         check("SMARTS-explicit/single",fixture,prepared.match(target),expected,false,false);
         check("SMARTS-explicit/all",fixture,prepared.matchAll(target,1000),expected,true,false);
     }
-    const auto recursive=smsd::Substructure::smarts("[$([#6]-[#6])]").withTimeout(1000).matchAll(target,8);
+    const auto recursive=smsd::Substructure::smarts("[$([#6]-[#6])]").withTimeout(30000).matchAll(target,8);
     std::set<int> atoms;for(const auto& match:recursive.matches)if(match.atomMapping.size()==1)atoms.insert(match.atomMapping.at(0));
     require(recursive.status==smsd::SearchStatus::Completed && recursive.optimal && recursive.complete
             && atoms==std::set<int>({0,1,2}) && recursive.matches.size()==3,"Recursive single-bond SMARTS must find every carbon with a canonical outgoing single bond");

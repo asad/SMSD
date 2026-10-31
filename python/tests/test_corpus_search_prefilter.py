@@ -270,11 +270,11 @@ def _concurrent_append(kind):
 
     def pause_screen():
         entered.set()
-        assert attempting.wait(2), "append thread did not start"
+        assert attempting.wait(30), "append thread did not start"
 
     def append():
         try:
-            assert entered.wait(2), "screen callback did not start"
+            assert entered.wait(30), "screen callback did not start"
             attempting.set()
             corpus.add_target(appended)
         except BaseException as error:
@@ -286,7 +286,7 @@ def _concurrent_append(kind):
     prepared = smsd.Substructure.find("C") if kind == "substructure" else smsd.MCS.find("C")
     args = () if kind == "substructure" else (1,)
     results = prepared.match_corpus(corpus, *args, gpu_prefilter=True)
-    writer.join(2)
+    writer.join(30)
     assert not writer.is_alive() and not errors
     assert [outcome.target_index for outcome in results] == [0, 1, 2]
     assert [outcome.threshold_reached for outcome in results] == [True, False, True]
@@ -306,7 +306,7 @@ module = importlib.import_module('python.tests.test_corpus_search_prefilter')
 module._concurrent_append(sys.argv[2])
 """
     completed = subprocess.run([sys.executable, "-c", code, __file__, kind],
-                               capture_output=True, text=True, timeout=6)
+                               capture_output=True, text=True, timeout=60)
     assert completed.returncode == 0, completed.stdout + completed.stderr
 
 

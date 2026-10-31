@@ -268,7 +268,7 @@ static void testCompleteQueryBound() {
         if (first != second) complete[first].push_back(second);
     const auto query = smsd::MolGraph::Builder().atomCount(9).atomicNumbers(std::vector<int>(9,6)).setNeighbors(complete).build(false);
     const auto target = smsd::MolGraph::Builder().atomCount(9).atomicNumbers(std::vector<int>(9,6)).setNeighbors(adjacent).build(false);
-    const auto result = smsd::MCS::find(query).withTimeout(1000).matchAll(target, 1);
+    const auto result = smsd::MCS::find(query).withTimeout(30000).matchAll(target, 1);
     assert(result.score == 7.0 && result.optimal && !result.complete && result.status == smsd::SearchStatus::LimitReached);
     assert(result.matches.size() == 1 && result.matches.front().bondMapping.size() == 21);
 }

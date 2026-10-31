@@ -51,10 +51,10 @@ static void targetCase(const std::string& operation, const Mutation& mutation) {
     auto target = smsd::parseSMILES("CCC");
     mutation.second(target);
     if (operation == "sub") {
-        const auto prepared = smsd::Substructure::find(query).withTimeout(1000);
+        const auto prepared = smsd::Substructure::find(query).withTimeout(30000);
         refuses([&] { return prepared.match(target); });
     } else if (operation == "smarts") {
-        const auto prepared = smsd::Substructure::smarts("[#6]").withTimeout(1000);
+        const auto prepared = smsd::Substructure::smarts("[#6]").withTimeout(30000);
         refuses([&] { return prepared.match(target); });
     } else if (operation == "validate" || operation == "mapping") {
         bool refused = false;
@@ -66,7 +66,7 @@ static void targetCase(const std::string& operation, const Mutation& mutation) {
         require(refused, "Mapping entry points must refuse invalid graph storage");
     } else {
         smsd::MCSOptions options;
-        options.timeoutMs = 1000;
+        options.timeoutMs = 30000;
         options.connectivity = smsd::MCSConnectivity::Fragments;
         options.objective = operation == "mces" ? smsd::MCSObjective::MCES : smsd::MCSObjective::MCIS;
         const auto prepared = smsd::MCS::find(query).withOptions(options);

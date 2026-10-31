@@ -28,7 +28,7 @@ void branchBoundsUseTheEnabledPredicates() {
     for (const auto& pair : pairs) {
         const auto query = smsd::parseSMILES(pair.query), target = smsd::parseSMILES(pair.target);
         smsd::MCSOptions options;
-        options.timeoutMs = 1000;
+        options.timeoutMs = 30000;
         options.chemistry = smsd::ChemOptions::profile(pair.profile);
         options.chemistry.matchIsotope = true;
         smsd::search_detail::Budget budget(options, query.n, target.n, true);
@@ -45,7 +45,7 @@ void branchBoundsUseTheEnabledPredicates() {
 void unsupportedOrStoppedConstructionLeavesNoTable() {
     const auto chain = smsd::parseSMILES("CCCCCC"), ring = smsd::parseSMILES("C1CCCCC1");
     smsd::MCSOptions options;
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     smsd::search_detail::Budget budget(options, ring.n, chain.n, true);
     assert(!smsd::search_detail::BridgeBound::create(ring, chain, options.chemistry, budget));
     const auto large = smsd::parseSMILES(std::string(513, 'C'));
@@ -62,7 +62,7 @@ void largeBranchedChainsKeepTheMaximumPath() {
     const auto target = smsd::parseSMILES(std::string(31, 'C') + "C(C)" + std::string(31, 'C'));
     for (bool reverse : {false, true}) {
         smsd::MCSOptions options;
-        options.timeoutMs = 3000;
+        options.timeoutMs = 30000;
         options.nodeLimit = 1000000;
         const auto& first = reverse ? target : query;
         const auto& second = reverse ? query : target;

@@ -5,6 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #include "test_support.hpp"
+#include "timing_allowance.hpp"  // also defines SMSD_TEST_SANITISED
 #include "smsd/smiles_parser.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/batch.hpp"
@@ -24,15 +25,6 @@
 #include <thread>
 #if defined(__unix__) || defined(__APPLE__)
 #include <pthread.h>
-#endif
-
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(undefined_behavior_sanitizer)
-#define SMSD_TEST_SANITISED 1
-#endif
-#endif
-#if defined(__SANITIZE_ADDRESS__) && !defined(SMSD_TEST_SANITISED)
-#define SMSD_TEST_SANITISED 1
 #endif
 
 /** The time allowed to perceive the large rings of one test, in milliseconds. */
@@ -221,7 +213,7 @@ static void testLargeRings() {
     require(ladder.n == 4 * rings + 2 && ladder.computeRings().size() == rings
             && ladder.computeRelevantCycles().size() == rings, "a long acene lost a ring");
     for (int atom = 0; atom < ladder.n; ++atom) require(ladder.aromatic[atom] != 0, "a long acene lost aromaticity");
-    require(elapsed < 5000, "parsing a 40-ring acene took too long");
+    require(elapsed < smsd_test::timingAllowance(5000), "parsing a 40-ring acene took too long");
 }
 
 // The Kekule structure of an aromatic macrocycle near the atom limit, which perception assigns

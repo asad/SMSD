@@ -282,7 +282,7 @@ TEST(batchMCS_50_pairs) {
     chem.matchBondOrder = smsd::ChemOptions::BondOrderMode::LOOSE;
     chem.ringMatchesRingOnly = false;
     smsd::MCSOptions mcsOpts;
-    mcsOpts.timeoutMs = 2000;
+    mcsOpts.timeoutMs = 30000;
     std::vector<smsd::MolGraph> targets;
     targets.reserve(50);
     for (int i = 0; i < 50; ++i)

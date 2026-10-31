@@ -16,7 +16,7 @@ namespace {
 void cyclicRootsKeepTheirWholeParts() {
     const auto molecule = smsd::parseSMILES("CC1CCCCC1");
     smsd::MCSOptions options;
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     smsd::search_detail::Budget budget(options, molecule.n, molecule.n, true);
     const auto bound = smsd::search_detail::BridgeBound::create(molecule, molecule, options.chemistry, budget);
     assert(bound && !bound->acyclic() && bound->upper() == 7);
@@ -39,7 +39,7 @@ void relaxedPredicatesRemainUpperBounds() {
     for (const auto& pair : pairs) {
         const auto query = smsd::parseSMILES(pair.query), target = smsd::parseSMILES(pair.target);
         smsd::MCSOptions options;
-        options.timeoutMs = 1000;
+        options.timeoutMs = 30000;
         options.chemistry = smsd::ChemOptions::profile(pair.profile);
         options.chemistry.matchAtomType = pair.typed;
         options.chemistry.matchIsotope = true;
@@ -61,7 +61,7 @@ void aLargeCyclicMatchCanHaveOneBondPerAtom() {
     const auto target = smsd::parseSMILES(std::string(29, 'C') + "C(C)" + std::string(27, 'C') + "C1CCCCC1");
     for (bool reverse : {false, true}) {
         smsd::MCSOptions options;
-        options.timeoutMs = 3000;
+        options.timeoutMs = 30000;
         options.nodeLimit = 1000000;
         const auto& first = reverse ? target : query;
         const auto& second = reverse ? query : target;

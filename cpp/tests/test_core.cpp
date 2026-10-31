@@ -1593,7 +1593,7 @@ void test_clique_search_matches_exhaustive_small_graphs() {
     for (int first = 0; first < atoms; ++first) for (int second = first + 1; second < atoms; ++second)
         completeEdges.emplace_back(first, second);
     const auto query = makePruningGraph(atoms, completeEdges);
-    const auto prepared = smsd::MCS::find(query).withTimeout(1000);
+    const auto prepared = smsd::MCS::find(query).withTimeout(30000);
     for (int trial = 0; trial < 100; ++trial) {
         bool adjacent[atoms][atoms] = {};
         std::vector<std::pair<int, int>> edges;

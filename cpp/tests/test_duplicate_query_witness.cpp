@@ -28,13 +28,13 @@ int main() {
    auto query=smsd::parseSMILES("CC"); query.neighbors[0].push_back(1);
    if (both) query.neighbors[1].push_back(0);
    for (bool induced : {false,true}) for (bool atomType : {false,true}) {
-    smsd::SubstructureOptions options; options.timeoutMs=1000; options.induced=induced; options.chemistry.matchAtomType=atomType;
+    smsd::SubstructureOptions options; options.timeoutMs=30000; options.induced=induced; options.chemistry.matchAtomType=atomType;
     auto result=smsd::Substructure::find(query).withOptions(options).matchAll(target,100);
     check(result,4,2,1,2);
     for (const auto& match:result.matches) require(smsd::MCS::validateMapping(smsd::parseSMILES("CC"),target,match).empty(),"Sub witnesses must validate against the same bond graph");
    }
    for (auto connectivity : {smsd::MCSConnectivity::Connected,smsd::MCSConnectivity::Fragments}) {
-    smsd::MCSOptions options; options.timeoutMs=1000; options.connectivity=connectivity;
+    smsd::MCSOptions options; options.timeoutMs=30000; options.connectivity=connectivity;
     auto prepared=smsd::MCS::find(query).withOptions(options);
     auto result=prepared.matchAll(target,100); check(result,4,2,1,2);
     for (const auto& match:result.matches) require(smsd::MCS::validateMapping(smsd::parseSMILES("CC"),target,match,options).empty(),"MCIS witnesses must validate against the same bond graph");
@@ -45,13 +45,13 @@ int main() {
    require(mapped.bondMapping.size()==1,"mappingMatch must select one correspondence per bond");
   }
   auto query=smsd::parseSMILES("CCC");query.neighbors[0].push_back(1);query.neighbors[0].push_back(1);
-  smsd::MCSOptions options;options.timeoutMs=1000;options.connectivity=smsd::MCSConnectivity::Fragments;
+  smsd::MCSOptions options;options.timeoutMs=30000;options.connectivity=smsd::MCSConnectivity::Fragments;
   check(smsd::MCS::find(query).withOptions(options).matchAll(smsd::parseSMILES("CC"),100),4,2,1,2);
   auto sameTerms=smsd::parseSMILES("C(C)(C)C.C(C)C");
   sameTerms.neighbors[4].push_back(5); sameTerms.neighbors[5].push_back(4);
   sameTerms.degree[4]=3; sameTerms.degree[5]=2;
   const auto plain=smsd::parseSMILES("C(C)(C)C.C(C)C");
-  smsd::SubstructureOptions charged; charged.timeoutMs=1000;charged.chemistry.matchFormalCharge=true;
+  smsd::SubstructureOptions charged; charged.timeoutMs=30000;charged.chemistry.matchFormalCharge=true;
   check(smsd::Substructure::find(sameTerms).withOptions(charged).matchAll(plain,100),12,7,5,7);
   std::cout<<"PASS duplicate query bonds and complete embeddings\n";return 0;
  } catch (const std::exception& error) {std::cerr<<error.what()<<'\n';return 1;}

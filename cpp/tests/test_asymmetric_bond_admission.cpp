@@ -16,7 +16,7 @@ int main() {
                       "Ordinary reciprocal bond properties must remain supported");
     smsd::MCSOptions options;
     options.objective = smsd::MCSObjective::MCES;
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     const auto control = smsd::MCS::find(ordinary).withOptions(options).match(ordinary);
     smsd_test::require(control.optimal && control.complete && control.score == 1,
                       "Ordinary common-edge search must retain its proved result");

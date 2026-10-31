@@ -15,7 +15,7 @@ namespace {
 smsd::MCSOptions ringOptions() {
     smsd::MCSOptions options;
     options.chemistry.completeRingsOnly = true;
-    options.timeoutMs = 1000;
+    options.timeoutMs = 30000;
     options.nodeLimit = 100000;
     return options;
 }

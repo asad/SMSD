@@ -437,6 +437,9 @@ if(SMSD_BUILD_TESTS)
     set_tests_properties(smsd_header_self_containment_tests smsd_seed_incumbent_tests
         smsd_mces_contract_regression_tests smsd_mcs_regression_tests smsd_ring_candidate_search_tests
         PROPERTIES LABELS slow TIMEOUT 3600)
+    # Suites with wall-clock checks run alone so parallel tests cannot slow them.
+    set_tests_properties(smsd_substructure_regression_tests smsd_search_enumeration_tests
+        smsd_parser_robustness_regression_tests smsd_mcs_regression_tests PROPERTIES RUN_SERIAL TRUE)
 endif()
 
 # ---- Install ----

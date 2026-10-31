@@ -7,8 +7,10 @@
 #include "test_support.hpp"
 #include "smsd/mol_reader.hpp"
 #include "smsd/smarts_parser.hpp"
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <filesystem>
 #include <fstream>
 
@@ -107,7 +109,10 @@ int main() {
         throw std::runtime_error("Large MOL output must use V3000");
     if (largeBlock != smsd::writeMolBlockV3000(largeGraph))
         throw std::runtime_error("Automatic V3000 output must match the explicit writer");
-    const auto sdfPath = std::filesystem::temp_directory_path() / "smsd-mol-properties-regression.sdf";
+    // A unique name lets concurrent runs of this test share the temporary directory.
+    const auto suffix = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto sdfPath = std::filesystem::temp_directory_path()
+        / ("smsd-mol-properties-regression-" + std::to_string(suffix) + ".sdf");
     {
         std::ofstream output(sdfPath);
         output << smsd::writeMolBlock(acid) << "$$$$\n\n \t\n";
