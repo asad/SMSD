@@ -1,0 +1,2880 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/guide/SUBSTRUCTURE/">
+      
+      
+        <link rel="prev" href="../GETTING_STARTED/">
+      
+      
+        <link rel="next" href="../SMARTS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Substructure search - SMSD Pro</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#substructure-search" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Substructure search
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-a-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare a query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#find-one-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find one embedding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerate-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerate embeddings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-many-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search many targets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-a-prepared-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search a prepared corpus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#induced-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Induced matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chemistry-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemistry options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hydrogen-counts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hydrogen counts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-limits-node-limits-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time limits, node limits and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#draw-a-hit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Draw a hit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r-group-decomposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-group decomposition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-a-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare a query
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#find-one-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find one embedding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerate-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerate embeddings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-many-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search many targets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#search-a-prepared-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search a prepared corpus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#induced-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Induced matching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chemistry-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemistry options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hydrogen-counts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hydrogen counts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-limits-node-limits-and-cancellation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time limits, node limits and cancellation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#draw-a-hit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Draw a hit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r-group-decomposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-group decomposition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="substructure-search">Substructure search<a class="headerlink" href="#substructure-search" title="Permanent link">&para;</a></h1>
+<p>A substructure search asks whether a query occurs whole inside a target, and
+where. SMSD prepares the query once and then searches one target, every
+embedding in one target, a list of targets or a captured corpus. Every call
+returns a <code>SearchResult</code> that holds the matches together with the reason the
+search ended, so an empty result proves absence only when its status is
+<code>COMPLETED</code> and <code>optimal</code> is true.</p>
+<p>This chapter covers molecule queries in Python. The SMARTS syntax is described
+in <a href="../SMARTS/">SMARTS queries</a>, and the exhaustive API list is in the
+<a href="../../PYTHON/#searches">Python guide</a>.</p>
+<h2 id="prepare-a-query">Prepare a query<a class="headerlink" href="#prepare-a-query" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>Substructure.find(query)</code> prepares a molecule query from a SMILES string, a
+  <code>MolGraph</code> or an RDKit molecule. The query graph is copied, so later changes
+  to the input do not reach it.</li>
+<li><code>Substructure.smarts(pattern)</code> compiles a SMARTS pattern once.</li>
+</ul>
+<p>A prepared query is immutable. <code>with_options</code>, <code>with_timeout</code> and
+<code>with_induced</code> return a new query with a copy of the options and leave the
+original unchanged. Searches release the global interpreter lock, so several
+threads can share one prepared query.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># The same phenol query, prepared from SMILES, from a MolGraph and as SMARTS</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">queries</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="s2">"SMILES"</span><span class="p">:</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">),</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="s2">"MolGraph"</span><span class="p">:</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)),</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="s2">"SMARTS"</span><span class="p">:</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"c1ccccc1[OX2H]"</span><span class="p">),</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">}</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">bounded</span> <span class="o">=</span> <span class="n">queries</span><span class="p">[</span><span class="s2">"SMILES"</span><span class="p">]</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="k">assert</span> <span class="n">bounded</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">queries</span><span class="p">[</span><span class="s2">"SMILES"</span><span class="p">]</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">targets</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>          <span class="c1"># paracetamol</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>           <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>  <span class="c1"># ibuprofen</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>           <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">]</span>             <span class="c1"># salicylic acid</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="c1"># One prepared query serves several threads at once</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">queries</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">,</span> <span class="n">targets</span><span class="p">)]</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">8</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">found</span><span class="p">)</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="k">assert</span> <span class="n">found</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>SMILES   [True, False, True]
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>MolGraph [True, False, True]
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>SMARTS   [True, False, True]
+</code></pre></div>
+<h2 id="find-one-embedding">Find one embedding<a class="headerlink" href="#find-one-embedding" title="Permanent link">&para;</a></h2>
+<p><code>match(target)</code> returns at most one embedding. <code>atom_mapping</code> maps each query
+atom index to a target atom index, in each input's own numbering (see
+<a href="../GETTING_STARTED/#atom-numbering">Getting started</a>). <code>score</code> is the number of
+query atoms when a match is found and <code>0.0</code> otherwise.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span>   <span class="c1"># phenol</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(C)(C)c1ccc(O)cc1"</span><span class="p">)</span>   <span class="c1"># 4-tert-butylphenol</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"found:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"status:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">"optimal:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>      <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"score:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"mapping:"</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"matched query atoms as SMILES:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">))</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">COMPLETED</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">score</span> <span class="o">==</span> <span class="mf">7.0</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="k">assert</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">==</span> <span class="p">[</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">)]</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"c1(ccccc1)O"</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="c1"># A completed search that finds nothing proves absence</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="n">absent</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"Nc1ccccc1"</span><span class="p">)</span>             <span class="c1"># aniline</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"aniline:"</span><span class="p">,</span> <span class="n">absent</span><span class="o">.</span><span class="n">found</span><span class="p">,</span> <span class="n">absent</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">absent</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>      <span class="n">absent</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">absent</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">absent</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">COMPLETED</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="k">assert</span> <span class="n">absent</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="n">absent</span><span class="o">.</span><span class="n">complete</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>found: True
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>status: COMPLETED optimal: True complete: True
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>score: 7.0
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>mapping: [(0, 6), (1, 5), (2, 4), (3, 10), (4, 9), (5, 7), (6, 8)]
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>matched query atoms as SMILES: c1(ccccc1)O
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>aniline: False COMPLETED True True
+</code></pre></div>
+<h2 id="enumerate-embeddings">Enumerate embeddings<a class="headerlink" href="#enumerate-embeddings" title="Permanent link">&para;</a></h2>
+<p><code>match_all(target, limit=1000)</code> lists every embedding up to <code>limit</code>.
+Symmetry-related embeddings are listed separately: benzene sits in toluene in
+twelve ways, all on the same six ring atoms. To count occurrences, collect the
+target atom sets with <code>frozenset</code>.</p>
+<p>When the limit is reached, the status is <code>LIMIT_REACHED</code> and <code>complete</code> is
+false; <code>optimal</code> stays true, because a found embedding already proves that the
+query occurs. A limit that is not a positive integer raises <code>ValueError</code>. Give
+every enumeration on a large target both a limit and a time limit.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">benzene</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">toluene</span> <span class="o">=</span> <span class="s2">"Cc1ccccc1"</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">every</span> <span class="o">=</span> <span class="n">benzene</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">toluene</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">occurrences</span> <span class="o">=</span> <span class="p">{</span><span class="nb">frozenset</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">every</span><span class="o">.</span><span class="n">matches</span><span class="p">}</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"embeddings:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">every</span><span class="o">.</span><span class="n">matches</span><span class="p">),</span> <span class="n">every</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>      <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">every</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"distinct ring occurrences:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">occurrences</span><span class="p">))</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">every</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">12</span> <span class="ow">and</span> <span class="n">every</span><span class="o">.</span><span class="n">complete</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">occurrences</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">capped</span> <span class="o">=</span> <span class="n">benzene</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">toluene</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"limit 5:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">capped</span><span class="o">.</span><span class="n">matches</span><span class="p">),</span> <span class="n">capped</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>      <span class="s2">"optimal:"</span><span class="p">,</span> <span class="n">capped</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span> <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">capped</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="k">assert</span> <span class="n">capped</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">LIMIT_REACHED</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="k">assert</span> <span class="n">capped</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">capped</span><span class="o">.</span><span class="n">complete</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="c1"># Two carbonyl groups in aspirin</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="n">carbonyl</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"C=O"</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">groups</span> <span class="o">=</span> <span class="n">carbonyl</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="n">atoms</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">groups</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"carbonyl atoms in aspirin:"</span><span class="p">,</span> <span class="n">atoms</span><span class="p">)</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="k">assert</span> <span class="n">atoms</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">]]</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>    <span class="n">benzene</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">toluene</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"limit 0:"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>    <span class="k">assert</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Match limit must be positive"</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>embeddings: 12 COMPLETED complete: True
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>distinct ring occurrences: 1
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>limit 5: 5 LIMIT_REACHED optimal: True complete: False
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>carbonyl atoms in aspirin: [[1, 2], [10, 11]]
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>limit 0: Match limit must be positive
+</code></pre></div>
+<h2 id="search-many-targets">Search many targets<a class="headerlink" href="#search-many-targets" title="Permanent link">&para;</a></h2>
+<p><code>match_many(targets, *, num_threads=0)</code> searches each target independently and
+returns one <code>SearchResult</code> per target, in input order. SMILES strings,
+<code>MolGraph</code> objects and RDKit molecules can be mixed in one list. Each target
+gets its own time limit and keeps its own atom numbering. <code>num_threads=0</code>
+uses the OpenMP default, which <code>OMP_NUM_THREADS</code> sets.</p>
+<p><code>match_many</code> keeps at most one embedding per target. To count occurrences in
+each target, call <code>match_all</code> on that target.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">acid</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"C(=O)[OX2H1]"</span><span class="p">)</span>      <span class="c1"># carboxylic acid</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">targets</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>                  <span class="c1"># aspirin</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>           <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">),</span>  <span class="c1"># paracetamol</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>           <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">]</span>             <span class="c1"># ibuprofen</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">results</span> <span class="o">=</span> <span class="n">acid</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">completed</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">COMPLETED</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"carboxylic acid:"</span><span class="p">,</span> <span class="n">found</span><span class="p">,</span> <span class="s2">"all completed:"</span><span class="p">,</span> <span class="n">completed</span><span class="p">)</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="k">assert</span> <span class="n">found</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]</span> <span class="ow">and</span> <span class="n">completed</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">benzene</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="n">pair</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Cc1ccccc1"</span><span class="p">,</span> <span class="s2">"c1ccc2ccccc2c1"</span><span class="p">]</span>               <span class="c1"># toluene, naphthalene</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="n">kept</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">benzene</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">pair</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)]</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="n">listed</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">benzene</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">pair</span><span class="p">]</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"match_many keeps:"</span><span class="p">,</span> <span class="n">kept</span><span class="p">,</span> <span class="s2">"match_all lists:"</span><span class="p">,</span> <span class="n">listed</span><span class="p">)</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="k">assert</span> <span class="n">kept</span> <span class="o">==</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">listed</span> <span class="o">==</span> <span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">24</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>carboxylic acid: [True, False, True] all completed: True
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>match_many keeps: [1, 1] match_all lists: [12, 24]
+</code></pre></div>
+<h2 id="search-a-prepared-corpus">Search a prepared corpus<a class="headerlink" href="#search-a-prepared-corpus" title="Permanent link">&para;</a></h2>
+<p><code>TargetCorpus.from_smiles(targets)</code> captures a library once, with each
+target's atom numbering, so that many queries can search it. A substructure
+search needs no <code>prewarm</code> and no NumPy. <code>match_many</code> accepts a corpus in place
+of a list.</p>
+<p><code>match_corpus(corpus, *, gpu_prefilter=False, num_threads=0)</code> returns one
+<code>CorpusSearchResult</code> for each corpus slot, in order. Targets that cannot
+contain the query are ruled out before matching, with a proof; every other
+target is searched as usual.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target_index</code></td>
+<td>The slot in the corpus</td>
+</tr>
+<tr>
+<td><code>atom_upper_bound</code></td>
+<td>Always <code>None</code> for a substructure search</td>
+</tr>
+<tr>
+<td><code>proven_below_threshold</code></td>
+<td>True when the query is proved absent</td>
+</tr>
+<tr>
+<td><code>threshold_reached</code></td>
+<td>True when an embedding was found</td>
+</tr>
+<tr>
+<td><code>result</code></td>
+<td>The <code>SearchResult</code>, or <code>None</code> for a slot ruled out before matching</td>
+</tr>
+</tbody>
+</table>
+<p>When both flags are false, the outcome is unknown, for example after a search
+was stopped. Every slot is searched, with no slot ruled out, for a SMARTS
+query, with <code>match_atom_type=False</code>, with a <code>node_limit</code> other than 0, with
+<code>timeout_ms</code> set to 0 or with a cancellation token. With
+<code>gpu_prefilter=True</code>, an attached device runs the step that rules targets out,
+and the CPU runs it when no device is usable; the decisions are the same either
+way. See
+<a href="../CPU_GPU/#request-the-gpu-for-a-corpus-pre-screen">CPU and GPU screening</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"aspirin"</span><span class="p">,</span> <span class="s2">"paracetamol"</span><span class="p">,</span> <span class="s2">"ibuprofen"</span><span class="p">,</span> <span class="s2">"caffeine"</span><span class="p">,</span> <span class="s2">"salicylic acid"</span><span class="p">]</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">])</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">searches</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"benzene ring"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">),</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>             <span class="p">[</span><span class="s2">"aspirin"</span><span class="p">,</span> <span class="s2">"paracetamol"</span><span class="p">,</span> <span class="s2">"ibuprofen"</span><span class="p">,</span> <span class="s2">"salicylic acid"</span><span class="p">]),</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>            <span class="p">(</span><span class="s2">"aromatic hydroxyl"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"c[OX2H]"</span><span class="p">),</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>             <span class="p">[</span><span class="s2">"paracetamol"</span><span class="p">,</span> <span class="s2">"salicylic acid"</span><span class="p">])]</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">expected</span> <span class="ow">in</span> <span class="n">searches</span><span class="p">:</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    <span class="n">results</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>    <span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span><span class="p">]</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">:"</span><span class="p">,</span> <span class="n">hits</span><span class="p">)</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">COMPLETED</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="k">assert</span> <span class="n">hits</span> <span class="o">==</span> <span class="n">expected</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="n">decisions</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="n">outcomes</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">decision</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">decisions</span><span class="p">):</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>    <span class="k">if</span> <span class="n">decision</span><span class="o">.</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>        <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"ruled out before matching"</span>
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>    <span class="k">elif</span> <span class="n">decision</span><span class="o">.</span><span class="n">threshold_reached</span><span class="p">:</span>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>        <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"found"</span>
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>    <span class="k">elif</span> <span class="n">decision</span><span class="o">.</span><span class="n">proven_below_threshold</span><span class="p">:</span>
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>        <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"searched, proved absent"</span>
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>        <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"unknown"</span>
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">15</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">outcome</span><span class="p">)</span>
+<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>    <span class="k">assert</span> <span class="n">decision</span><span class="o">.</span><span class="n">atom_upper_bound</span> <span class="ow">is</span> <span class="kc">None</span>
+<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>    <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">outcome</span><span class="p">)</span>
+<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a><span class="k">assert</span> <span class="n">outcomes</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"found"</span><span class="p">,</span> <span class="s2">"found"</span><span class="p">,</span> <span class="s2">"searched, proved absent"</span><span class="p">,</span>
+<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a>                    <span class="s2">"ruled out before matching"</span><span class="p">,</span> <span class="s2">"found"</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>benzene ring: ['aspirin', 'paracetamol', 'ibuprofen', 'salicylic acid']
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>aromatic hydroxyl: ['paracetamol', 'salicylic acid']
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>aspirin         found
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>paracetamol     found
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>ibuprofen       searched, proved absent
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>caffeine        ruled out before matching
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>salicylic acid  found
+</code></pre></div>
+<h2 id="induced-matching">Induced matching<a class="headerlink" href="#induced-matching" title="Permanent link">&para;</a></h2>
+<p>By default a search is non-induced: query bonds must map to target bonds, but
+two query atoms that are not bonded may map to target atoms that are.
+<code>with_induced()</code> also requires every pair of unbonded query atoms to map to
+unbonded target atoms. Propane is then no longer found in cyclopropane, while
+cyclohexane is still found in decalin.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"CCC"</span><span class="p">,</span> <span class="s2">"C1CC1"</span><span class="p">,</span> <span class="s2">"propane in cyclopropane"</span><span class="p">),</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>         <span class="p">(</span><span class="s2">"C1CCCCC1"</span><span class="p">,</span> <span class="s2">"C1CCC2CCCCC2C1"</span><span class="p">,</span> <span class="s2">"cyclohexane in decalin"</span><span class="p">)]</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">:</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">plain</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">induced</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_induced</span><span class="p">()</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">24</span><span class="si">}</span><span class="s2"> default: </span><span class="si">{</span><span class="n">plain</span><span class="si">!s:</span><span class="s2">5</span><span class="si">}</span><span class="s2"> induced: </span><span class="si">{</span><span class="n">induced</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="k">assert</span> <span class="n">plain</span> <span class="ow">and</span> <span class="n">induced</span> <span class="o">==</span> <span class="p">(</span><span class="n">target</span> <span class="o">!=</span> <span class="s2">"C1CC1"</span><span class="p">)</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>propane in cyclopropane  default: True  induced: False
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>cyclohexane in decalin   default: True  induced: True
+</code></pre></div>
+<h2 id="chemistry-options">Chemistry options<a class="headerlink" href="#chemistry-options" title="Permanent link">&para;</a></h2>
+<p><code>options.chemistry</code> is a <code>ChemOptions</code> object that decides which atoms and
+bonds may match. For a SMARTS query, the pattern itself states charge,
+hydrogen count, aromaticity, bond order and stereochemistry, so only
+<code>complete_rings_only</code> applies (see
+<a href="../SMARTS/#which-options-apply">SMARTS queries</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Default</th>
+<th>Effect on a molecule query</th>
+<th>SMARTS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>match_atom_type</code></td>
+<td><code>True</code></td>
+<td>Matched atoms have the same element</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>match_formal_charge</code></td>
+<td><code>False</code></td>
+<td>Matched atoms have the same formal charge</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>match_isotope</code></td>
+<td><code>False</code></td>
+<td>Matched atoms have the same mass number where both atoms state one</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>use_chirality</code></td>
+<td><code>False</code></td>
+<td>A tagged query centre needs the same configuration in the target; an untagged query centre matches any; an untagged target centre does not satisfy a tagged query</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>use_bond_stereo</code></td>
+<td><code>False</code></td>
+<td>The same rule for double-bond configuration</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>ring_matches_ring_only</code></td>
+<td><code>False</code></td>
+<td>Ring atoms and bonds match only ring atoms and bonds</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>complete_rings_only</code></td>
+<td><code>False</code></td>
+<td>Matched ring atoms and bonds lie in fully matched rings of the target</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>ring_fusion_mode</code></td>
+<td><code>RingFusionMode.IGNORE</code></td>
+<td><code>STRICT</code> requires the same number of rings on each matched atom; <code>PERMISSIVE</code> behaves as <code>IGNORE</code></td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>match_bond_order</code></td>
+<td><code>BondOrderMode.STRICT</code></td>
+<td>Bond orders agree; <code>LOOSE</code> and <code>ANY</code> both accept any order and give identical results</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>aromaticity_mode</code></td>
+<td><code>AromaticityMode.FLEXIBLE</code></td>
+<td>Aromatic atoms and bonds may also match non-aromatic ones; <code>STRICT</code> requires agreement</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>tautomer_aware</code></td>
+<td><code>False</code></td>
+<td>Recognised tautomeric bonds may match; usually combined with a relaxed bond order</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>pH</code>, <code>solvent</code></td>
+<td><code>7.4</code>, <code>Solvent.AQUEOUS</code></td>
+<td>Used only by <code>MCS.compute_tautomer_confidence</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p><code>LOOSE</code> and <code>ANY</code> still respect <code>aromaticity_mode=STRICT</code> and
+<code>ring_matches_ring_only</code>. Options objects take no keyword arguments, so set
+each field as an attribute. The program below shows the effect of each option
+on a small pair of molecules.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">found</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="o">**</span><span class="n">fields</span><span class="p">):</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>        <span class="nb">setattr</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="k">return</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="n">BOND</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">AROMATIC</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">AromaticityMode</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="n">FUSION</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">RingFusionMode</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    <span class="p">(</span><span class="s2">"C=C in ethane"</span><span class="p">,</span> <span class="s2">"C=C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">match_bond_order</span><span class="o">=</span><span class="n">BOND</span><span class="o">.</span><span class="n">ANY</span><span class="p">)),</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="p">(</span><span class="s2">"C=C in ethane"</span><span class="p">,</span> <span class="s2">"C=C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">match_bond_order</span><span class="o">=</span><span class="n">BOND</span><span class="o">.</span><span class="n">LOOSE</span><span class="p">)),</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    <span class="p">(</span><span class="s2">"phenol in cyclohexanol"</span><span class="p">,</span> <span class="s2">"c1ccccc1O"</span><span class="p">,</span> <span class="s2">"OC1CCCCC1"</span><span class="p">,</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">aromaticity_mode</span><span class="o">=</span><span class="n">AROMATIC</span><span class="o">.</span><span class="n">STRICT</span><span class="p">)),</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>    <span class="p">(</span><span class="s2">"C[NH3+] in methylamine"</span><span class="p">,</span> <span class="s2">"C[NH3+]"</span><span class="p">,</span> <span class="s2">"CN"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">match_formal_charge</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    <span class="p">(</span><span class="s2">"[13CH4] in methane"</span><span class="p">,</span> <span class="s2">"[13CH4]"</span><span class="p">,</span> <span class="s2">"C"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">match_isotope</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>    <span class="p">(</span><span class="s2">"methanol in methylamine"</span><span class="p">,</span> <span class="s2">"CO"</span><span class="p">,</span> <span class="s2">"CN"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">match_atom_type</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>    <span class="p">(</span><span class="s2">"L-alanine in D-alanine"</span><span class="p">,</span> <span class="s2">"N[C@@H](C)C(=O)O"</span><span class="p">,</span> <span class="s2">"N[C@H](C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">use_chirality</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>    <span class="p">(</span><span class="s2">"L-alanine in racemic alanine"</span><span class="p">,</span> <span class="s2">"N[C@@H](C)C(=O)O"</span><span class="p">,</span> <span class="s2">"NC(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">use_chirality</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>    <span class="p">(</span><span class="s2">"racemic alanine in L-alanine"</span><span class="p">,</span> <span class="s2">"NC(C)C(=O)O"</span><span class="p">,</span> <span class="s2">"N[C@@H](C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">use_chirality</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>    <span class="p">(</span><span class="s2">"F/C=C/F in F/C=C</span><span class="se">\\</span><span class="s2">F"</span><span class="p">,</span> <span class="s2">"F/C=C/F"</span><span class="p">,</span> <span class="s2">"F/C=C</span><span class="se">\\</span><span class="s2">F"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">use_bond_stereo</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>    <span class="p">(</span><span class="s2">"propane in cyclohexane"</span><span class="p">,</span> <span class="s2">"CCC"</span><span class="p">,</span> <span class="s2">"C1CCCCC1"</span><span class="p">,</span>
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">ring_matches_ring_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>    <span class="p">(</span><span class="s2">"propane in cyclohexane"</span><span class="p">,</span> <span class="s2">"CCC"</span><span class="p">,</span> <span class="s2">"C1CCCCC1"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">complete_rings_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>    <span class="p">(</span><span class="s2">"propane in propylcyclohexane"</span><span class="p">,</span> <span class="s2">"CCC"</span><span class="p">,</span> <span class="s2">"CCCC1CCCCC1"</span><span class="p">,</span>
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">complete_rings_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>    <span class="p">(</span><span class="s2">"cyclohexane in decalin"</span><span class="p">,</span> <span class="s2">"C1CCCCC1"</span><span class="p">,</span> <span class="s2">"C1CCC2CCCCC2C1"</span><span class="p">,</span>
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">ring_fusion_mode</span><span class="o">=</span><span class="n">FUSION</span><span class="o">.</span><span class="n">STRICT</span><span class="p">)),</span>
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>    <span class="p">(</span><span class="s2">"acetone in its enol"</span><span class="p">,</span> <span class="s2">"CC(=O)C"</span><span class="p">,</span> <span class="s2">"CC(O)=C"</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tautomer_aware</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>    <span class="p">(</span><span class="s2">"acetone in its enol"</span><span class="p">,</span> <span class="s2">"CC(=O)C"</span><span class="p">,</span> <span class="s2">"CC(O)=C"</span><span class="p">,</span>
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>     <span class="nb">dict</span><span class="p">(</span><span class="n">tautomer_aware</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">match_bond_order</span><span class="o">=</span><span class="n">BOND</span><span class="o">.</span><span class="n">ANY</span><span class="p">)),</span>
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a><span class="p">]</span>
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a><span class="n">expected</span> <span class="o">=</span> <span class="p">[(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>            <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a>            <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a>            <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">)]</span>
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a><span class="k">for</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">fields</span><span class="p">),</span> <span class="n">outcome</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">expected</span><span class="p">):</span>
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a>    <span class="n">setting</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="s1">'name'</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-12-46" name="__codelineno-12-46" href="#__codelineno-12-46"></a>                        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+<a id="__codelineno-12-47" name="__codelineno-12-47" href="#__codelineno-12-47"></a>    <span class="n">default</span><span class="p">,</span> <span class="n">changed</span> <span class="o">=</span> <span class="n">found</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">),</span> <span class="n">found</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="o">**</span><span class="n">fields</span><span class="p">)</span>
+<a id="__codelineno-12-48" name="__codelineno-12-48" href="#__codelineno-12-48"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">29</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">setting</span><span class="si">:</span><span class="s2">40</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">default</span><span class="si">!s:</span><span class="s2">5</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">changed</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-12-49" name="__codelineno-12-49" href="#__codelineno-12-49"></a>    <span class="k">assert</span> <span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">changed</span><span class="p">)</span> <span class="o">==</span> <span class="n">outcome</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>C=C in ethane                 match_bond_order=ANY                     False -&gt; True
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>C=C in ethane                 match_bond_order=LOOSE                   False -&gt; True
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>phenol in cyclohexanol        aromaticity_mode=STRICT                  True  -&gt; False
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>C[NH3+] in methylamine        match_formal_charge=True                 True  -&gt; False
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>[13CH4] in methane            match_isotope=True                       True  -&gt; True
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>methanol in methylamine       match_atom_type=False                    False -&gt; True
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>L-alanine in D-alanine        use_chirality=True                       True  -&gt; False
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>L-alanine in racemic alanine  use_chirality=True                       True  -&gt; False
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>racemic alanine in L-alanine  use_chirality=True                       True  -&gt; True
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>F/C=C/F in F/C=C\F            use_bond_stereo=True                     True  -&gt; False
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>propane in cyclohexane        ring_matches_ring_only=True              True  -&gt; False
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>propane in cyclohexane        complete_rings_only=True                 True  -&gt; False
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>propane in propylcyclohexane  complete_rings_only=True                 True  -&gt; True
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>cyclohexane in decalin        ring_fusion_mode=STRICT                  True  -&gt; False
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>acetone in its enol           tautomer_aware=True                      False -&gt; False
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>acetone in its enol           tautomer_aware=True, match_bond_order=ANY False -&gt; True
+</code></pre></div>
+<p>Three rows deserve attention. Under the default <code>FLEXIBLE</code> mode, phenol is
+found in cyclohexanol; <code>STRICT</code> aromaticity prevents this. <code>match_isotope</code>
+compares mass numbers only where both atoms state one, so the labelled query
+still matches unlabelled methane. Tautomer matching usually also needs a
+relaxed bond order.</p>
+<p><code>ChemOptions.profile(name)</code> returns a named set of options, and the name is
+not case-sensitive. Each profile starts from the defaults and changes only the
+fields shown below. <code>strict</code> changes only the aromaticity mode, so charge and
+isotope matching still need <code>match_formal_charge</code> or <code>match_isotope</code>. An
+unknown name raises <code>ValueError</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"match_atom_type"</span><span class="p">,</span> <span class="s2">"match_formal_charge"</span><span class="p">,</span> <span class="s2">"match_isotope"</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>          <span class="s2">"use_chirality"</span><span class="p">,</span> <span class="s2">"use_bond_stereo"</span><span class="p">,</span> <span class="s2">"ring_matches_ring_only"</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>          <span class="s2">"complete_rings_only"</span><span class="p">,</span> <span class="s2">"ring_fusion_mode"</span><span class="p">,</span> <span class="s2">"match_bond_order"</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>          <span class="s2">"aromaticity_mode"</span><span class="p">,</span> <span class="s2">"tautomer_aware"</span><span class="p">)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">default</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="p">()</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">changes</span><span class="p">(</span><span class="n">chemistry</span><span class="p">):</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="n">changed</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">FIELDS</span><span class="p">:</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">chemistry</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>        <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>            <span class="n">changed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="nb">getattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="s1">'name'</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>    <span class="k">return</span> <span class="n">changed</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="n">expected</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>    <span class="s2">"default"</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>    <span class="s2">"strict"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"aromaticity_mode=STRICT"</span><span class="p">],</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>    <span class="s2">"pharma"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"match_formal_charge=True"</span><span class="p">,</span> <span class="s2">"ring_matches_ring_only=True"</span><span class="p">,</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>               <span class="s2">"complete_rings_only=True"</span><span class="p">],</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>    <span class="s2">"reaction"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"match_bond_order=LOOSE"</span><span class="p">],</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>    <span class="s2">"compat-fmcs"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"match_bond_order=LOOSE"</span><span class="p">],</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>    <span class="s2">"compat-substruct"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"match_bond_order=LOOSE"</span><span class="p">],</span>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a><span class="p">}</span>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">fields</span> <span class="ow">in</span> <span class="n">expected</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">17</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">changes</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">name</span><span class="p">)))</span>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a>    <span class="k">assert</span> <span class="n">changes</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span> <span class="o">==</span> <span class="n">fields</span>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a><span class="n">tautomer</span> <span class="o">=</span> <span class="n">changes</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">tautomer_profile</span><span class="p">())</span>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'tautomer_profile'</span><span class="si">:</span><span class="s2">17</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">tautomer</span><span class="p">)</span>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a><span class="k">assert</span> <span class="n">tautomer</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"match_bond_order=LOOSE"</span><span class="p">,</span> <span class="s2">"tautomer_aware=True"</span><span class="p">]</span>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a>    <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="s2">"fast"</span><span class="p">)</span>
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a>    <span class="k">assert</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Unknown ChemOptions profile: fast"</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>default           []
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>strict            ['aromaticity_mode=STRICT']
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>pharma            ['match_formal_charge=True', 'ring_matches_ring_only=True', 'complete_rings_only=True']
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>reaction          ['match_bond_order=LOOSE']
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>compat-fmcs       ['match_bond_order=LOOSE']
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>compat-substruct  ['match_bond_order=LOOSE']
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>tautomer_profile  ['match_bond_order=LOOSE', 'tautomer_aware=True']
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>Unknown ChemOptions profile: fast
+</code></pre></div>
+<h2 id="hydrogen-counts">Hydrogen counts<a class="headerlink" href="#hydrogen-counts" title="Permanent link">&para;</a></h2>
+<p>A molecule query does not compare hydrogen counts. Phenol as a molecule query
+therefore matches aspirin, whose ester oxygen bears no hydrogen. When hydrogen
+counts matter, write SMARTS with an <code>H</code> primitive, such as <code>c[OX2H]</code>, or turn
+the drawn query into SMARTS with <code>to_smarts(..., include_h_count=True)</code>. The
+second route fixes the hydrogen count of every atom, including the ring
+positions, so the pattern below matches unsubstituted phenol only.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">aspirin</span> <span class="o">=</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">phenol</span> <span class="o">=</span> <span class="s2">"Oc1ccccc1"</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">butylphenol</span> <span class="o">=</span> <span class="s2">"CC(C)(C)c1ccc(O)cc1"</span>   <span class="c1"># 4-tert-butylphenol</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="n">molecule</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">aspirin</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="n">hydroxyl</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"c[OX2H]"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">aspirin</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"phenol as a molecule query, in aspirin:"</span><span class="p">,</span> <span class="n">molecule</span><span class="p">)</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"c[OX2H] in aspirin:"</span><span class="p">,</span> <span class="n">hydroxyl</span><span class="p">)</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="k">assert</span> <span class="n">molecule</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">hydroxyl</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="n">pattern</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">to_smarts</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">,</span> <span class="n">include_h_count</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="k">assert</span> <span class="n">pattern</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"-[#8;A;H1]"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pattern</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">"H1"</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="n">fixed</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="n">outcome</span> <span class="o">=</span> <span class="p">[</span><span class="n">fixed</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="p">(</span><span class="n">aspirin</span><span class="p">,</span> <span class="n">phenol</span><span class="p">,</span> <span class="n">butylphenol</span><span class="p">)]</span>
+<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"aspirin, phenol, 4-tert-butylphenol:"</span><span class="p">,</span> <span class="n">outcome</span><span class="p">)</span>
+<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="k">assert</span> <span class="n">outcome</span> <span class="o">==</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>phenol as a molecule query, in aspirin: True
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>c[OX2H] in aspirin: False
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>[#6;a;H0]:1(:[#6;a;H1]:[#6;a;H1]:[#6;a;H1]:[#6;a;H1]:[#6;a;H1]:1)-[#8;A;H1]
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>aspirin, phenol, 4-tert-butylphenol: [False, True, False]
+</code></pre></div>
+<h2 id="time-limits-node-limits-and-cancellation">Time limits, node limits and cancellation<a class="headerlink" href="#time-limits-node-limits-and-cancellation" title="Permanent link">&para;</a></h2>
+<p>Each search stops at the first of these limits:</p>
+<ul>
+<li><code>timeout_ms</code>: the time limit per target in milliseconds. The default <code>-1</code>
+  selects 10,000 ms for a substructure search; <code>0</code> stops at once.</li>
+<li><code>node_limit</code>: the number of search nodes. The default <code>0</code> sets no limit;
+  reaching one gives <code>LIMIT_REACHED</code>.</li>
+<li><code>cancellation</code>: a <code>CancellationToken</code>. Calling <code>cancel()</code> from any thread
+  stops the search with <code>CANCELLED</code>.</li>
+</ul>
+<p>A stopped search with no matches proves nothing: <code>optimal</code> and <code>complete</code> are
+both false. A token stays cancelled and is shared by every options object and
+prepared query that holds it, so use a new token for each request.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span>   <span class="c1"># phenol</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">target</span> <span class="o">=</span> <span class="s2">"CC(C)(C)c1ccc(O)cc1"</span>                <span class="c1"># 4-tert-butylphenol</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">14</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">"found:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span><span class="p">,</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>          <span class="s2">"optimal:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span> <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="n">stopped</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="n">report</span><span class="p">(</span><span class="s2">"timeout 0"</span><span class="p">,</span> <span class="n">stopped</span><span class="p">)</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="k">assert</span> <span class="n">stopped</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">TIMED_OUT</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">stopped</span><span class="o">.</span><span class="n">optimal</span>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="n">options</span><span class="o">.</span><span class="n">node_limit</span> <span class="o">=</span> <span class="mi">3</span>
+<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="n">capped</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="n">report</span><span class="p">(</span><span class="s2">"node limit 3"</span><span class="p">,</span> <span class="n">capped</span><span class="p">)</span>
+<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="k">assert</span> <span class="n">capped</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">LIMIT_REACHED</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">capped</span><span class="o">.</span><span class="n">complete</span>
+<a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a>
+<a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="n">token</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">CancellationToken</span><span class="p">()</span>
+<a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a><span class="n">options</span><span class="o">.</span><span class="n">cancellation</span> <span class="o">=</span> <span class="n">token</span>
+<a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-18-26" name="__codelineno-18-26" href="#__codelineno-18-26"></a><span class="n">cancellable</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-18-27" name="__codelineno-18-27" href="#__codelineno-18-27"></a><span class="n">before</span> <span class="o">=</span> <span class="n">cancellable</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-18-28" name="__codelineno-18-28" href="#__codelineno-18-28"></a><span class="n">report</span><span class="p">(</span><span class="s2">"before cancel"</span><span class="p">,</span> <span class="n">before</span><span class="p">)</span>
+<a id="__codelineno-18-29" name="__codelineno-18-29" href="#__codelineno-18-29"></a><span class="k">assert</span> <span class="n">before</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">before</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">COMPLETED</span>
+<a id="__codelineno-18-30" name="__codelineno-18-30" href="#__codelineno-18-30"></a><span class="n">token</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+<a id="__codelineno-18-31" name="__codelineno-18-31" href="#__codelineno-18-31"></a><span class="n">cancelled</span> <span class="o">=</span> <span class="n">cancellable</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-18-32" name="__codelineno-18-32" href="#__codelineno-18-32"></a><span class="n">report</span><span class="p">(</span><span class="s2">"after cancel"</span><span class="p">,</span> <span class="n">cancelled</span><span class="p">)</span>
+<a id="__codelineno-18-33" name="__codelineno-18-33" href="#__codelineno-18-33"></a><span class="k">assert</span> <span class="n">cancelled</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">CANCELLED</span> <span class="ow">and</span> <span class="n">token</span><span class="o">.</span><span class="n">is_cancelled</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>timeout 0      TIMED_OUT found: False optimal: False complete: False
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>node limit 3   LIMIT_REACHED found: False optimal: False complete: False
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>before cancel  COMPLETED found: True optimal: True complete: True
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>after cancel   CANCELLED found: False optimal: False complete: False
+</code></pre></div>
+<p>To stop a long search from another thread, raise the token there. Keep a
+limit and a time limit as a safety net. The number of embeddings found before
+the stop depends on timing, so the program below does not print it.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># A carbon ladder of 181 atoms holds a very large number of 20-carbon chains</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="n">ladder</span> <span class="o">=</span> <span class="p">(</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"C%</span><span class="si">{</span><span class="n">ring</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">ring</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span> <span class="o">+</span> <span class="s2">"C"</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>          <span class="o">+</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"C%</span><span class="si">{</span><span class="n">ring</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">ring</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">99</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="n">chain</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"C"</span> <span class="o">*</span> <span class="mi">20</span><span class="p">)</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="n">token</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">CancellationToken</span><span class="p">()</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="n">options</span><span class="o">.</span><span class="n">cancellation</span> <span class="o">=</span> <span class="n">token</span>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">5000</span>                     <span class="c1"># safety net</span>
+<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="n">timer</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">token</span><span class="o">.</span><span class="n">cancel</span><span class="p">)</span>
+<a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="n">timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="n">result</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">ladder</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">1_000_000</span><span class="p">)</span>
+<a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="n">timer</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+<a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>
+<a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"status:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+<a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">CANCELLED</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>status: CANCELLED complete: False
+</code></pre></div>
+<h2 id="draw-a-hit">Draw a hit<a class="headerlink" href="#draw-a-hit" title="Permanent link">&para;</a></h2>
+<p><code>depict_mapping(molecule, mapping)</code> draws a molecule natively, with no RDKit,
+and highlights the atoms in <code>mapping</code>. Its keys are atoms of the drawn
+molecule, so invert the search mapping to draw the target. This route works
+for molecule and SMARTS queries alike.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="n">paracetamol</span> <span class="o">=</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"c[OX2H]"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">paracetamol</span><span class="p">)</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="k">assert</span> <span class="n">hit</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="n">highlight</span> <span class="o">=</span> <span class="p">{</span><span class="n">target</span><span class="p">:</span> <span class="n">query</span> <span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">hit</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"highlighted target atoms:"</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">highlight</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="k">assert</span> <span class="n">highlight</span> <span class="o">==</span> <span class="p">{</span><span class="mi">7</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">depict_mapping</span><span class="p">(</span><span class="n">paracetamol</span><span class="p">,</span> <span class="n">highlight</span><span class="p">)</span>
+<a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"paracetamol_hit.svg"</span>
+<a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>    <span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">svg</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+<a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>    <span class="n">written</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+<a id="__codelineno-22-19" name="__codelineno-22-19" href="#__codelineno-22-19"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"SVG written:"</span><span class="p">,</span> <span class="s2">"&lt;svg"</span> <span class="ow">in</span> <span class="n">written</span><span class="p">)</span>
+<a id="__codelineno-22-20" name="__codelineno-22-20" href="#__codelineno-22-20"></a><span class="k">assert</span> <span class="s2">"&lt;svg"</span> <span class="ow">in</span> <span class="n">written</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>highlighted target atoms: [(7, 0), (8, 1)]
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>SVG written: True
+</code></pre></div>
+<p>With RDKit installed, <code>depict_substructure(query, target, *, timeout_ms=10000,
+size=(600, 300))</code> runs its own molecule-query search and returns an RDKit
+image of the query and the target with the matched atoms highlighted. It does
+not accept SMARTS and reports no search status: when the search stops without
+a match, it draws the pair without a highlight.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chem</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="n">query</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span>              <span class="c1"># phenol</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="n">target</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"CC(C)(C)c1ccc(O)cc1"</span><span class="p">)</span>   <span class="c1"># 4-tert-butylphenol</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="n">image</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">depict_substructure</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"image size:"</span><span class="p">,</span> <span class="n">image</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="k">assert</span> <span class="n">image</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="p">(</span><span class="mi">600</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+<a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>
+<a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"phenol_hit.png"</span>
+<a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>    <span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a>    <span class="k">assert</span> <span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>image size: (600, 300)
+</code></pre></div>
+<h2 id="r-group-decomposition">R-group decomposition<a class="headerlink" href="#r-group-decomposition" title="Permanent link">&para;</a></h2>
+<p><code>Substructure.decompose_r_groups(core, targets, options=None)</code> searches each
+target for the core and returns a dictionary with the matched <code>core</code> graph,
+the substituents as <code>rgroups</code> (<code>R1</code>, <code>R2</code> and so on) and the <code>search</code> result.
+The core keeps its original hydrogen counts, so its attachment atoms are
+written as bracket atoms.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="n">targets</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Cc1ccccc1O"</span><span class="p">,</span>   <span class="c1"># 2-methylphenol</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>           <span class="s2">"CCN"</span><span class="p">]</span>          <span class="c1"># ethylamine</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="n">parts</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">decompose_r_groups</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>   <span class="c1"># benzene core</span>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="n">summary</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">parts</span><span class="p">):</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>    <span class="n">found</span> <span class="o">=</span> <span class="n">part</span><span class="p">[</span><span class="s2">"search"</span><span class="p">]</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>    <span class="n">core</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">part</span><span class="p">[</span><span class="s2">"core"</span><span class="p">])</span> <span class="k">if</span> <span class="n">found</span> <span class="k">else</span> <span class="kc">None</span>
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>    <span class="n">groups</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">smsd</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">part</span><span class="p">[</span><span class="s2">"rgroups"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">target</span><span class="si">:</span><span class="s2">11</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"found:"</span><span class="p">,</span> <span class="n">found</span><span class="p">,</span> <span class="s2">"core:"</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="s2">"R-groups:"</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span>
+<a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>    <span class="n">summary</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">found</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="n">groups</span><span class="p">))</span>
+<a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="k">assert</span> <span class="n">summary</span> <span class="o">==</span> <span class="p">[(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">"[c]1[c]cccc1"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"R1"</span><span class="p">:</span> <span class="s2">"[CH3]"</span><span class="p">,</span> <span class="s2">"R2"</span><span class="p">:</span> <span class="s2">"[OH]"</span><span class="p">}),</span>
+<a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>                   <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">{})]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>Cc1ccccc1O  found: True core: [c]1[c]cccc1 R-groups: {'R1': '[CH3]', 'R2': '[OH]'}
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>CCN         found: False core: None R-groups: {}
+</code></pre></div>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Substructure.find(query)</code></td>
+<td></td>
+<td>Prepare a molecule query from SMILES, a <code>MolGraph</code> or an RDKit molecule</td>
+</tr>
+<tr>
+<td><code>Substructure.smarts(pattern)</code></td>
+<td></td>
+<td>Compile a SMARTS pattern; an empty or non-string pattern raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>with_options(options)</code></td>
+<td></td>
+<td>A new query with a copy of <code>options</code></td>
+</tr>
+<tr>
+<td><code>with_timeout(milliseconds)</code></td>
+<td></td>
+<td>A new query with <code>timeout_ms</code> set</td>
+</tr>
+<tr>
+<td><code>with_induced(enabled=True)</code></td>
+<td><code>enabled=True</code></td>
+<td>A new query with induced matching on or off</td>
+</tr>
+<tr>
+<td><code>match(target)</code></td>
+<td></td>
+<td>One embedding, with its status</td>
+</tr>
+<tr>
+<td><code>match_all(target, limit=1000)</code></td>
+<td><code>limit=1000</code></td>
+<td>Every embedding up to <code>limit</code>; <code>limit</code> must be a positive integer</td>
+</tr>
+<tr>
+<td><code>match_many(targets, *, num_threads=0)</code></td>
+<td><code>num_threads=0</code></td>
+<td>One result per target, in order; <code>num_threads</code> must be a non-negative integer</td>
+</tr>
+<tr>
+<td><code>match_corpus(corpus, *, gpu_prefilter=False, num_threads=0)</code></td>
+<td><code>gpu_prefilter=False</code>, <code>num_threads=0</code></td>
+<td>One decision per corpus slot; <code>corpus</code> must be a <code>TargetCorpus</code></td>
+</tr>
+<tr>
+<td><code>Substructure.decompose_r_groups(core, targets, options=None)</code></td>
+<td><code>options=None</code> (default options)</td>
+<td>Core, R-groups and search result for each target</td>
+</tr>
+</tbody>
+</table>
+<p><code>Substructure.Options()</code> holds these fields. Copy one with
+<code>Substructure.Options(other)</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chemistry</code></td>
+<td><code>ChemOptions</code></td>
+<td><code>ChemOptions()</code></td>
+<td>Matching rules (see <a href="#chemistry-options">Chemistry options</a>)</td>
+</tr>
+<tr>
+<td><code>timeout_ms</code></td>
+<td><code>int</code></td>
+<td><code>-1</code></td>
+<td>Time limit per target; a negative value selects 10,000 ms; <code>0</code> stops at once</td>
+</tr>
+<tr>
+<td><code>node_limit</code></td>
+<td><code>int</code></td>
+<td><code>0</code></td>
+<td>Search node limit; <code>0</code> sets no limit</td>
+</tr>
+<tr>
+<td><code>cancellation</code></td>
+<td><code>CancellationToken</code> or <code>None</code></td>
+<td><code>None</code></td>
+<td>A token that stops the search when cancelled</td>
+</tr>
+<tr>
+<td><code>induced</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Require an induced embedding</td>
+</tr>
+</tbody>
+</table>
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>Substructure.Options</code> and <code>ChemOptions</code> take no keyword arguments. Set each
+  field as an attribute; a misspelt attribute raises <code>AttributeError</code>.
+  <code>options.chemistry</code> can be edited in place.</li>
+<li><code>with_options</code> copies the options object, so later edits do not reach the
+  query. A <code>CancellationToken</code> held in the options is shared, not copied.</li>
+<li>A query with several components, such as <code>C.O</code>, maps each component to
+  distinct target atoms: <code>C.O</code> is found in ethanol, <code>O.O</code> is not.</li>
+<li>An empty SMILES string raises <code>ValueError</code>. An empty <code>MolGraph</code> query, from
+  <code>parse_smiles("")</code>, is found in every target with one empty match.</li>
+<li><code>Match.atom_mapping</code> is read-only, and <code>Match</code> and <code>SearchResult</code> are frozen.</li>
+<li><code>elapsed_ms</code> is in whole milliseconds and <code>nodes_visited</code> measures effort;
+  both vary between runs and builds.</li>
+<li><code>match</code> and <code>match_all</code> count the time spent building Python results
+  towards the time limit. <code>match_many</code> stops building results only when
+  cancelled.</li>
+<li>A molecule query with an explicit <code>[H]</code> atom needs an explicit hydrogen atom
+  in the target; a bracket hydrogen count is not an atom (see
+  <a href="../../PYTHON/#input-atom-numbering">Input atom numbering</a>).</li>
+<li><code>num_threads=0</code> means the OpenMP default in Python and one thread per
+  processor in C++. In Java, <code>matchMany(targets)</code> without a thread count runs
+  on one thread.</li>
+<li>The substructure tools of the local molecular tools server (<code>smsd-mcp</code>)
+  use their own defaults: a time limit of 1,000 ms and a node limit of
+  100,000; see <a href="../COMMAND_LINE/#molecular-tools-server">Molecular tools server</a>.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../SMARTS/">SMARTS queries</a></li>
+<li><a href="../MCS/">Maximum common substructure</a></li>
+<li><a href="../SCREENING/#substructure-screen-with-exact-confirmation">Library screening</a></li>
+<li><a href="../../PYTHON/#chemistry-options">Chemistry options in the Python guide</a></li>
+<li><a href="../../ALGORITHMS/#what-each-search-guarantees">Search guarantees</a></li>
+<li><a href="../../CPP/#prepared-queries">C++ prepared queries</a></li>
+<li><a href="../../JAVA/#prepared-searches">Java prepared searches</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../GETTING_STARTED/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Getting started">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Getting started
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../SMARTS/" class="md-footer__link md-footer__link--next" aria-label="Next: SMARTS queries">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                SMARTS queries
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

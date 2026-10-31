@@ -1,0 +1,109 @@
+/* SMSD Pro documentation theme: colours from the SMSD Pro icon. */
+:root {
+  --smsd-ink: #0d3330;
+  --smsd-teal: #166b63;
+  --smsd-sea: #22a196;
+  --smsd-mint: #4ee8c7;
+  --smsd-gold: #f0c040;
+  --smsd-coral: #e86c5a;
+  --smsd-sky: #78b8f0;
+  --smsd-radius: 14px;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--smsd-teal);
+  --md-primary-fg-color--light: var(--smsd-sea);
+  --md-primary-fg-color--dark: var(--smsd-ink);
+  --md-accent-fg-color: var(--smsd-sea);
+  --md-typeset-a-color: #12786e;
+  --md-default-bg-color: #fbfdfc;
+  --md-code-bg-color: #f2f7f6;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 172;
+  --md-primary-fg-color: var(--smsd-ink);
+  --md-primary-fg-color--dark: #081f1d;
+  --md-accent-fg-color: var(--smsd-mint);
+  --md-typeset-a-color: var(--smsd-mint);
+  --md-default-bg-color: #0a1c1a;
+  --md-code-bg-color: #0f2926;
+}
+
+/* Header and tabs carry the icon's gradient. */
+.md-header, .md-tabs {
+  background: linear-gradient(120deg, var(--smsd-ink) 0%, var(--smsd-teal) 60%, var(--smsd-sea) 100%);
+}
+.md-header { box-shadow: 0 1px 0 rgba(78, 232, 199, .25); }
+.md-tabs__link--active, .md-tabs__link:hover { color: var(--smsd-mint); opacity: 1; }
+.md-header__title { font-weight: 700; letter-spacing: .02em; }
+
+/* Typography. */
+.md-typeset h1 { font-weight: 800; letter-spacing: -.01em; color: var(--md-typeset-color); }
+.md-typeset h2 { font-weight: 700; margin-top: 2.2em; border-bottom: 1px solid rgba(34, 161, 150, .25); padding-bottom: .3em; }
+.md-typeset h3 { font-weight: 650; }
+.md-typeset code { border-radius: 6px; }
+.md-typeset a { text-decoration-color: rgba(34, 161, 150, .35); }
+
+/* Hero. */
+.smsd-hero {
+  margin: -1.2rem -.8rem 2.4rem;
+  padding: 3.2rem 2.4rem 2.8rem;
+  border-radius: 0 0 var(--smsd-radius) var(--smsd-radius);
+  background:
+    radial-gradient(900px 380px at 85% -10%, rgba(78, 232, 199, .28), transparent 60%),
+    linear-gradient(135deg, var(--smsd-ink) 0%, var(--smsd-teal) 55%, var(--smsd-sea) 100%);
+  color: #fff;
+  display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: center;
+}
+.smsd-hero h1 { color: #fff; font-size: 2.6rem; margin: 0 0 .4rem; line-height: 1.1; }
+.smsd-hero .smsd-tagline { color: var(--smsd-mint); text-transform: uppercase; letter-spacing: .22em; font-size: .72rem; font-weight: 700; }
+.smsd-hero p { font-size: 1.02rem; max-width: 40rem; opacity: .95; }
+.smsd-hero img { width: 168px; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .35)); }
+.smsd-hero .md-button { margin: .4rem .5rem 0 0; border-radius: 999px; }
+.smsd-hero .md-button--primary { background: var(--smsd-gold); border-color: var(--smsd-gold); color: var(--smsd-ink); font-weight: 700; }
+.smsd-hero .md-button:not(.md-button--primary) { color: #fff; border-color: rgba(255, 255, 255, .55); }
+.smsd-hero .md-button:hover { filter: brightness(1.08); }
+@media (max-width: 720px) {
+  .smsd-hero { grid-template-columns: 1fr; padding: 2.2rem 1.4rem; }
+  .smsd-hero img { display: none; }
+  .smsd-hero h1 { font-size: 2rem; }
+}
+
+/* Cards. */
+.md-typeset .grid.cards > ul > li, .md-typeset .grid > .card {
+  border-radius: var(--smsd-radius);
+  border: 1px solid rgba(34, 161, 150, .22);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.md-typeset .grid.cards > ul > li:hover {
+  transform: translateY(-2px);
+  border-color: var(--smsd-sea);
+  box-shadow: 0 10px 28px rgba(13, 51, 48, .14);
+}
+.md-typeset .grid.cards .twemoji, .md-typeset .grid.cards .lg { color: var(--smsd-sea); }
+
+/* Key facts strip. */
+.smsd-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin: 1.6rem 0; }
+.smsd-facts div { border-left: 3px solid var(--smsd-gold); padding: .3rem .8rem; }
+.smsd-facts strong { display: block; font-size: 1.25rem; color: var(--md-typeset-color); }
+.smsd-facts span { font-size: .78rem; opacity: .75; }
+
+/* Molecule figures stay on white so bonds read in both schemes. */
+.smsd-mols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+.smsd-mols figure { margin: 0; background: #fff; border-radius: var(--smsd-radius); padding: .6rem; border: 1px solid rgba(34, 161, 150, .22); }
+.smsd-mols img { width: 100%; height: auto; }
+.smsd-mols figcaption { color: #3b4a48; font-size: .74rem; text-align: center; }
+
+/* Admonitions in brand colours. */
+.md-typeset .admonition.tip, .md-typeset details.tip { border-color: var(--smsd-sea); }
+.md-typeset .tip > .admonition-title, .md-typeset .tip > summary { background-color: rgba(78, 232, 199, .12); }
+.md-typeset .admonition.note, .md-typeset details.note { border-color: var(--smsd-sky); }
+.md-typeset .admonition.warning, .md-typeset details.warning { border-color: var(--smsd-gold); }
+
+/* Tables. */
+.md-typeset table:not([class]) { border-radius: 10px; overflow: hidden; font-size: .78rem; }
+.md-typeset table:not([class]) th { background: rgba(22, 107, 99, .08); color: var(--md-typeset-color); }
+
+/* Notebook cells. */
+.jp-InputArea-editor, .highlight-ipynb { border-radius: 10px !important; }

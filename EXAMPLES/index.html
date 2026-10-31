@@ -1,0 +1,2604 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/EXAMPLES/">
+      
+      
+        <link rel="prev" href="../AI_ASSISTANTS/">
+      
+      
+        <link rel="next" href="../API_REFERENCE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Examples - SMSD Pro</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#smsd-pro-python-examples" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Examples
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../guide/" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-and-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and similarity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fingerprints and similarity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#circular-and-torsion-fingerprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circular and torsion fingerprints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-and-count-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary and count metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configurable-fingerprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configurable fingerprints
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screening
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Screening">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rank-a-small-set-by-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rank a small set by similarity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-a-large-library-then-confirm-by-substructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen a large library, then confirm by substructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-by-mcs-similarity-then-compute-the-mcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen by MCS similarity, then compute the MCS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#svg-drawing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SVG drawing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SVG drawing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#styling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Styling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-conversion-to-png" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional conversion to PNG
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinates-and-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinates and layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coordinates and layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-and-three-dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two and three dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refinement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refinement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transforms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stereo-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stereo assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mol-and-sdf-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MOL and SDF files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r-group-decomposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-group decomposition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaffolds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaffolds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph utilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#atom-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Atom maps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-assistants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI assistants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-and-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and similarity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fingerprints and similarity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#circular-and-torsion-fingerprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circular and torsion fingerprints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-and-count-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary and count metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configurable-fingerprints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configurable fingerprints
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screening
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Screening">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rank-a-small-set-by-similarity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rank a small set by similarity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-a-large-library-then-confirm-by-substructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen a large library, then confirm by substructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-by-mcs-similarity-then-compute-the-mcs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen by MCS similarity, then compute the MCS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#svg-drawing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SVG drawing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SVG drawing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#styling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Styling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-conversion-to-png" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional conversion to PNG
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coordinates-and-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinates and layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coordinates and layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-and-three-dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two and three dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refinement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refinement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transforms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stereo-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stereo assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mol-and-sdf-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MOL and SDF files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r-group-decomposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-group decomposition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scaffolds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaffolds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph utilities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#atom-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Atom maps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-assistants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI assistants
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="smsd-pro-python-examples">SMSD Pro Python examples<a class="headerlink" href="#smsd-pro-python-examples" title="Permanent link">&para;</a></h1>
+<p>Runnable examples for the <code>smsd</code> Python package beyond molecule search. Each
+block is self-contained, and blocks that write files create them in the current
+directory. Searches, options and the full API reference are in the
+<a href="../PYTHON/">Python guide</a>. Interpreter and platform requirements are in the
+<a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a>.</p>
+<h2 id="fingerprints-and-similarity">Fingerprints and similarity<a class="headerlink" href="#fingerprints-and-similarity" title="Permanent link">&para;</a></h2>
+<h3 id="circular-and-torsion-fingerprints">Circular and torsion fingerprints<a class="headerlink" href="#circular-and-torsion-fingerprints" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccc(O)cc1"</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">fp</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>  <span class="c1"># ECFP4</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint_counts</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">fcfp</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"fcfp"</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">torsion</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">topological_torsion</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">assert</span> <span class="n">fp</span> <span class="ow">and</span> <span class="n">counts</span> <span class="ow">and</span> <span class="n">fcfp</span> <span class="ow">and</span> <span class="n">torsion</span>
+</code></pre></div>
+<p>ECFP describes structural environments and FCFP functional classes
+(<a href="https://doi.org/10.1021/ci100050t">Rogers and Hahn, 2010</a>). Binary
+fingerprints hold set bit positions; count fingerprints hold
+<code>(position, count)</code> pairs. Choose the fingerprint and threshold on your own
+data.</p>
+<h3 id="binary-and-count-metrics">Binary and count metrics<a class="headerlink" href="#binary-and-count-metrics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">mol1</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">mol2</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CCCO"</span><span class="p">)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">fp1</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint</span><span class="p">(</span><span class="n">mol1</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">fp2</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint</span><span class="p">(</span><span class="n">mol2</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">fp1</span><span class="p">,</span> <span class="n">fp2</span><span class="p">),</span> <span class="n">smsd</span><span class="o">.</span><span class="n">dice</span><span class="p">(</span><span class="n">fp1</span><span class="p">,</span> <span class="n">fp2</span><span class="p">),</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>          <span class="n">smsd</span><span class="o">.</span><span class="n">cosine</span><span class="p">(</span><span class="n">fp1</span><span class="p">,</span> <span class="n">fp2</span><span class="p">)]</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">score</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="k">for</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">scores</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">c1</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint_counts</span><span class="p">(</span><span class="n">mol1</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">c2</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">circular_fingerprint_counts</span><span class="p">(</span><span class="n">mol2</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">count_tanimoto</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">count_tanimoto_coefficient</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="n">c2</span><span class="p">)</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">dense1</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">counts_to_array</span><span class="p">(</span><span class="n">c1</span><span class="p">,</span> <span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">dense2</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">counts_to_array</span><span class="p">(</span><span class="n">c2</span><span class="p">,</span> <span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">count_dice</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">count_dice</span><span class="p">(</span><span class="n">dense1</span><span class="p">,</span> <span class="n">dense2</span><span class="p">)</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="k">assert</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">count_tanimoto</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">count_dice</span> <span class="o">&lt;=</span> <span class="mf">1.0</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># Hexadecimal storage for a binary fingerprint.</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">hex_string</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">to_hex</span><span class="p">(</span><span class="n">fp1</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">from_hex</span><span class="p">(</span><span class="n">hex_string</span><span class="p">))</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">fp1</span><span class="p">)</span>
+</code></pre></div>
+<p><code>count_dice()</code> and <code>count_cosine()</code> accept dense vectors, <code>(position, count)</code>
+pairs or dictionaries; <code>count_tanimoto_coefficient()</code> and
+<code>count_overlap_coefficient()</code> take pairs. Binary <code>tanimoto_coefficient()</code>
+compares set positions only, even for count input. Two empty fingerprints
+score 1.0 with <code>tanimoto_coefficient()</code> and <code>overlap_coefficient()</code>.</p>
+<h3 id="configurable-fingerprints">Configurable fingerprints<a class="headerlink" href="#configurable-fingerprints" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">aspirin</span> <span class="o">=</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># ECFP4 with ring-size and stereo terms; the default ECFP options give the</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># same bits as circular_fingerprint().</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">ring_size</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cip_atoms</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cip_bonds</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">fp</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">aspirin</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">keys</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">aspirin</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">maccs</span><span class="p">())</span>  <span class="c1"># 166 MACCS keys</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">assert</span> <span class="n">fp</span> <span class="ow">and</span> <span class="n">keys</span>
+</code></pre></div>
+<p>The same <code>FingerprintOptions</code> give the same bits in C++ and Java.</p>
+<h2 id="screening">Screening<a class="headerlink" href="#screening" title="Permanent link">&para;</a></h2>
+<h3 id="rank-a-small-set-by-similarity">Rank a small set by similarity<a class="headerlink" href="#rank-a-small-set-by-similarity" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">query</span> <span class="o">=</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span>                    <span class="c1"># aspirin</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">library</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span> <span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="s2">"CC(=O)Oc1ccccc1"</span><span class="p">]</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">ranked</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">batch_similarity</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">library</span><span class="p">)</span>    <span class="c1"># (index, Tanimoto), most similar first</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">assert</span> <span class="n">library</span><span class="p">[</span><span class="n">ranked</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span> <span class="o">==</span> <span class="s2">"CC(=O)Oc1ccccc1"</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">ranked</span><span class="p">:</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">library</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="screen-a-large-library-then-confirm-by-substructure">Screen a large library, then confirm by substructure<a class="headerlink" href="#screen-a-large-library-then-confirm-by-substructure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"Br"</span><span class="p">,</span> <span class="s2">"C#N"</span><span class="p">,</span> <span class="s2">"C(F)(F)F"</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>          <span class="s2">"C(=O)O"</span><span class="p">,</span> <span class="s2">"C(=O)N"</span><span class="p">,</span> <span class="s2">"S(=O)(=O)N"</span><span class="p">,</span> <span class="s2">"OCC"</span><span class="p">]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">library</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">)]</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2744</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>   <span class="c1"># parse once, search many times</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">()</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">query</span> <span class="o">=</span> <span class="s2">"c1c(C)cc(O)cc1C(=O)O"</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">nearest</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">batch_similarity</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">library</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="n">acid</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"C(=O)[OX2H1]"</span><span class="p">)</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="n">results</span> <span class="o">=</span> <span class="n">acid</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># every processor core</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">library</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span><span class="p">]</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="k">assert</span> <span class="n">library</span><span class="p">[</span><span class="n">nearest</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span> <span class="o">==</span> <span class="n">query</span> <span class="ow">and</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">hits</span>
+</code></pre></div>
+<p>With OpenMP, as in the published wheels, <code>num_threads=0</code> uses every core unless
+<code>OMP_NUM_THREADS</code> sets fewer; results keep the order of the targets.</p>
+<h3 id="screen-by-mcs-similarity-then-compute-the-mcs">Screen by MCS similarity, then compute the MCS<a class="headerlink" href="#screen-by-mcs-similarity-then-compute-the-mcs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">library</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">)]</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>   <span class="c1"># prepared once for repeated screens</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">query</span> <span class="o">=</span> <span class="s2">"c1c(C)cc(O)cc1C(=O)O"</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">candidates</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">screen_targets</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">corpus</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>   <span class="c1"># targets that can reach 0.8</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="n">results</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">match_many</span><span class="p">([</span><span class="n">library</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">])</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="k">assert</span> <span class="n">candidates</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+<p><code>screen_targets</code> bounds the atom-count Tanimoto similarity of the MCS from
+above, so under the same chemistry options it never rejects a target able to
+reach the threshold, and the MCS runs only where it can matter. For repeated
+screens of the same library, a prepared <code>TargetCorpus</code> such as this one saves
+converting the targets on every call; a list of molecules or SMILES gives the
+same indices.</p>
+<p>This threshold applies to atom-count Tanimoto, not bond Tanimoto or weighted MCS scores.
+<code>MCS.match_many</code> itself searches every supplied target without a similarity threshold.</p>
+<p>With <code>smsd-cuda</code> and an NVIDIA GPU,
+<a href="../python/examples/gpu_screening.py"><code>gpu_screening.py</code></a> runs packed and
+corpus screens on the device and checks every result against the CPU; without
+them it runs on the CPU.</p>
+<h2 id="svg-drawing">SVG drawing<a class="headerlink" href="#svg-drawing" title="Permanent link">&para;</a></h2>
+<p>The native SVG renderer needs no RDKit. Check each drawing before publishing
+it, as fonts depend on the viewer.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">depict_svg</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">assert</span> <span class="n">ET</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">svg</span><span class="p">)</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"svg"</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">svg</span><span class="p">,</span> <span class="s2">"aspirin.svg"</span><span class="p">)</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CC(=O)NC"</span><span class="p">)</span>   <span class="c1"># N-methylacetamide</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">target</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CCC(=O)N"</span><span class="p">)</span>  <span class="c1"># propanamide</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="n">mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="p">)</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">assert</span> <span class="n">mapping</span> <span class="o">==</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">depict_pair</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">),</span> <span class="s2">"mcs_pair.svg"</span><span class="p">)</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1"># Highlight target atoms: keys must be indices in the rendered molecule.</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="n">target_mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">depict_mapping</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">target_mapping</span><span class="p">),</span> <span class="s2">"target.svg"</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="styling">Styling<a class="headerlink" href="#styling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">DepictOptions</span><span class="p">()</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">options</span><span class="o">.</span><span class="n">bond_length</span> <span class="o">=</span> <span class="mi">35</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">options</span><span class="o">.</span><span class="n">show_map_numbers</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">options</span><span class="o">.</span><span class="n">font_family</span> <span class="o">=</span> <span class="s2">"Arial, sans-serif"</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">smiles</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="s2">"CC(=O)O"</span><span class="p">]):</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">depict_svg</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="n">options</span><span class="p">),</span> <span class="sa">f</span><span class="s2">"molecule_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">.svg"</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">depict_svg</span><span class="p">(</span><span class="s2">"c1ccc2c(c1)cc1ccccc1c2"</span><span class="p">,</span> <span class="n">bond_length</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>                      <span class="n">width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">show_atom_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">smsd</span><span class="o">.</span><span class="n">save_svg</span><span class="p">(</span><span class="n">svg</span><span class="p">,</span> <span class="s2">"large.svg"</span><span class="p">)</span>
+</code></pre></div>
+<p>Keyword arguments such as <code>bond_length=50</code> set <code>DepictOptions</code> attributes, on
+<code>opts</code> when it is passed.</p>
+<h3 id="optional-conversion-to-png">Optional conversion to PNG<a class="headerlink" href="#optional-conversion-to-png" title="Permanent link">&para;</a></h3>
+<p>Convert <code>aspirin.svg</code> from above with Inkscape or CairoSVG, installed
+separately:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>inkscape<span class="w"> </span>aspirin.svg<span class="w"> </span>--export-type<span class="o">=</span>png<span class="w"> </span>--export-filename<span class="o">=</span>aspirin.png<span class="w"> </span>--export-dpi<span class="o">=</span><span class="m">600</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import cairosvg; cairosvg.svg2png(url='aspirin.svg', write_to='aspirin.png', dpi=600)"</span>
+</code></pre></div>
+<h2 id="coordinates-and-layout">Coordinates and layout<a class="headerlink" href="#coordinates-and-layout" title="Permanent link">&para;</a></h2>
+<h3 id="two-and-three-dimensions">Two and three dimensions<a class="headerlink" href="#two-and-three-dimensions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">generate_coords_2d</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">target_bond_length</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">quality</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">layout_quality</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="k">assert</span> <span class="n">quality</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">coords_3d</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">generate_coords_3d</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">target_bond_length</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords_3d</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">coords_3d</span><span class="p">)</span>
+</code></pre></div>
+<p>A <code>layout_quality()</code> score of 0.0 is ideal. Three-dimensional coordinates are
+a starting geometry, not a validated conformer or energy minimum.</p>
+<h3 id="refinement">Refinement<a class="headerlink" href="#refinement" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">generate_coords_2d</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">_</span><span class="p">,</span> <span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">force_directed_layout</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">_</span><span class="p">,</span> <span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">stress_majorisation</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">crossings</span><span class="p">,</span> <span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">reduce_crossings</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+</code></pre></div>
+<p>Refinement does not improve every layout; compare <code>layout_quality()</code> and
+inspect the drawing.</p>
+<h3 id="transforms">Transforms<a class="headerlink" href="#transforms" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">generate_coords_2d</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">translate_2d</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">rotate_2d</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mi">45</span><span class="p">))</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">scale_2d</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">factor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">mirror_x</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">mirror_y</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">center_2d</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">normalise_bond_length</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="n">coords</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">canonical_orientation</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="n">reference</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">generate_coords_2d</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="n">rmsd</span><span class="p">,</span> <span class="n">aligned</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">align_2d</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">reference</span><span class="p">)</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="n">box</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">bounding_box_2d</span><span class="p">(</span><span class="n">aligned</span><span class="p">)</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">box</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">rmsd</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+</code></pre></div>
+<p>Angles are in radians. Save coordinates when exact reproducibility matters.</p>
+<h2 id="stereo-assignment">Stereo assignment<a class="headerlink" href="#stereo-assignment" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">alanine</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"N[C@@H](C)C(=O)O"</span><span class="p">)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">assign_rs</span><span class="p">(</span><span class="n">alanine</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s2">"S"</span><span class="p">}</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">butene</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"C/C=C/C"</span><span class="p">)</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">assign_ez</span><span class="p">(</span><span class="n">butene</span><span class="p">)</span> <span class="o">==</span> <span class="p">{(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span> <span class="s2">"E"</span><span class="p">}</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">descriptors</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">assign_cip</span><span class="p">(</span><span class="n">alanine</span><span class="p">)</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="k">assert</span> <span class="n">descriptors</span><span class="o">.</span><span class="n">rs_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">RSLabel</span><span class="o">.</span><span class="n">S</span>
+</code></pre></div>
+<p>Write explicit stereo markers in the SMILES; unspecified stereo is not
+assigned.</p>
+<h2 id="mol-and-sdf-files">MOL and SDF files<a class="headerlink" href="#mol-and-sdf-files" title="Permanent link">&para;</a></h2>
+<p>Each example creates its own input files.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">smsd</span><span class="o">.</span><span class="n">write_molfile</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="s2">"molecule.mol"</span><span class="p">)</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">loaded</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">read_mol_file</span><span class="p">(</span><span class="s2">"molecule.mol"</span><span class="p">)</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="n">block</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">write_mol_block</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">block_v3000</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">write_mol_block_v3000</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">read_mol_block</span><span class="p">(</span><span class="n">block</span><span class="p">))</span> <span class="o">==</span> <span class="mi">3</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">read_mol_block</span><span class="p">(</span><span class="n">block_v3000</span><span class="p">))</span> <span class="o">==</span> <span class="mi">3</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">molecules</span> <span class="o">=</span> <span class="p">[</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"c1ccccc1"</span><span class="p">]]</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="n">smsd</span><span class="o">.</span><span class="n">write_sdf</span><span class="p">(</span><span class="n">molecules</span><span class="p">,</span> <span class="s2">"compounds.sdf"</span><span class="p">)</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">loaded</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">read_sdf</span><span class="p">(</span><span class="s2">"compounds.sdf"</span><span class="p">)</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="k">assert</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="k">for</span> <span class="n">mol</span> <span class="ow">in</span> <span class="n">loaded</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">smsd</span><span class="o">.</span><span class="n">write_sdf</span><span class="p">(</span><span class="n">loaded</span><span class="p">,</span> <span class="s2">"output.sdf"</span><span class="p">)</span>
+</code></pre></div>
+<p><code>read_sdf()</code> loads the whole file and turns malformed records into empty
+graphs, so check each record. For large files, pass records one at a time to
+<code>read_mol_block()</code>. <code>write_mol_block()</code> and the SDF writers switch to V3000
+above 999 atoms or bonds.</p>
+<h2 id="r-group-decomposition">R-group decomposition<a class="headerlink" href="#r-group-decomposition" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="n">results</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">decompose_r_groups</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"Nc1ccccc1"</span><span class="p">,</span> <span class="s2">"CCO"</span><span class="p">],</span> <span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="s2">"search"</span><span class="p">]</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"core"</span><span class="p">]</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"rgroups"</span><span class="p">][</span><span class="s2">"R1"</span><span class="p">]</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">1</span>
+</code></pre></div>
+<p>Each entry holds the core graph, the substituent graphs and the core's search
+result, which shows whether a missing core was proved absent.</p>
+<h2 id="scaffolds">Scaffolds<a class="headerlink" href="#scaffolds" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">parent</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"Cc1ccccc1"</span><span class="p">)</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">scaffold</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">murcko_scaffold</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="k">assert</span> <span class="n">scaffold</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"Oc1ccccc1"</span><span class="p">)</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span>
+</code></pre></div>
+<p>The Bemis–Murcko scaffold keeps ring systems, their linkers and atoms double-
+or triple-bonded to them, such as carbonyl oxygens. An acyclic input is
+returned unchanged.</p>
+<h2 id="graph-utilities">Graph utilities<a class="headerlink" href="#graph-utilities" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">mol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1.CCO"</span><span class="p">)</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">count_components</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="n">components</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">split_components</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="k">assert</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">components</span><span class="p">)</span> <span class="o">==</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">same_canonical_graph</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">),</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>                                 <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"C1=CC=CC=C1"</span><span class="p">))</span>
+</code></pre></div>
+<p>To compare stereoisomers in a search, enable the stereo
+<a href="../PYTHON/#chemistry-options">chemistry options</a>.</p>
+<h2 id="atom-maps">Atom maps<a class="headerlink" href="#atom-maps" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">mapped</span> <span class="o">=</span> <span class="s2">"[CH3:1][C:2](=[O:3])[OH:4]"</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">clean</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">strip_atom_maps</span><span class="p">(</span><span class="n">mapped</span><span class="p">)</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="k">assert</span> <span class="n">clean</span> <span class="o">==</span> <span class="s2">"[CH3][C](=[O])[OH]"</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">clean</span><span class="p">))</span> <span class="o">==</span> <span class="mi">4</span>
+</code></pre></div>
+<p>Use <code>strip_atom_maps()</code> rather than a regular expression: outside brackets, a
+colon is an aromatic bond, so text replacement can alter the structure.
+<code>parse_mapped_smiles()</code> strips and parses in one call.</p>
+<h2 id="ai-assistants">AI assistants<a class="headerlink" href="#ai-assistants" title="Permanent link">&para;</a></h2>
+<p>An AI assistant can call the molecular tools through the local MCP server
+(<code>smsd-mcp</code>) or through tool definitions in your own Python loop. The tools run
+on your machine. Each search result reports its <code>status</code> and whether it is
+<code>optimal</code> and <code>complete</code>. See <a href="../AI_ASSISTANTS/">Connecting AI assistants</a> for
+set-up steps and worked examples.
+<a href="../python/examples/agent_workflow.py"><code>agent_workflow.py</code></a> chains screening,
+MCS and depiction through <code>call_tool</code> without a model, and
+<a href="../python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> checks the MCP
+server from Python.</p>
+<h2 id="further-reading">Further reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
+<p>See the <a href="../guide/">user guide</a>, the <a href="../PYTHON/">Python guide</a>, the
+<a href="../HOWTO-INSTALL/">installation guide</a>, the <a href="../CPP/">C++ guide</a> and the
+<a href="../JAVA/">Java guide</a>. Five notebooks work through the guide's topics:
+<a href="../python/examples/substructure_search.ipynb">substructure and SMARTS search</a>,
+<a href="../python/examples/mcs_search.ipynb">maximum common substructure</a>,
+<a href="../python/examples/fingerprints_similarity.ipynb">fingerprints and similarity</a>,
+<a href="../python/examples/library_screening.ipynb">library screening</a> and
+<a href="../python/examples/cpu_gpu_screening.ipynb">CPU and GPU screening</a>.</p>
+<p>A C++ program that screens packed fingerprints on a Metal GPU, with the CPU
+screen as the fallback, is the
+<a href="../cpp/examples/metal_fingerprint_screen.cpp">Metal screening example</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../AI_ASSISTANTS/" class="md-footer__link md-footer__link--prev" aria-label="Previous: AI assistants">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                AI assistants
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../API_REFERENCE/" class="md-footer__link md-footer__link--next" aria-label="Next: API reference">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                API reference
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

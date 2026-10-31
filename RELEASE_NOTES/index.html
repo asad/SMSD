@@ -1,0 +1,2275 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/RELEASE_NOTES/">
+      
+      
+        <link rel="prev" href="../ALGORITHMS/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Release notes - SMSD Pro</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#smsd-pro-810" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release notes
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../guide/" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-803" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 8.0.3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#downloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloads
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-803" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 8.0.3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#downloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloads
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="smsd-pro-810">SMSD Pro 8.1.0<a class="headerlink" href="#smsd-pro-810" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.1.0 adds Python data and machine-learning adapters, local MCP tools,
+packed fingerprint corpora, corpus threshold searches and SMARTS export of MCS
+results, and corrects the C++ RDKit adapter. The deprecated 8.x APIs remain
+available and supported throughout the 8.x line. The Java library and
+command-line tool stay at 8.0.3 on Maven Central. The CPU Docker images carry
+the 8.1.0 command-line tool; otherwise the Java changes below are available
+only from a source build. The <a href="../CHANGELOG.md">changelog</a> lists every change.</p>
+<h2 id="changes">Changes<a class="headerlink" href="#changes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../PYTHON_ADAPTERS/">Python adapters</a> give fingerprints as NumPy, PyTorch,
+  SciPy CSR, Arrow, pandas and Polars data, add scikit-learn fingerprint and
+  similarity transformers, and build PyTorch Geometric graphs with native atom
+  numbering and no coordinates or stereo. The PyTorch adapters refuse a
+  conflicting bundled OpenMP runtime; use a shared runtime or build SMSD with
+  <code>SMSD_BUILD_OPENMP=OFF</code>.</li>
+<li><code>smsd-mcp</code> serves eight <a href="../MCP_SERVER/">local molecular tools</a> over MCP for
+  MCS, substructure and SMARTS search, fingerprints, similarity, screening,
+  standardisation and depiction; the registry also exports function definitions
+  and optional LangChain and LlamaIndex tools. Results are JSON with search
+  status and limits; no tool contacts a model provider.</li>
+<li>A <a href="../API_REFERENCE/">consolidated API reference</a>, an <code>llms.txt</code> index and a
+  guide to <a href="../AI_ASSISTANTS/">connecting AI assistants</a> make the interfaces and
+  local tools easier to find. New Python examples cover NVIDIA screening checked
+  against the CPU, an offline chain of the molecular tools and an MCP client.</li>
+<li>The <a href="../packaging/mcp/README.md">MCP container recipe</a> and
+  <a href="../examples/huggingface/README.md">Hugging Face demonstration source</a> use
+  supplied wheelhouses. They are source examples, not deployed services or
+  published images. Native SVG helpers highlight existing MCS results.</li>
+<li><a href="../PACKED_CORPORA/">Packed fingerprint corpora</a> are read-only memory-mapped
+  files for threshold and exact top-k scans, Butina clustering and MaxMin
+  selection. The CPU is the default; <code>backend="cuda"</code> computes exact integer
+  intersections on the GPU, and <code>"auto"</code> does so when a supported GPU is
+  available. Clustering decisions stay on the CPU, and <code>cuda_calls</code> counts
+  completed CUDA calls. All-pairs work is quadratic.</li>
+<li><a href="../packaging/smsd-cuda/README.md"><code>smsd-cuda</code></a> adds <code>smsd_cuda.preload()</code>,
+  retained device workspaces for prepared corpora, opt-in CUDA Graph replay
+  (<code>SMSD_CUDA_GRAPHS=1</code>) and on-device top-k selection.</li>
+<li><code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code> screen target iterables
+  in bounded chunks, and <code>warm_start</code> prepares a corpus and returns a first
+  screen, with the usual <code>TargetCorpus</code> GPU dispatch and CPU fallback.</li>
+<li><code>Substructure.match_corpus</code> and <code>MCS.match_corpus</code> (C++ <code>matchCorpus</code>) decide,
+  in target order, whether each target contains the query or shares at least a
+  given number of atoms; a stopped search leaves the answer open. Matching runs
+  on the CPU; <code>gpu_prefilter=True</code> lets an available GPU pre-screen targets.</li>
+<li><a href="../SMARTS_EXPORT/">SMARTS export</a> writes MCS matches in C++, Java and Python;
+  <code>matchWithSmarts</code> (Python <code>match_with_smarts</code>) returns the result and SMARTS
+  together, and Java <code>SmartsWriter</code> writes whole graphs. Stereo, tautomer,
+  complete-ring and strict ring-fusion options are rejected. A pattern carries
+  neither the induced MCIS objective nor the search status.</li>
+<li>Relevant cycles can be counted without listing them:
+  <code>computeRelevantCycleFamilies</code> (Python <code>compute_relevant_cycle_families</code>)
+  groups them into families, each with one member and its exact number of
+  members, and two further functions find the family of a ring or list members
+  up to a given limit. The grouping into families can depend on the input atom
+  order.</li>
+<li>The C++ RDKit adapter (<code>fromRDKit</code>, <code>fromSmiles</code>) keeps each atom's hydrogen
+  count and specified double-bond E/Z configuration. Aromatic N–H atoms, as in
+  pyrrole, previously lost their hydrogen.</li>
+<li>SMILES writers and the C++ and Python SMARTS writer reuse ring-closure
+  numbers and raise an error beyond 99 open closures; SMILES writers also
+  write long chains without exhausting the stack. Compiled SMARTS evaluate
+  distinct recursive predicates separately, and bond edits refresh cached rings
+  and topology. Worker errors in <code>TargetCorpus.prewarm</code>, CPU corpus screening,
+  C++ path-fingerprint <code>batchFingerprint</code> and <code>batchFingerprintScreen</code> now reach
+  the caller instead of ending the process.</li>
+<li>Conda recipes build the CPU package and the Linux CUDA package; the
+  <a href="../packaging/conda/README.md">conda guide</a> gives the conda, mamba and Pixi
+  install routes.</li>
+<li>NOTICE now carries licence notices for the RDKit MACCS key definitions and
+  pybind11. The <code>smsd-cuda</code> package now ships the CUB and CCCL licences, and its
+  NOTICE points to them.</li>
+</ul>
+<h2 id="upgrading-from-803">Upgrading from 8.0.3<a class="headerlink" href="#upgrading-from-803" title="Permanent link">&para;</a></h2>
+<p>SMSD Pro 8.1.0 supports CPython 3.12–3.15. On Python 3.10 and 3.11, pip
+continues to install 8.0.3.</p>
+<p>Ring perception works within one fixed, deterministic work limit, the same in
+C++, Java and Python and independent of time, thread count and hardware. Very
+large fused-ring systems, such as synthetic cages, can reach it. Some ring
+systems that 8.0.3 left incomplete now complete, and their ring-dependent
+results can change. Where rings stay incomplete, values computed
+without the missing rings stay exact; where 8.0.3 computed the rest from
+incomplete rings, searches now report <code>LimitReached</code> and other calls raise an
+error naming the cause, with the zero-based input index in C++ and Python batch
+calls. That error is the new <code>RingBasisUnavailable</code> (Java
+<code>RingBasisUnavailableException</code>), which existing <code>std::runtime_error</code>,
+<code>RuntimeError</code> and <code>IllegalStateException</code> handlers still catch. A longer
+timeout does not change this; see
+<a href="../ALGORITHMS/#results-and-budgets">Results and budgets</a>.</p>
+<p>Complete-ring matching uses all relevant cycles, and the new
+<code>relevantCyclesTruncated</code> (Python <code>relevant_cycles_truncated</code>) reports when their
+enumeration is incomplete. A relevant cycle outside the smallest set of smallest
+rings now counts as a complete ring, so a <code>completeRingsOnly</code> result that 8.0.3
+reported as proved, sometimes empty, can now be larger. With <code>completeRingsOnly</code>,
+Java substructure matching now rejects matches that cover only part of a ring,
+as C++ and Python do. <code>ringsTruncated</code> keeps its meaning. Per-atom ring counts,
+and with them strict ring-fusion results, can differ from 8.0.3.</p>
+<p>SMARTS <code>R&lt;n&gt;</code> (<code>n &gt; 0</code>) uses the same minimum cycle basis in C++ and Java. If
+ring perception cannot complete it, an <code>R&lt;n&gt;</code> search that cannot be decided
+without it returns <code>LimitReached</code> without matches, which does not prove
+absence; other functions that need the basis raise an error, and <code>computeSSSR</code>
+and <code>computeRings</code> may return incomplete rings with truncation flags. <code>R</code> and
+<code>R0</code> are unaffected. Ring-size and double-bond stereo fingerprint terms,
+aromatic-ring keys (as in MACCS) and SMARTS keys whose search needs the basis
+also raise an error then. Java now uses the same basis as C++ and Python for
+<code>R&lt;n&gt;</code> and these terms, so a Java result from a different minimum basis of
+equal size can change.</p>
+<p>SMARTS parsing in C++ and Python now rejects a pattern ending in a bond, such
+as <code>CC-</code>, as Java already did; 8.0.3 C++ and Python accepted it after dropping
+the bond.</p>
+<p>C++ and Python MCIS search (the default MCS objective) has changed: when 8.0.3
+or 8.1.0 stops a search at its node or time limit, including the default time
+limit, the two results can differ, and a result of the same size can come with
+a different atom mapping. Java does not have this change, so a stopped search
+can return a different result in Java than in C++ and Python.</p>
+<p><code>MCS.consensus</code> always reports <code>optimal</code> as false; <code>complete</code> means the
+computation finished, not that no larger common graph exists. Searches on
+graphs from the C++ RDKit adapter can now differ. MCS searches reject graphs
+with inconsistent bond properties.</p>
+<h2 id="downloads">Downloads<a class="headerlink" href="#downloads" title="Permanent link">&para;</a></h2>
+<p>SMSD Pro 8.1.0 is available from PyPI and GitHub. Install it
+with <code>python -m pip install "smsd==8.1.0"</code>, adding <code>"smsd-cuda==8.1.0"</code>
+(matching <code>smsd</code>) for GPU screening on Linux x86_64 with an NVIDIA GPU. Python
+wheels cover CPython 3.12–3.15 on Linux x86_64 and aarch64, Windows x86_64 and
+macOS arm64 (macOS 14 or later). For Java, use 8.0.3: the library
+<code>com.bioinceptionlabs:smsd:8.0.3</code> and the command-line tool
+<code>com.bioinceptionlabs:smsd-cli:8.0.3</code> on Maven Central, and the CLI files and
+installers of the <a href="https://github.com/asad/SMSD/releases/tag/v8.0.3">8.0.3 release</a>.
+The CPU Docker images below carry the 8.1.0 command-line tool. Multi-GPU
+screening and native Windows CUDA wheels are not provided. See the
+<a href="../HOWTO-INSTALL/#supported-platforms">installation guide</a> for requirements, its
+<a href="../HOWTO-INSTALL/#docker">Docker section</a> for the Docker images and the
+<a href="https://github.com/asad/SMSD/releases">GitHub releases page</a> for the files and
+<code>SHA256SUMS</code>:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd-8.1.0.tar.gz</code></td>
+<td>Python source distribution</td>
+</tr>
+<tr>
+<td><code>smsd-8.1.0-cp312-cp312-*.whl</code> to <code>smsd-8.1.0-cp315-cp315-*.whl</code></td>
+<td>Python CPU wheels, one per CPython version on each platform: Linux x86_64 (<code>manylinux_2_27_x86_64.manylinux_2_28_x86_64</code>), Linux aarch64 (<code>manylinux_2_26_aarch64.manylinux_2_28_aarch64</code>), macOS arm64 (<code>macosx_14_0_arm64</code>) and Windows x86_64 (<code>win_amd64</code>)</td>
+</tr>
+<tr>
+<td><code>smsd_cuda-8.1.0-py3-none-manylinux_2_34_x86_64.whl</code></td>
+<td>Optional CUDA package for Linux x86_64</td>
+</tr>
+<tr>
+<td><code>smsd-cpp-8.1.0-headers.tar.gz</code></td>
+<td>Header-only C++17 library</td>
+</tr>
+<tr>
+<td><code>smsd-8.1.0-cpu-linux-amd64.tar.xz</code> and <code>smsd-8.1.0-cpu-linux-arm64.tar.xz</code></td>
+<td>Docker CPU images for Linux amd64 and arm64 with <code>smsd</code> and the 8.1.0 Java command-line tool</td>
+</tr>
+<tr>
+<td><code>smsd-8.1.0-cuda-linux-amd64.tar.xz</code></td>
+<td>Docker GPU image for Linux amd64 with <code>smsd-cuda</code> and the CUDA runtime</td>
+</tr>
+<tr>
+<td><code>SOURCE_MANIFEST.json</code>, <code>WHEEL_MANIFEST.json</code> and <code>CUDA_WHEEL_MANIFEST.json</code></td>
+<td>Source commit and checksums of the source distribution and wheels</td>
+</tr>
+<tr>
+<td><code>RELEASE_NOTES.md</code></td>
+<td>These release notes</td>
+</tr>
+<tr>
+<td><code>SHA256SUMS</code></td>
+<td>SHA-256 checksums of the release files</td>
+</tr>
+</tbody>
+</table>
+<h1 id="smsd-pro-803">SMSD Pro 8.0.3<a class="headerlink" href="#smsd-pro-803" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.0.3 corrects complete-ring MCS matching, the status of MCS results
+that depend on truncated ring perception, and the built-in named SMARTS
+predicates. It adds opt-in Metal fingerprint screening for C++ source builds
+on macOS and a Python call that fingerprints many molecules at once. The
+<a href="../CHANGELOG.md">changelog</a> lists every change.</p>
+<h2 id="changes_1">Changes<a class="headerlink" href="#changes_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>C++ and Java MCIS searches with stereochemistry find the largest mapping
+  that keeps the configuration of mapped stereocentres and double bonds.</li>
+<li>C++ MCIS searches return the maximum mapping whatever the atom and bond
+  order of the target.</li>
+<li>Complete-ring MCS matching recognises rings in graphs built without ring
+  flags.</li>
+<li>With complete rings or strict ring fusion, MCS keeps its mappings but no
+  longer reports them as proved when it depends on truncated ring perception.</li>
+<li>GPU similarity-bound screening returns the same hits as the CPU screen,
+  including scores at the threshold and molecules with very large atom
+  counts. The float-valued Metal similarity API is unchanged.</li>
+<li>Metal fingerprint screening for C++ source builds on macOS returns the same
+  hits, in the same order, as the CPU screen. It runs only when requested
+  explicitly. The <a href="../CPP/#optional-metal-fingerprint-screening">C++ guide</a>
+  gives its requirements and CPU fallback. The Python wheels use the CPU for
+  screening on macOS.</li>
+<li>The built-in named SMARTS predicates have corrected definitions, shared by
+  C++ and Java and listed in the <a href="../JAVA/#prepared-searches">Java guide</a>.
+  <code>isKetone</code> and <code>isEster</code> now mark the carbonyl carbon.</li>
+<li>Python <code>fingerprints</code> computes the fingerprints of many molecules or SMILES
+  strings in one call, each identical to <code>fingerprint</code> and in input order.</li>
+</ul>
+<h2 id="upgrading-from-802">Upgrading from 8.0.2<a class="headerlink" href="#upgrading-from-802" title="Permanent link">&para;</a></h2>
+<p>Patterns that use the built-in named predicates can match different atoms.
+Java expands names made of ASCII letters, digits and underscores, including
+inside recursive SMARTS; a registered name containing other characters is no
+longer expanded.</p>
+<p>With complete rings or strict ring fusion, a search that depends on truncated
+ring perception now reports <code>LimitReached</code>, with <code>optimal</code> and <code>complete</code>
+false, instead of <code>Completed</code>. <code>isMappingMaximal</code> (Python
+<code>is_mapping_maximal</code>) then raises its proof-unavailable error rather than
+returning a value.</p>
+<p>In C++ and Python, a single-result connected MCIS search without
+stereochemistry or ring options can return a different mapping of the same
+size when every atom of the target is bonded to every other.</p>
+<h2 id="downloads_1">Downloads<a class="headerlink" href="#downloads_1" title="Permanent link">&para;</a></h2>
+<p>The <a href="../HOWTO-INSTALL/#supported-platforms">installation guide</a> lists the
+supported platforms and runtime requirements. Python CPU wheels target CPython
+3.10–3.14 on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64. The
+optional <code>smsd-cuda</code> package targets Linux x86_64 and must match the <code>smsd</code>
+version. The Java CLI is supplied as a portable distribution and as Windows
+x86_64 MSI, macOS arm64 DMG and Linux amd64 DEB installers that include
+Java 25. CPU Docker image archives target Linux amd64 and arm64; the GPU
+Docker image archive targets Linux amd64 and needs a compatible NVIDIA GPU and
+driver.</p>
+<p>See the <a href="https://github.com/asad/SMSD/releases">GitHub releases page</a> for the
+files and <code>SHA256SUMS</code>. Install with <code>python -m pip install "smsd==8.0.3"</code>,
+and add <code>"smsd-cuda==8.0.3"</code> for GPU screening with an NVIDIA GPU.</p>
+<h1 id="smsd-pro-802">SMSD Pro 8.0.2<a class="headerlink" href="#smsd-pro-802" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.0.2 adds the optional <code>smsd-cuda</code> package and ordered batches of
+corpus screening queries. Matching runs on the CPU. The
+<a href="../CHANGELOG.md">changelog</a> lists the changes in full.</p>
+<h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>TargetCorpus.screen_many</code> screens ECFP4 Tanimoto similarity for each query;
+  <code>screen_targets_many</code> screens the atom-count MCS similarity bound. Each
+  result keeps query and target order.</li>
+<li>The optional CUDA backend keeps corpus fingerprints on the device for
+  reuse. Scores use the CPU expressions and hits keep target
+  order.</li>
+<li>CPU wheels cover CPython 3.10–3.14 on four platforms. CPU Docker images
+  cover Linux amd64 and arm64; the separate GPU image targets Linux amd64.</li>
+</ul>
+<h2 id="downloads-and-installation">Downloads and installation<a class="headerlink" href="#downloads-and-installation" title="Permanent link">&para;</a></h2>
+<p>See the <a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a> for
+the Python, Java and C++ requirements, the
+<a href="../HOWTO-INSTALL/#docker">Docker section</a> for the Docker images and the
+<a href="https://github.com/asad/SMSD/releases">GitHub releases page</a> for files and
+<code>SHA256SUMS</code>. Install the Python package with <code>python -m pip install
+"smsd==8.0.2"</code>; the optional CUDA package must also be version 8.0.2.</p>
+<p>The <a href="../PYTHON/#optional-cuda-screening">Python guide</a> describes CUDA dispatch
+and CPU fallback behaviour. Native Windows CUDA wheels and macOS GPU support
+are not included. Windows GPU use is through the GPU Docker image under WSL2.</p>
+<h2 id="upgrading-from-801">Upgrading from 8.0.1<a class="headerlink" href="#upgrading-from-801" title="Permanent link">&para;</a></h2>
+<p>Python now requires version 3.10 or later. Existing scalar screening calls
+and prepared search calls keep their signatures; the two corpus batch screens
+are additional methods.</p>
+<h1 id="smsd-pro-801">SMSD Pro 8.0.1<a class="headerlink" href="#smsd-pro-801" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.0.1 corrects parsing, aromaticity, CIP descriptors and
+stereochemistry, gives fingerprint quality one definition in C++, Java and
+Python, and screens targets on every core in Python. The prepared-query API is
+unchanged. The <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a>
+lists the changes in full.</p>
+<h2 id="highlights_1">Highlights<a class="headerlink" href="#highlights_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>SMILES, SMARTS and V3000 MOL input outside the supported characters or
+  ranges is rejected with the same error on every platform, and SMILES atoms
+  joined by <code>:</code> ring bonds are aromatic, as RDKit reads them.</li>
+<li>CIP R/S and E/Z labels that only the later sequence rules decide, and C++
+  SMARTS chirality, ring closures and MCES stereochemistry that match Java.</li>
+<li>Python <code>screen_targets</code> takes <code>num_threads</code> and a prepared <code>TargetCorpus</code>,
+  and <code>rings_truncated</code> reports when a bounded ring search is cut short.</li>
+</ul>
+<h2 id="downloads_2">Downloads<a class="headerlink" href="#downloads_2" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C++ headers: <code>smsd-cpp-8.0.1-headers.tar.gz</code></td>
+<td>A C++17 compiler</td>
+</tr>
+<tr>
+<td>Java library: <code>smsd-8.0.1.jar</code>, with <code>smsd-8.0.1-sources.jar</code> and <code>smsd-8.0.1-javadoc.jar</code></td>
+<td>Java 8 or later and CDK 2.13</td>
+</tr>
+<tr>
+<td>Command-line tool: <code>smsd-cli-8.0.1-jar-with-dependencies.jar</code> and <code>smsd-8.0.1-cli.tar.gz</code></td>
+<td>Java 8 or later</td>
+</tr>
+<tr>
+<td>Python source distribution: <code>smsd-8.0.1.tar.gz</code></td>
+<td>Python 3.9 or later, a C++17 compiler and CMake 3.18 or later</td>
+</tr>
+<tr>
+<td>Python wheels for macOS arm64, Linux x86_64 and Windows x86_64</td>
+<td>CPython 3.14, as for 8.0.0</td>
+</tr>
+<tr>
+<td><code>SHA256SUMS</code></td>
+<td>Lists the SHA-256 checksum of each file</td>
+</tr>
+</tbody>
+</table>
+<h2 id="upgrading-from-800">Upgrading from 8.0.0<a class="headerlink" href="#upgrading-from-800" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>expected_collision_rate</code> (Python <code>analyze_fp_quality</code>, Java
+  <code>analyzeFpQuality</code>) is now the estimated share of hashed features that fell
+  on a bit already set, and Java <code>suggestFingerprintSize</code> returns larger
+  sizes; review thresholds based on either.</li>
+<li>In C++ and Python, rings written aromatic that are not, such as
+  cyclobutadiene, are no longer aromatic.</li>
+<li>A long fragment MCES search for one best mapping can return a different
+  mapping of the same size.</li>
+</ul>
+<h1 id="smsd-pro-800">SMSD Pro 8.0.0<a class="headerlink" href="#smsd-pro-800" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.0.0 provides substructure and maximum common substructure (MCS)
+search for C++, Java and Python through prepared <code>MCS</code> and <code>Substructure</code>
+queries. A query is prepared once and searches one or more targets; each
+result holds its matches with their atom and bond mappings, the search status
+and whether the optimum was proved. The
+<a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> lists the
+changes in full.</p>
+<h2 id="highlights_2">Highlights<a class="headerlink" href="#highlights_2" title="Permanent link">&para;</a></h2>
+<ul>
+<li>One search API in three languages: connected and disconnected maximum
+  common induced subgraphs (MCIS), maximum common edge subgraphs (MCES),
+  atom-weighted MCIS and substructure search, through <code>match</code>, <code>matchAll</code> and
+  <code>matchMany</code> (Python <code>match</code>, <code>match_all</code> and <code>match_many</code>).</li>
+<li>Constrained, consensus and R-group searches: <code>MCS.matchConstrained</code>,
+  <code>MCS.consensus</code> and <code>Substructure.decomposeRGroups</code> (Python
+  <code>match_constrained</code>, <code>consensus</code> and <code>decompose_r_groups</code>).</li>
+<li>Results that report status, proved optimality and completeness separately
+  from the matches, under timeouts, node limits and cancellation.</li>
+<li>Daylight SMARTS semantics in C++ and Java through <code>Substructure.smarts</code>,
+  documented SMARTS size limits in every language, and the OpenSMILES limits
+  for SMILES bracket atoms in C++ and Python.</li>
+<li>The same valence and tetrahedral-centre rules in C++, Java and Python, and
+  CIP descriptors for R/S that follow the IUPAC 2013 Sequence Rules 1 to 5,
+  with Rule 6 as proposed by Hanson et al. (2018).</li>
+<li>Tautomer classes that do not depend on the atom order, pH-dependent tautomer
+  weights and a tautomer confidence for the selected bonds of a match.</li>
+<li><code>FingerprintOptions</code>, one fingerprint specification for circular, path,
+  torsion and structural-key fingerprints, including the 166 MACCS keys, with
+  identical bits in C++, Java and Python.</li>
+<li>The Java library <code>com.bioinceptionlabs:smsd</code>, which depends only on the CDK
+  modules it uses, and the separate command-line tool
+  <code>com.bioinceptionlabs:smsd-cli</code>.</li>
+</ul>
+<h2 id="downloads_3">Downloads<a class="headerlink" href="#downloads_3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C++ headers: <code>smsd-cpp-8.0.0-headers.tar.gz</code></td>
+<td>A C++17 compiler</td>
+</tr>
+<tr>
+<td>Java library: <code>smsd-8.0.0.jar</code>, with <code>smsd-8.0.0-sources.jar</code> and <code>smsd-8.0.0-javadoc.jar</code></td>
+<td>Java 8 or later (Java 25 LTS preferred) and CDK 2.13</td>
+</tr>
+<tr>
+<td>Self-contained CLI: <code>smsd-cli-8.0.0-jar-with-dependencies.jar</code></td>
+<td>Java 8 or later</td>
+</tr>
+<tr>
+<td>Portable CLI with Unix and Windows launchers: <code>smsd-8.0.0-cli.tar.gz</code></td>
+<td>Java 8 or later</td>
+</tr>
+<tr>
+<td>Python source distribution: <code>smsd-8.0.0.tar.gz</code></td>
+<td>Python 3.9 or later, a C++17 compiler and CMake 3.18 or later</td>
+</tr>
+<tr>
+<td>Python wheel for macOS arm64</td>
+<td>macOS 26 or later and CPython 3.14</td>
+</tr>
+<tr>
+<td>Python wheels for Linux x86_64 and Windows x86_64</td>
+<td>glibc 2.28 or later, or Windows 10 or later, and CPython 3.14</td>
+</tr>
+<tr>
+<td><code>SHA256SUMS</code></td>
+<td>Lists the SHA-256 checksum of each file</td>
+</tr>
+</tbody>
+</table>
+<p>The 8.0.0 wheels run batch operations on the CPU with OpenMP. The current
+<a href="https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md">installation guide</a>
+explains how to verify the downloads and install each package, and the
+<a href="https://github.com/asad/SMSD/blob/master/docs/VALIDATION_8.0.0.md">validation record</a>
+lists the release checks.</p>
+<h2 id="upgrading-from-7x">Upgrading from 7.x<a class="headerlink" href="#upgrading-from-7x" title="Permanent link">&para;</a></h2>
+<p>The 7.x search functions are removed. Prepare a query with <code>find</code> (or
+<code>Substructure.smarts</code> for SMARTS), pass search options with <code>withOptions</code>
+(Python <code>with_options</code>), whose <code>chemistry</code> field holds the chemistry
+settings, then search with <code>match</code>, <code>matchAll</code> or <code>matchMany</code>. Java
+<code>matchMany</code> takes a <code>List&lt;MolGraph&gt;</code>; <code>new MolGraph(container)</code> converts a CDK
+molecule.</p>
+<table>
+<thead>
+<tr>
+<th>7.x</th>
+<th>8.0.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python <code>smsd.find_mcs(a, b)</code>, <code>smsd.mcs_result(a, b)</code>, <code>smsd.mcs_rdkit(a, b)</code></td>
+<td><code>smsd.MCS.find(a).match(b)</code>, which accepts SMILES, <code>MolGraph</code> objects and RDKit molecules</td>
+</tr>
+<tr>
+<td>Python <code>smsd.find_substructure(q, t)</code>, <code>smsd.is_substructure(q, t)</code></td>
+<td><code>smsd.Substructure.find(q).match(t)</code>, then <code>.found</code> or <code>.best</code></td>
+</tr>
+<tr>
+<td>Python <code>smsd.batch_mcs(q, targets)</code>, <code>smsd.batch_substructure(q, targets)</code></td>
+<td><code>smsd.MCS.find(q).match_many(targets)</code>, <code>smsd.Substructure.find(q).match_many(targets)</code></td>
+</tr>
+<tr>
+<td>Python <code>smsd.smarts_match(smarts, t)</code>, <code>smsd.smarts_find_all(smarts, t)</code>, <code>smsd.compile_smarts(smarts)</code></td>
+<td><code>smsd.Substructure.smarts(smarts)</code>, then <code>.match(t).found</code> or <code>.match_all(t, limit)</code></td>
+</tr>
+<tr>
+<td>Java <code>SearchEngine.findMCS(a, b)</code>, <code>new SMSD(q, t, chem).findMCS()</code></td>
+<td><code>MCS.find(a).match(b)</code></td>
+</tr>
+<tr>
+<td>Java <code>SearchEngine.findSubstructure(q, t)</code>, <code>SearchEngine.isSubstructure(q, t, chem, ms)</code>, <code>new SMSD(q, t, chem).isSubstructure()</code></td>
+<td><code>Substructure.find(q).match(t)</code>, then <code>found()</code></td>
+</tr>
+<tr>
+<td>Java <code>SearchEngine.batchSubstructure(q, targets, chem, ms)</code>, <code>SearchEngine.findAllMCS</code>, <code>SearchEngine.findAllSubstructures</code></td>
+<td><code>matchMany(targets, numThreads)</code> or <code>matchAll(target, limit)</code> on the prepared query</td>
+</tr>
+<tr>
+<td>Java <code>SearchEngine.findMCSSmarts(smarts, target, chem, ms)</code>, <code>new SMSD(smarts, target, chem)</code></td>
+<td><code>Substructure.smarts(pattern).match(target)</code></td>
+</tr>
+<tr>
+<td>C++ <code>smsd::findMCS(a, b, ...)</code>, <code>smsd::isSubstructure(q, t, ...)</code>, <code>smsd::findSubstructure(q, t, ...)</code></td>
+<td><code>smsd::MCS::find(a).match(b)</code>, <code>smsd::Substructure::find(q).match(t)</code></td>
+</tr>
+<tr>
+<td>C++ <code>smsd::batch::batchMCS</code>, <code>smsd::batch::batchSubstructure</code>, <code>smsd::findAllMCS</code>, <code>smsd::findAllSubstructures</code></td>
+<td><code>matchMany(targets, numThreads)</code> or <code>matchAll(target, limit)</code> on the prepared query</td>
+</tr>
+<tr>
+<td>Python <code>timeout_ms=</code> keyword arguments, Java <code>SMSD.setMCSTimeoutMs(ms)</code> and <code>setSubstructureTimeoutMs(ms)</code></td>
+<td><code>withTimeout(ms)</code> (Python <code>with_timeout(ms)</code>) on the prepared query</td>
+</tr>
+<tr>
+<td>Java artefact <code>com.bioinceptionlabs:smsd</code> with the CLI</td>
+<td><code>com.bioinceptionlabs:smsd</code> for the library and <code>com.bioinceptionlabs:smsd-cli</code> for the command-line tool</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Status and optimality:</strong> each result reports <code>status</code> (<code>Completed</code>,
+  <code>TimedOut</code>, <code>Cancelled</code> or <code>LimitReached</code>; in Python <code>SearchStatus.COMPLETED</code>,
+  <code>TIMED_OUT</code>, <code>CANCELLED</code> or <code>LIMIT_REACHED</code>), <code>optimal</code> and <code>complete</code>. A
+  stopped search may return a valid mapping without proving the optimum, and a
+  capped <code>matchAll</code> (Python <code>match_all</code>) may prove it without listing every
+  match, so check <code>optimal</code> and <code>complete</code> separately.</li>
+<li><strong>Java library and CLI:</strong> the library no longer brings picocli,
+  <code>jackson-databind</code> or CDK modules such as <code>cdk-smiles</code>, <code>cdk-data</code> and the
+  CDK file readers; projects that used them through <code>smsd</code> declare them. The
+  self-contained CLI is <code>smsd-cli-8.0.0-jar-with-dependencies.jar</code>.</li>
+<li><strong>SMARTS:</strong> in C++, as in Java, uppercase bracket atoms such as <code>[C]</code> match
+  aliphatic atoms only and lowercase ones aromatic atoms only; use <code>[#6]</code> or
+  <code>[C,c]</code> for both. C++ reads <code>[H]</code>, <code>[2H]</code> and <code>[H+]</code> as hydrogen atoms, and
+  SMARTS beyond the size limits is rejected in every language.</li>
+<li><strong>Deprecated names</strong> keep working in 8.0.0, and Python names warn with
+  <code>DeprecationWarning</code>. The warning, or the Java and C++ API documentation of
+  the name, gives its replacement where one exists.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ALGORITHMS/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Algorithms">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Algorithms
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

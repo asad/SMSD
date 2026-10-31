@@ -1,0 +1,3713 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/API_REFERENCE/">
+      
+      
+        <link rel="prev" href="../EXAMPLES/">
+      
+      
+        <link rel="next" href="../ALGORITHMS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>API reference - SMSD Pro</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#smsd-pro-810-api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../guide/" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mcs-and-substructure-searches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCS and substructure searches
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#result-graphs-smarts-and-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result graphs, SMARTS and images
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#molecule-io-and-chemistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecule I/O and chemistry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-and-coefficients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and coefficients
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#corpus-search-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corpus search decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packed-corpora-clustering-and-optional-data-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed corpora, clustering and optional data adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accelerators-and-molecular-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accelerators and molecular tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compatibility names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-graph-and-option-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native graph and option objects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#callable-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Callable index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Callable index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#molecules-and-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecules and I/O
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chemical-graph-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemical graph helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prepared-searches-and-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepared searches and results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprints-and-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-and-fingerprint-screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph and fingerprint screening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinates-and-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinates and layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depiction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depiction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proof-bearing-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proof-bearing highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packed-corpus-and-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed corpus and streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clustering-and-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clustering and selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-data-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional data adapters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warm-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warm start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#molecular-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecular tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool definitions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cuda-package-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA package entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mcs-and-substructure-searches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCS and substructure searches
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#result-graphs-smarts-and-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result graphs, SMARTS and images
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#molecule-io-and-chemistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecule I/O and chemistry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-and-coefficients" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and coefficients
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#corpus-search-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corpus search decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packed-corpora-clustering-and-optional-data-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed corpora, clustering and optional data adapters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accelerators-and-molecular-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accelerators and molecular tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatibility-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compatibility names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-graph-and-option-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native graph and option objects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#callable-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Callable index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Callable index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#molecules-and-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecules and I/O
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chemical-graph-helpers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chemical graph helpers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prepared-searches-and-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepared searches and results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprints-and-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints and metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graph-and-fingerprint-screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph and fingerprint screening
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinates-and-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinates and layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#depiction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Depiction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proof-bearing-highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proof-bearing highlights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packed-corpus-and-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed corpus and streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clustering-and-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clustering and selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-data-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional data adapters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#warm-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warm start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#molecular-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Molecular tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool definitions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cuda-package-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA package entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="smsd-pro-810-api-reference">SMSD Pro 8.1.0 API reference<a class="headerlink" href="#smsd-pro-810-api-reference" title="Permanent link">&para;</a></h1>
+<p>This reference describes the 8.1.0 source API. Use a matching wheel or build;
+an earlier installed native extension cannot provide new Python APIs.</p>
+<p>The Python package provides molecular graphs, exact searches, fingerprints,
+screening, depiction and optional data adapters. Java and C++ expose related
+graph operations; their names and available options are documented in the
+<a href="../java/README.md">Java guide</a> and <a href="../CPP/">C++ guide</a>. Identical fingerprint
+parameters do not establish bit identity across toolkits.</p>
+<h2 id="mcs-and-substructure-searches">MCS and substructure searches<a class="headerlink" href="#mcs-and-substructure-searches" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">options</span><span class="o">.</span><span class="n">node_limit</span> <span class="o">=</span> <span class="mi">100000</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">2</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">validate_mapping</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span> <span class="o">==</span> <span class="p">[]</span>
+</code></pre></div>
+<p><code>MCS.Objective.MCIS</code> maximises common atoms while preserving edges and
+non-edges. <code>MCES</code> maximises selected common bonds; its witness includes the
+chosen bonds as well as atoms. The objectives are different and should not be
+compared as interchangeable scores. <code>MCS.Connectivity.CONNECTED</code> requires a
+connected common graph; <code>FRAGMENTS</code> permits disconnected selected components.
+<code>with_fragments(min_atoms=..., max_fragments=...)</code> selects the latter mode.
+<code>with_atom_weights</code> assigns weights to query atoms in MCIS; weighted scores
+are not atom counts. Use the matching options when validating a witness.</p>
+<p>Prepared searches copy options and support <code>match</code>, <code>match_all(limit=...)</code>
+and <code>match_many(num_threads=...)</code>. A prepared query can be reused; avoid
+mutating its source molecule or shared mutable inputs during calls. Options
+are copied, but a shared cancellation token intentionally remains a signal
+to all searches using it. <code>num_threads=0</code> selects the native OpenMP default;
+set an explicit positive thread count for a controlled batch.</p>
+<p><code>SearchResult</code> contains <code>matches</code>, <code>status</code>, <code>optimal</code>, <code>complete</code>, <code>score</code>,
+<code>nodes_visited</code> and <code>elapsed_ms</code>; <code>found</code> and <code>best</code> are convenience properties.
+<code>best</code> is <code>None</code> when there is no witness. <code>Match</code> contains <code>atom_mapping</code>,
+selected <code>bond_mapping</code> and <code>fragments</code>, with <code>atom_count</code> and <code>bond_count</code>.
+For SMILES inputs, atom indices are zero-based in parsing order. Foreign
+molecule inputs retain their caller-visible numbering through conversion.</p>
+<p>Inspect <code>found</code>, <code>status</code>, <code>optimal</code> and <code>complete</code> separately. A time-, node-
+or cancellation-stopped call can retain a useful witness without proving an
+optimum. An unfinished result with no witness does not prove absence.
+<code>complete</code> also records enumeration completeness; a requested result limit
+can stop enumeration after an optimum is found. Ring-perception work limits
+can prevent a proof even when a mapping is feasible. Preserve stopped cases
+when analysing outcomes; stopped latency is not completed-work throughput.</p>
+<p>Search budgets apply after input parsing and preparation. General API options
+permit native defaults and unlimited node settings; set explicit finite limits
+when accepting untrusted or interactive requests. The MCP tools impose their
+own stricter limits. <code>timeout_ms=0</code> requests an immediate timeout. A
+<code>CancellationToken</code> is one-way: call <code>cancel()</code> and create a fresh token for a
+later independent request.</p>
+<p><code>ChemOptions</code> controls atom type, charge, isotope, bond order, aromatic
+compatibility, stereo, ring and optional tautomer handling. The default
+profile does not require matching formal charges or isotopes. Use explicit
+options or <code>ChemOptions.profile("strict")</code> when those restrictions matter;
+do not infer them from a tool or method name. <code>complete_rings_only</code>,
+<code>ring_matches_ring_only</code> and <code>ring_fusion_mode</code> impose different restrictions.
+The graph aromaticity model is a preparation choice, selected through
+<code>perceive_aromaticity</code> or the builder. The deprecated chemistry
+<code>aromaticity_model</code> field is not read by search.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"[OX2H]"</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">assert</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">embeddings</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"[#8]"</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"OCCO"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+</code></pre></div>
+<p><code>Substructure.find</code> takes a molecule query; <code>Substructure.smarts</code> compiles a
+predicate query. <code>with_induced(True)</code> additionally requires query non-bonds
+to remain non-bonds. SMARTS predicates can specify hydrogen, isotope, charge,
+aromaticity and topology directly. A parsed SMARTS string and a proved search
+result are separate facts.</p>
+<p><code>MCS.match_constrained</code> processes queries in order while excluding already
+used target atoms. <code>MCS.consensus</code> builds a progressive common graph with a
+support threshold and supporting mappings. It is an approximation and always
+reports <code>optimal=False</code>, including empty and single-input calls. <code>complete</code>
+reports whether the progressive pass finished. Neither it nor <code>COMPLETED</code>
+proves a global multi-molecule optimum or absence of a qualifying common graph.
+<code>is_mapping_maximal</code> tests extendibility of a given valid mapping, which is different from proving a maximum. Symmetry
+canonicalisation and tautomer-confidence helpers also have separate contracts;
+confidence is a heuristic, not a search proof or stability prediction.</p>
+<h2 id="result-graphs-smarts-and-images">Result graphs, SMARTS and images<a class="headerlink" href="#result-graphs-smarts-and-images" title="Permanent link">&para;</a></h2>
+<p><code>Match.to_graph(query)</code> and <code>Match.to_smiles(query)</code> extract selected atoms
+and bonds. A partial selected graph can have capped valences and should not
+be mistaken for an unchanged fragment of the original complete molecule.
+<code>Match.to_smarts(query, chemistry)</code> and <code>MCS.match_with_smarts(target)</code> export
+portable predicates for represented selected graphs. Unsupported stereo,
+tautomer and ring-export constraints raise rather than being silently dropped.
+A SMARTS predicate does not carry an optimum proof, enumeration status or all
+induced non-edge requirements; retain the associated <code>SearchResult</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">exported</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span><span class="o">.</span><span class="n">match_with_smarts</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">assert</span> <span class="n">exported</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="n">exported</span><span class="o">.</span><span class="n">smarts</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.highlight</span><span class="w"> </span><span class="kn">import</span> <span class="n">mcs_svg</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">svg</span> <span class="o">=</span> <span class="n">mcs_svg</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="n">exported</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">assert</span> <span class="s1">'&lt;svg'</span> <span class="ow">in</span> <span class="n">svg</span> <span class="ow">and</span> <span class="s1">'data-search-status='</span> <span class="ow">in</span> <span class="n">svg</span>
+</code></pre></div>
+<p>Native <code>depict_svg</code>, <code>depict_mapping</code> and <code>depict_pair</code> return SVG strings and
+use <code>DepictOptions</code>. The pair renderer highlights mapped atoms and input
+bonds between them. <code>smsd.highlight.mcs_svg</code> carries search flags in the SVG
+and rejects selected-edge witnesses that this renderer would over-highlight;
+render <code>best.to_graph(query)</code> separately in that case. The MCP depiction tool
+instead labels this highlighting scope and returns the selected bond mapping
+alongside the image.</p>
+<p>The older <code>depict_mcs</code>, <code>depict_substructure</code> and deprecated <code>to_svg</code> helpers
+use the optional RDKit drawing dependency. Their convenience images do not
+replace the proof-bearing result. The native SVG functions need no external
+drawing toolkit. <code>save_svg</code> writes only when explicitly called.</p>
+<h2 id="molecule-io-and-chemistry">Molecule I/O and chemistry<a class="headerlink" href="#molecule-io-and-chemistry" title="Permanent link">&para;</a></h2>
+<p><code>parse_smiles</code> accepts OpenSMILES text; an empty string constructs an empty
+graph. <code>lenient=True</code> explicitly requests recovery from malformed input.
+<code>to_smiles</code> writes the native canonical representation, including supported
+stereo and atom maps. Canonical ordering can differ between language ports.
+<code>canonical_hash</code> and graph canonical hashes are compact screening keys, not
+proofs of molecular identity or difference. <code>same_canonical_graph</code> compares
+native canonical outputs; use a validated mapping when exact identity is
+required by an application.</p>
+<p><code>read_mol_block</code>, <code>read_mol_file</code>, <code>write_mol_block</code>,
+<code>write_mol_block_v3000</code> and <code>write_molfile</code> cover MOL V2000/V3000 text or
+files. <code>read_sdf</code>, <code>write_sdf</code> and <code>write_sdf_record</code> cover SDF records.
+<code>read_sdf</code> loads the whole file and represents malformed records as empty
+graphs; inspect them rather than counting every record as accepted chemistry.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">destination</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"molecules.sdf"</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">smsd</span><span class="o">.</span><span class="n">write_sdf</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="n">destination</span><span class="p">)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">assert</span> <span class="p">[</span><span class="n">graph</span><span class="o">.</span><span class="n">n</span> <span class="k">for</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">smsd</span><span class="o">.</span><span class="n">read_sdf</span><span class="p">(</span><span class="n">destination</span><span class="p">)]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+</code></pre></div>
+<p><code>MolGraphBuilder</code> takes explicit atom properties, adjacency and parallel bond
+properties. Its <code>build</code> can run aromaticity perception; select that behaviour
+deliberately when carrying an externally prepared representation. <code>MolGraph</code>
+exposes atom and bond properties and lazy invariant getters. <code>prewarm</code> prepares
+common invariants; <code>perceive_aromaticity</code> and <code>kekulize</code> explicitly change a
+graph. Do not mutate it concurrently with reads/searches. Molecule names,
+comments, program lines and SDF properties are ordinary metadata.</p>
+<p><code>compute_sssr</code>, <code>rings_truncated</code>, <code>relevant_cycles_truncated</code> and graph
+ring-system methods expose ring perception. <code>rings_truncated</code> keeps its 8.0.x
+meaning: the ring search behind <code>compute_sssr</code> stopped before finding a
+complete set of rings. That search works within one fixed, deterministic work
+limit; see <a href="../ALGORITHMS/#results-and-budgets">Results and budgets</a>.
+<code>relevant_cycles_truncated</code> separately reports incomplete relevant-cycle
+enumeration. Strict ring fusion compares per-atom ring counts; complete-ring
+matching uses relevant cycles. Each checks completeness of
+the perception it uses. <code>assign_cip</code>, <code>assign_rs</code> and
+<code>assign_ez</code> expose represented stereo descriptors, including unresolved cases;
+missing annotations are not inferred experimental configurations.
+<code>count_components</code>, <code>split_components</code>, <code>extract_subgraph</code> and
+<code>murcko_scaffold</code> return graph topology or transformed graph objects, rather
+than implicitly standardising every input.</p>
+<p><code>compute_relevant_cycle_families</code> groups the relevant cycles into families,
+each with one member and its exact number of members as a Python integer, so
+they can be counted without listing them; <code>truncated</code> reports an incomplete
+enumeration. <code>relevant_cycle_family_of</code> finds the family of a ring and
+<code>relevant_cycle_family_members</code> lists members up to a limit. When the
+enumeration is complete, the relevant cycles and their number do not depend on
+the input atom order; the grouping into families can.</p>
+<p><code>from_rdkit</code>/<code>to_rdkit</code> and <code>from_openbabel</code>/<code>to_openbabel</code> use optional toolkit
+bindings. They pass through molecular text and are not unrestricted object
+serialisation. <code>get_index_map</code> and <code>translate_mapping</code> preserve RDKit atom
+numbering. Cache clearing releases reusable conversions without invalidating
+index maps retained by live graphs. <code>translate_to_atom_ids</code> uses explicitly
+supplied external graph atom IDs. Keep toolkit versions and conversion choices
+with cross-tool results.</p>
+<h2 id="fingerprints-and-coefficients">Fingerprints and coefficients<a class="headerlink" href="#fingerprints-and-coefficients" title="Permanent link">&para;</a></h2>
+<p><code>fingerprint</code> and <code>fingerprints</code> accept molecules or SMILES and return sorted
+set-bit positions, or non-zero <code>(position, count)</code> pairs when counts are
+requested. <code>fingerprint_from_smiles</code> is a text convenience helper. Families
+include MCS-aware paths, element paths, ECFP/circular, FCFP and topological
+torsions; <code>FingerprintOptions</code> adds configurable invariants, fragment/scaffold
+choices, stereo and SMARTS keys. <code>FingerprintOptions.maccs()</code> supplies 166
+MACCS keys, with key number <code>k</code> at position <code>k - 1</code>. Fingerprint family names
+and options are not guarantees of cross-tool bit identity.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">specification</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprints</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="n">options</span><span class="o">=</span><span class="n">specification</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">counted</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"CCCCCC"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">counted</span><span class="p">)</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">assert</span> <span class="nb">any</span><span class="p">(</span><span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">counts</span><span class="p">)</span>
+</code></pre></div>
+<p>Bit Tanimoto is intersection over union; bit Dice and cosine use bit counts.
+Count Tanimoto uses <code>sum(min)/sum(max)</code>, count Dice uses
+<code>2*sum(min)/(sum(a)+sum(b))</code>, and count cosine uses the dot product and L2
+norms. These are different definitions. Use the count-specific helpers when
+retaining multiplicity. Empty-input conventions are documented on individual
+functions. Pass the actual fingerprint width to bit Dice/cosine/distance
+helpers whose default is 2,048 bits. <code>to_hex</code>, <code>from_hex</code>,
+<code>to_binary_string</code> and <code>counts_to_array</code> provide explicit serialisation forms.
+Fingerprint quality estimates concern hashed-vector density/collisions, not
+biological accuracy.</p>
+<p><code>batch_similarity</code> ranks by ECFP Tanimoto with stable input-order ties.
+<code>similarity_upper_bound</code>, its <code>similarity</code> alias and <code>screen_targets</code> are
+graph-label bounds used for screening; they are neither the same coefficient
+nor an exact MCS search. <code>TargetCorpus</code> captures molecules once for repeated
+graph-bound or ECFP screens and exact prepared-query batches.</p>
+<h2 id="corpus-search-decisions">Corpus search decisions<a class="headerlink" href="#corpus-search-decisions" title="Permanent link">&para;</a></h2>
+<p><code>Substructure.match_corpus(corpus, *, gpu_prefilter=False, num_threads=0)</code>
+decides for each target whether it contains the query, and
+<code>MCS.match_corpus(corpus, minimum_atoms, *, gpu_prefilter=False, num_threads=0)</code>
+whether its unweighted MCIS with the query has at least <code>minimum_atoms</code> atoms.
+A conservative pre-screen rules out targets that cannot qualify; the CPU
+searches the rest, including targets whose bound equals the threshold.
+Existing <code>match_many</code> is unchanged.</p>
+<p>Each <code>CorpusSearchResult</code> has <code>target_index</code>, <code>atom_upper_bound</code> (integer or
+None), <code>proven_below_threshold</code>, <code>threshold_reached</code> and <code>result</code> (the actual
+<code>SearchResult</code>, or None for a target ruled out by the pre-screen). Both
+decision flags false means unknown; a search stopped below the threshold
+proves nothing. Substructure has no atom bound. MCES and weighted searches
+return CPU results, but their scores never prove that a target falls below the
+atom threshold.</p>
+<p><code>gpu_prefilter=False</code> runs the pre-screen on the CPU. <code>True</code> asks the optional
+GPU provider to run it and falls back to the CPU when the device cannot. The
+GPU is never selected automatically, and graph matching always runs on the
+CPU. With unsupported query options, node caps, immediate timeouts or
+cancellation tokens, every target is searched. Original target order and atom
+numbering are retained. See the
+<a href="../PYTHON/#explicit-corpus-prefilters">Python examples and budget scope</a>.</p>
+<h2 id="packed-corpora-clustering-and-optional-data-adapters">Packed corpora, clustering and optional data adapters<a class="headerlink" href="#packed-corpora-clustering-and-optional-data-adapters" title="Permanent link">&para;</a></h2>
+<p><code>FingerprintCorpus</code> is a read-only memory-mapped packed-bit file with explicit
+fingerprint width and row count. <code>create</code>/<code>from_smiles</code> construct it;
+<code>fingerprint</code>, <code>iter_packed_chunks</code>, <code>screen_many</code>, <code>similarities</code>,
+<code>threshold_pairs</code> and <code>top_k_pairs</code> read it. Use its context manager or <code>close</code>.
+The underlying file must remain unchanged while open. Chunk bounds limit
+working arrays, not returned-hit storage, mapped pages or total comparison
+work. Counts of representable rows are not throughput or memory measurements.</p>
+<p><code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code> process target
+iterables in chunks. <code>butina</code> clusters by similarity to a chosen centre;
+members need not be mutually close. <code>maxmin</code> makes a greedy diverse selection
+with deterministic input-index ties. Full threshold pair/clustering work can
+be quadratic even when it avoids a dense distance matrix.</p>
+<p>The <code>smsd.adapters</code> module imports optional dependencies only when requested:</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>Output and dependency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>to_numpy</code>, <code>fingerprints_numpy</code></td>
+<td>Dense binary/count arrays; NumPy.</td>
+</tr>
+<tr>
+<td><code>to_scipy</code>, <code>fingerprints_scipy</code></td>
+<td>Sparse matrices; SciPy and NumPy.</td>
+</tr>
+<tr>
+<td><code>molecules_pandas</code>, <code>molecules_polars</code></td>
+<td>Molecule/fingerprint columns; pandas or Polars.</td>
+</tr>
+<tr>
+<td><code>to_arrow</code></td>
+<td>Fixed-size-list fingerprint table; PyArrow and NumPy.</td>
+</tr>
+<tr>
+<td><code>to_torch</code>, <code>fingerprints_torch</code></td>
+<td>Tensors; PyTorch and NumPy.</td>
+</tr>
+<tr>
+<td><code>to_pyg</code></td>
+<td>Molecular graph <code>Data</code>; PyTorch Geometric and PyTorch.</td>
+</tr>
+<tr>
+<td><code>FingerprintTransformer</code>, <code>SimilarityTransformer</code></td>
+<td>Fit/transform estimators for scikit-learn pipelines.</td>
+</tr>
+</tbody>
+</table>
+<p>Arrow can share a native-endian, C-contiguous 2-D integer NumPy buffer and
+retains its owner. Shared input must not be mutated. Other inputs/layouts can
+require copies; <code>zero_copy_only=True</code> rejects those cases and table metadata
+records the ownership/copy result. A tensor/graph adapter's device argument
+does not itself establish a GPU chemistry kernel.</p>
+<h2 id="accelerators-and-molecular-tools">Accelerators and molecular tools<a class="headerlink" href="#accelerators-and-molecular-tools" title="Permanent link">&para;</a></h2>
+<p>Exact MCS/substructure proof remains on the CPU. GPU support is operation-,
+build-, device- and package-dependent; availability alone does not prove a
+particular call dispatched to a device. <code>gpu_is_available</code> and
+<code>gpu_device_info</code> describe discovery. <code>warm_start</code> explicitly prepares a
+reusable corpus/query path. Packed corpus APIs expose explicit backends and
+retain deterministic CPU-defined score/hit semantics. Native Metal packed
+fingerprint screening is available only in C++ and runs only when requested
+explicitly; Python screening and search never run on Metal. See
+<a href="../PYTHON/#optional-cuda-screening">CUDA operation scope</a>,
+<a href="../CPP/#optional-metal-fingerprint-screening">native Metal scope</a> and the optional
+<a href="../packaging/smsd-cuda/README.md"><code>smsd-cuda</code> package</a> for build and device
+requirements; the <a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a>
+lists the GPU that automatic screening uses by default.</p>
+<p>The eight <a href="../MCP_SERVER/">MCP tools</a> expose finite text, atom, target, result
+and search limits plus status/proof/timing metadata. Native default
+standardisation changes representation only; opt-in chemical transformations
+record their optional backend. The tool registry also exports local function
+definitions in the <code>input-schema</code>, <code>function</code> and <code>chat-function</code> formats, and
+LangChain and LlamaIndex tools, without creating a model client.</p>
+<h2 id="compatibility-names">Compatibility names<a class="headerlink" href="#compatibility-names" title="Permanent link">&para;</a></h2>
+<p>The 8.x API retains deprecated names such as <code>canonical_smiles</code>,
+<code>prewarm_graph</code>, <code>read_molfile</code>, <code>export_sdf</code>, <code>dearomatize</code>,
+<code>overlapCoefficient</code>, <code>count_overlapCoefficient</code>, <code>to_svg</code> and <code>chem=</code>.
+Use their documented replacements. Retaining these names is not permission
+to remove or reinterpret them in a minor release; warnings and old return
+values remain part of the compatibility behaviour.</p>
+<h2 id="native-graph-and-option-objects">Native graph and option objects<a class="headerlink" href="#native-graph-and-option-objects" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>Public operations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MolGraph</code></td>
+<td><code>bonds()</code>, <code>has_bond(i, j)</code>, <code>bond_order(i, j)</code>, <code>bond_in_ring(i, j)</code>, <code>bond_aromatic(i, j)</code> read represented topology. <code>prewarm()</code>, <code>ensure_canonical()</code> and <code>ensure_ring_counts()</code> prepare lazy invariants. <code>get_canonical_hash()</code>, <code>get_automorphism_generators()</code> and <code>automorphism_generators_truncated()</code> expose bounded canonical/symmetry results. <code>num_rings()</code>, <code>ring_system_of(atom)</code>, <code>ring_system_sig(rs_id)</code> and <code>ring_system_count()</code> describe perceived rings. <code>perceive_aromaticity(model)</code>, <code>kekulize()</code> and <code>dearomatize()</code> explicitly mutate representation.</td>
+</tr>
+<tr>
+<td><code>MolGraphBuilder</code></td>
+<td><code>atom_count</code>, <code>atomic_numbers</code>, <code>formal_charges</code>, <code>mass_numbers</code>, <code>hydrogen_counts</code>, <code>ring_flags</code>, <code>aromatic_flags</code>, <code>neighbors</code>, <code>bond_orders</code>, <code>bond_ring_flags</code>, <code>bond_aromatic_flags</code>, <code>atom_ids</code>, <code>name</code>, <code>program_line</code>, <code>comment</code> and <code>properties</code> set builder data and return the builder. <code>build(perceive_aromaticity=True, aromaticity_model=DAYLIGHT_LIKE)</code> constructs the graph. Bond-property rows run parallel to neighbour rows.</td>
+</tr>
+<tr>
+<td><code>ChemOptions</code></td>
+<td><code>profile(name)</code> selects a named profile and <code>tautomer_profile()</code> selects the tautomer-aware profile. Fluent setters <code>with_match_isotope</code>, <code>with_complete_rings_only</code>, <code>with_tautomer_aware</code>, <code>with_solvent</code>, <code>with_bond_order_mode</code>, <code>with_aromaticity_mode</code>, <code>with_ph</code> and <code>with_ring_fusion_mode</code> change and return that options object. Constructing <code>ChemOptions(existing)</code> copies it.</td>
+</tr>
+<tr>
+<td><code>MCS.Options</code></td>
+<td>Search chemistry, <code>timeout_ms</code>, <code>node_limit</code>, <code>cancellation</code>, <code>objective</code>, <code>connectivity</code>, <code>min_fragment_atoms</code>, <code>max_fragments</code>, <code>atom_weights</code> and <code>excluded_target_atoms</code>.</td>
+</tr>
+<tr>
+<td><code>Substructure.Options</code></td>
+<td>Search chemistry, <code>timeout_ms</code>, <code>node_limit</code>, <code>cancellation</code> and <code>induced</code>.</td>
+</tr>
+<tr>
+<td><code>CancellationToken</code></td>
+<td><code>cancel()</code> sets the one-way signal; <code>is_cancelled</code> reads it.</td>
+</tr>
+<tr>
+<td><code>FingerprintOptions</code></td>
+<td>Constructor keyword options and mutable fields describe fingerprint terms. <code>copy()</code> makes an independent copy; factories <code>ecfp(radius=2, size=2048)</code>, <code>fcfp(radius=2, size=2048)</code>, <code>path(path_length=7, size=2048)</code>, <code>torsion(size=2048)</code> and <code>maccs()</code> select classic configurations. <code>maccs_keys()</code> returns the key definitions.</td>
+</tr>
+<tr>
+<td><code>FingerprintKey</code></td>
+<td><code>FingerprintKey(smarts, minimum=1)</code> defines a SMARTS occurrence key; read-only <code>smarts</code>, <code>minimum</code> and <code>kind</code> describe it.</td>
+</tr>
+<tr>
+<td><code>CIPDescriptors</code></td>
+<td><code>rs_labels</code> is a label per atom; <code>ez_bonds</code> contains <code>(atom1, atom2, label)</code> entries. Produced by <code>assign_cip</code>.</td>
+</tr>
+<tr>
+<td><code>RelevantCycleFamilies</code></td>
+<td>Read-only <code>families</code>, <code>relevant_cycle_count</code> (the exact number of members of the families listed) and <code>truncated</code>. Produced by <code>compute_relevant_cycle_families</code>.</td>
+</tr>
+<tr>
+<td><code>RelevantCycleFamily</code></td>
+<td>Read-only <code>size</code>, <code>root</code>, <code>first</code>, <code>second</code>, <code>opposite</code>, <code>prototype</code> (one member as atom indices) and the exact <code>member_count</code>.</td>
+</tr>
+<tr>
+<td><code>Point2D</code>, <code>Point3D</code></td>
+<td>Empty or coordinate constructors, with writable <code>x</code>, <code>y</code> and, for 3-D, <code>z</code>.</td>
+</tr>
+<tr>
+<td><code>DepictOptions</code></td>
+<td>Native SVG dimensions, bond lengths/widths/spacing, atom labels, map/index visibility, highlight styling, padding and font family.</td>
+</tr>
+</tbody>
+</table>
+<p>Native enums are <code>SearchStatus</code>, <code>BondOrderMode</code>, <code>AromaticityMode</code>,
+<code>AromaticityModel</code>, <code>RingFusionMode</code>, <code>Solvent</code>, <code>FingerprintFamily</code>,
+<code>FragmentMode</code>, <code>ScaffoldMode</code>, <code>RSLabel</code>, <code>EZLabel</code>, and the nested
+<code>MCS.Objective</code>/<code>MCS.Connectivity</code>. Use their named values rather than numeric
+ordinals. Graph atom arrays are in graph index order; <code>canonical_label</code> and
+<code>orbit</code> are derived data and are not permission to replace caller numbering.
+<code>properties</code> supports ordinary string-key/value mapping operations.</p>
+<p><code>smsd.RingBasisUnavailable</code> is the native <code>RuntimeError</code> subclass raised when
+a result needs the minimum cycle basis and ring perception reached its work
+limit before completing it; batch calls add the zero-based input index.</p>
+<h2 id="callable-index">Callable index<a class="headerlink" href="#callable-index" title="Permanent link">&para;</a></h2>
+<p>The source-linked index below includes the top-level purpose modules, their
+public prepared-search/corpus methods, the separate adapters/highlight modules
+and molecular tool functions. Native graph/options fields and builder methods
+are grouped above and in their runtime docstrings. Optional dependencies are
+required only for the corresponding call.</p>
+<!-- CALLABLE_INDEX -->
+
+<h3 id="molecules-and-io">Molecules and I/O<a class="headerlink" href="#molecules-and-io" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_molecule.py">_molecule.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.canonical_hash(mol)</code></td>
+<td>The canonical hash of a molecule as a Python int.</td>
+</tr>
+<tr>
+<td><code>smsd.canonical_smiles(mol)</code></td>
+<td>Deprecated alias of :func:to_smiles.</td>
+</tr>
+<tr>
+<td><code>smsd.count_components(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.export_sdf(molecules, filename)</code></td>
+<td>Deprecated alias of :func:write_sdf.</td>
+</tr>
+<tr>
+<td><code>smsd.clear_cache()</code></td>
+<td>Clear reusable toolkit conversions; live graphs keep their atom correspondence.</td>
+</tr>
+<tr>
+<td><code>smsd.extract_subgraph(mol, atom_indices)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.murcko_scaffold(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.parse_mapped_smiles(smiles)</code></td>
+<td>Parse a SMILES string that contains atom map numbers.</td>
+</tr>
+<tr>
+<td><code>smsd.parse_smiles(smiles, *, lenient=False)</code></td>
+<td>Parse a SMILES string into a MolGraph.</td>
+</tr>
+<tr>
+<td><code>smsd.prewarm(mol)</code></td>
+<td>Compute and cache the common lazy invariants of a molecule once; returns its graph.</td>
+</tr>
+<tr>
+<td><code>smsd.prewarm_graph(mol)</code></td>
+<td>Deprecated alias of :func:prewarm that returns None.</td>
+</tr>
+<tr>
+<td><code>smsd.read_mol_block(mol_block)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.read_mol_file(filename)</code></td>
+<td>Read a MOL file (V2000 or V3000) into a MolGraph; one that cannot be opened or read raises ValueError.</td>
+</tr>
+<tr>
+<td><code>smsd.read_molfile(filename)</code></td>
+<td>Deprecated alias of :func:read_mol_file that reads the file as UTF-8 text.</td>
+</tr>
+<tr>
+<td><code>smsd.read_sdf(filename)</code></td>
+<td>Read every record of an SDF file at once; malformed records become empty graphs.</td>
+</tr>
+<tr>
+<td><code>smsd.same_canonical_graph(mol1, mol2)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.split_components(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.strip_atom_maps(smiles)</code></td>
+<td>Remove atom map numbers from a SMILES string.</td>
+</tr>
+<tr>
+<td><code>smsd.to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.to_smiles(mol)</code></td>
+<td>Canonical SMILES of a MolGraph, SMILES string or RDKit Mol.</td>
+</tr>
+<tr>
+<td><code>smsd.translate_to_atom_ids(mapping, g1, g2)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.write_mol_block(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.write_mol_block_v3000(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.write_molfile(mol, filename, *, v3000=False, sdf=False)</code></td>
+<td>Write a molecule to disk as MOL V2000, MOL V3000 or a single SDF record.</td>
+</tr>
+<tr>
+<td><code>smsd.write_sdf(molecules, filename)</code></td>
+<td>Write molecules as SDF records, each a V2000 MOL block followed by $$$$.</td>
+</tr>
+<tr>
+<td><code>smsd.write_sdf_record(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="chemical-graph-helpers">Chemical graph helpers<a class="headerlink" href="#chemical-graph-helpers" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_chemistry.py">_chemistry.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.CIPDescriptors (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.EZLabel (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.RSLabel (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.RelevantCycleFamilies (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.RelevantCycleFamily (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.assign_cip(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.assign_ez(mol)</code></td>
+<td>Assign CIP E/Z descriptors to all stereogenic double bonds.</td>
+</tr>
+<tr>
+<td><code>smsd.assign_rs(mol)</code></td>
+<td>Assign CIP R/S descriptors to all tetrahedral stereocentres.</td>
+</tr>
+<tr>
+<td><code>smsd.classify_pharmacophore(mol, atom_index)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.compute_relevant_cycle_families(mol)</code></td>
+<td>The relevant cycles grouped into families, each with one member and its exact number of members.</td>
+</tr>
+<tr>
+<td><code>smsd.compute_sssr(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.dearomatize(mol)</code></td>
+<td>Deprecated alias of :func:kekulize.</td>
+</tr>
+<tr>
+<td><code>smsd.implicit_h(atomic_num, bond_order_sum, formal_charge, aromatic=False)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.kekulize(mol)</code></td>
+<td>Convert an aromatic MolGraph into an explicit Kekule form.</td>
+</tr>
+<tr>
+<td><code>smsd.perceive_aromaticity(mol, *, model=_smsd.AromaticityModel.DAYLIGHT_LIKE)</code></td>
+<td>Recompute ring membership and aromaticity on a MolGraph.</td>
+</tr>
+<tr>
+<td><code>smsd.rings_truncated(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.relevant_cycles_truncated(mol)</code></td>
+<td>Whether full relevant-cycle enumeration is incomplete, independently of the minimum-basis flag.</td>
+</tr>
+<tr>
+<td><code>smsd.relevant_cycle_family_members(mol, family, limit)</code></td>
+<td>Up to <code>limit</code> members of a family as atom-index lists, starting with its prototype.</td>
+</tr>
+<tr>
+<td><code>smsd.relevant_cycle_family_of(mol, families, ring)</code></td>
+<td>The index in <code>families.families</code> of the family that has <code>ring</code> as a member, or -1.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prepared-searches-and-results">Prepared searches and results<a class="headerlink" href="#prepared-searches-and-results" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/search.py">search.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.ConsensusResult (class)</code></td>
+<td>A progressive common graph and supporting embeddings; <code>optimal</code> is always false and <code>complete</code> records progressive-pass completion.</td>
+</tr>
+<tr>
+<td><code>smsd.ConsensusResult.to_smiles()</code></td>
+<td>The common graph as SMILES.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS (class)</code></td>
+<td>Find common induced or edge subgraphs, including disconnected fragments.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match_with_smarts(target)</code></td>
+<td>Return the match and its SMARTS under this query's chemistry.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.find(query)</code></td>
+<td>Prepare a molecule query for repeated and concurrent searches.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.with_objective(objective)</code></td>
+<td>This query maximising objective: common atoms (MCIS) or common bonds (MCES).</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.with_fragments(*, min_atoms=1, max_fragments=2147483647)</code></td>
+<td>This query allowing disconnected common fragments of at least min_atoms atoms each.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.with_atom_weights(weights)</code></td>
+<td>This query scoring matched query atoms by weights, one per input atom.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.validate_mapping(query, target, match, options=None)</code></td>
+<td>Return selected-graph validation errors; an empty list is valid.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.is_mapping_maximal(query, target, match, options=None)</code></td>
+<td>Check whether a valid common graph admits a compatible extension.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.validate_tautomer_consistency(query, target, match)</code></td>
+<td>Whether a mapping conserves mobile protons across tautomeric groups.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.canonicalize_mapping(query, target, atom_mapping)</code></td>
+<td>Choose a representative under the two molecules' symmetries.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.compute_tautomer_confidence(query, target, match, chemistry)</code></td>
+<td>Score selected chemistry relaxations using a read-time pH/solvent heuristic.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match_constrained(queries, target, options=None)</code></td>
+<td>Match queries in order without reusing original target atoms.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.consensus(molecules, options=None, threshold=1.0)</code></td>
+<td>Find an approximate progressive common graph supported by a fraction of inputs; never a proof of optimality or absence.</td>
+</tr>
+<tr>
+<td><code>smsd.Match (class)</code></td>
+<td>Atom and selected-bond correspondences, with common-edge fragments.</td>
+</tr>
+<tr>
+<td><code>smsd.Match.atom_count (property)</code></td>
+<td>The number of matched atoms.</td>
+</tr>
+<tr>
+<td><code>smsd.Match.bond_count (property)</code></td>
+<td>The number of matched bonds.</td>
+</tr>
+<tr>
+<td><code>smsd.Match.to_smiles(query)</code></td>
+<td>Write the selected query atoms and bonds as a capped molecule.</td>
+</tr>
+<tr>
+<td><code>smsd.Match.to_graph(query)</code></td>
+<td>Extract selected edges while retaining original matching context.</td>
+</tr>
+<tr>
+<td><code>smsd.Match.to_smarts(query, chemistry=None)</code></td>
+<td>Export selected bonds as SMARTS; reject rules SMARTS cannot represent.</td>
+</tr>
+<tr>
+<td><code>smsd.SearchResult (class)</code></td>
+<td>Matches and the proof, enumeration and stopping status of a search.</td>
+</tr>
+<tr>
+<td><code>smsd.SearchResult.found (property)</code></td>
+<td>Whether the search found at least one match.</td>
+</tr>
+<tr>
+<td><code>smsd.SearchResult.best (property)</code></td>
+<td>The first match, or None when nothing was found.</td>
+</tr>
+<tr>
+<td><code>smsd.SmartsResult (class)</code></td>
+<td>A search result with a portable SMARTS query for its best selected graph.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure (class)</code></td>
+<td>Find molecule or SMARTS embeddings using one public query interface.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.find(query)</code></td>
+<td>Prepare a molecule query; SMILES strings are parsed as molecules.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.smarts(query)</code></td>
+<td>Compile a SMARTS predicate query once for repeated searches.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.with_induced(enabled=True)</code></td>
+<td>This query requiring an induced embedding, so query non-bonds are kept apart too.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.decompose_r_groups(core, targets, options=None)</code></td>
+<td>Return core and substituent graphs alongside each search result.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.with_options(options)</code></td>
+<td>This query with a copy of options.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.with_options(options)</code></td>
+<td>This query with a copy of options.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.with_timeout(milliseconds)</code></td>
+<td>This query with a time limit per target, in milliseconds; a negative value selects the default limit and zero stops at once.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.with_timeout(milliseconds)</code></td>
+<td>This query with a time limit per target, in milliseconds; a negative value selects the default limit and zero stops at once.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match(target)</code></td>
+<td>Return one best match, with its proof and stopping status.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.match(target)</code></td>
+<td>Return one best match, with its proof and stopping status.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match_all(target, limit=1000)</code></td>
+<td>Return optimal matches up to the limit, with enumeration status.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.match_all(target, limit=1000)</code></td>
+<td>Return optimal matches up to the limit, with enumeration status.</td>
+</tr>
+<tr>
+<td><code>smsd.CorpusSearchResult (class)</code></td>
+<td>Original corpus slot, bound decision and optional actual CPU result.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match_corpus(corpus, minimum_atoms, *, gpu_prefilter=False, num_threads=0)</code></td>
+<td>Atom-count decisions for unweighted MCIS, with unsupported contracts kept on the CPU.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.match_corpus(corpus, *, gpu_prefilter=False, num_threads=0)</code></td>
+<td>Containment decisions per target after an optional pre-screen, with ordinary CPU embeddings.</td>
+</tr>
+<tr>
+<td><code>smsd.MCS.match_many(targets, *, num_threads=0)</code></td>
+<td>Search targets independently and preserve each target's atom indices.</td>
+</tr>
+<tr>
+<td><code>smsd.Substructure.match_many(targets, *, num_threads=0)</code></td>
+<td>Search targets independently and preserve each target's atom indices.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fingerprints-and-metrics">Fingerprints and metrics<a class="headerlink" href="#fingerprints-and-metrics" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_fingerprints.py">_fingerprints.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.analyze_fp_quality(fp, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.cosine(fp1, fp2, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.count_cosine(fp1, fp2)</code></td>
+<td>Count-vector cosine: dot(a,b) / (|a| * |b|).</td>
+</tr>
+<tr>
+<td><code>smsd.count_dice(fp1, fp2)</code></td>
+<td>Count-vector Dice: 2*sum(min(a,b)) / (sum(a) + sum(b)).</td>
+</tr>
+<tr>
+<td><code>smsd.count_overlapCoefficient(fp1, fp2)</code></td>
+<td>Deprecated alias of :func:count_overlap_coefficient.</td>
+</tr>
+<tr>
+<td><code>smsd.count_overlap_coefficient(fp1, fp2)</code></td>
+<td>Count-vector Szymkiewicz-Simpson overlap: sum(min(a,b)) / min(sum(a), sum(b)).</td>
+</tr>
+<tr>
+<td><code>smsd.count_tanimoto_coefficient(fp1, fp2)</code></td>
+<td>Count-vector Tanimoto (generalised Jaccard): sum(min(a,b)) / sum(max(a,b)).</td>
+</tr>
+<tr>
+<td><code>smsd.counts_to_array(counts_dict, fp_size)</code></td>
+<td>Convert a sparse count dict {bit_position: count} into a dense list of length fp_size.</td>
+</tr>
+<tr>
+<td><code>smsd.dice(fp1, fp2, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.fingerprint(mol, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None)</code></td>
+<td>Compute a molecular fingerprint.</td>
+</tr>
+<tr>
+<td><code>smsd.fingerprint_from_smiles(smiles, radius=2, fp_size=2048, mode='ecfp', *, path_length=7, options=None)</code></td>
+<td>Parse a SMILES string and compute its fingerprint in one call.</td>
+</tr>
+<tr>
+<td><code>smsd.fingerprint_subset(fp1, fp2)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.fingerprints(mols, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0)</code></td>
+<td>Compute the fingerprints of many molecules in one call.</td>
+</tr>
+<tr>
+<td><code>smsd.from_hex(hex_str)</code></td>
+<td>Convert a hex string back to a fingerprint (list of set-bit positions).</td>
+</tr>
+<tr>
+<td><code>smsd.mcs_fingerprint(mol, path_length=7, fp_size=2048, tautomer_aware=False)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.overlapCoefficient(fp1, fp2, fp_size=2048)</code></td>
+<td>Deprecated alias of :func:overlap_coefficient.</td>
+</tr>
+<tr>
+<td><code>smsd.overlap_coefficient(fp1, fp2, fp_size=2048)</code></td>
+<td>Overlap coefficient (Szymkiewicz-Simpson): |A∩B| / min(|A|, |B|).</td>
+</tr>
+<tr>
+<td><code>smsd.path_fingerprint(mol, path_length=7, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.soergel(fp1, fp2, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.tanimoto_coefficient(fp1, fp2, fp_size=2048)</code></td>
+<td>Tanimoto coefficient (Jaccard index): |A∩B| / |A∪B|.</td>
+</tr>
+<tr>
+<td><code>smsd.to_binary_string(fp, fp_size=2048)</code></td>
+<td>Convert a fingerprint to a binary string of '0' and '1' characters.</td>
+</tr>
+<tr>
+<td><code>smsd.to_hex(fp, fp_size=2048)</code></td>
+<td>Convert a fingerprint (list of set-bit positions) to a hex string.</td>
+</tr>
+<tr>
+<td><code>smsd.topological_torsion(mol, fp_size=2048)</code></td>
+<td>Compute a topological torsion fingerprint (Nilakantan et al. 1987).</td>
+</tr>
+<tr>
+<td><code>smsd.topological_torsion_counts(mol, fp_size=2048)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="graph-and-fingerprint-screening">Graph and fingerprint screening<a class="headerlink" href="#graph-and-fingerprint-screening" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_screening.py">_screening.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.TargetCorpus (class)</code></td>
+<td>Targets captured once, with their input atom numbering, for repeated searches and screening.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.from_smiles(targets)</code></td>
+<td>Create a corpus from molecule objects or SMILES strings.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.add_target(target)</code></td>
+<td>Capture a molecule and its current input atom numbering.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.add_targets(targets)</code></td>
+<td>Capture targets together; later input changes do not alter them.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.prewarm(*, num_threads=0)</code></td>
+<td>Compute graph invariants and ECFP fingerprints once; later searches read the prewarmed graphs.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.is_prewarmed (property)</code></td>
+<td>Whether :meth:prewarm has run since the last targets were added.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.screen(query, threshold, *, num_threads=0)</code></td>
+<td>Return target indices meeting the ECFP Tanimoto threshold.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.screen_many(queries, threshold, *, num_threads=0)</code></td>
+<td>Return ECFP Tanimoto hit indices for each query in input order.</td>
+</tr>
+<tr>
+<td><code>smsd.TargetCorpus.screen_targets_many(queries, threshold, chemistry=None, *, num_threads=0)</code></td>
+<td>Return similarity-bound hit indices for each query in input order.</td>
+</tr>
+<tr>
+<td><code>smsd.batch_similarity(query, targets, fp_size=2048, radius=2)</code></td>
+<td>Rank targets by ECFP Tanimoto similarity to a query.</td>
+</tr>
+<tr>
+<td><code>smsd.gpu_device_info()</code></td>
+<td>Human-readable compute backend string, including a CPU-only backend.</td>
+</tr>
+<tr>
+<td><code>smsd.gpu_is_available()</code></td>
+<td>True when a GPU is available at run time: through an installed smsd-cuda package that finds a device, or through a native module built with CUDA or Metal. Python screening and search never run on Metal; a Metal-enabled source build changes only what this function and <code>gpu_device_info()</code> report.</td>
+</tr>
+<tr>
+<td><code>smsd.screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_threads=0)</code></td>
+<td>Indices of the targets whose similarity bound to the query reaches threshold.</td>
+</tr>
+<tr>
+<td><code>smsd.similarity(mol1, mol2)</code></td>
+<td>Upper bound on the similarity of two molecules, in [0.0, 1.0].</td>
+</tr>
+<tr>
+<td><code>smsd.similarity_upper_bound(g1, g2, chemistry=None, *, chem=None)</code></td>
+<td>Linear-time upper bound on the similarity of two molecules, in [0.0, 1.0].</td>
+</tr>
+</tbody>
+</table>
+<h3 id="coordinates-and-layout">Coordinates and layout<a class="headerlink" href="#coordinates-and-layout" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_layout.py">_layout.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.Point2D (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.Point3D (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.align_2d(coords, reference)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.bounding_box_2d(coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.canonical_orientation(mol, coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.center_2d(coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.count_crossings(mol, coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.generate_coords_2d(mol, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.generate_coords_3d(mol, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.is_degenerate_layout(coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.layout_quality(mol, coords, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.layout_sssr(mol)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.match_template(mol, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.mirror_x(coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.mirror_y(coords)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.normalise_bond_length(mol, coords, target=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.reduce_crossings(mol, coords, max_iter=1000)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.resolve_overlaps(coords, threshold=0.3, max_iter=100)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.rotate_2d(coords, angle)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.scale_2d(coords, factor)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+<tr>
+<td><code>smsd.translate_2d(coords, dx, dy)</code></td>
+<td>Native callable; its runtime docstring includes an ordinary example.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="depiction">Depiction<a class="headerlink" href="#depiction" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_depiction.py">_depiction.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.DepictOptions (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)</code></td>
+<td>Render a molecule with MCS or substructure atoms highlighted and numbered.</td>
+</tr>
+<tr>
+<td><code>smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))</code></td>
+<td>Find the MCS and return an RDKit image with matched atoms highlighted; <code>highlight_color</code> is deprecated and has no effect.</td>
+</tr>
+<tr>
+<td><code>smsd.depict_pair(mol1, mol2, mapping, opts=None, **kwargs)</code></td>
+<td>Render two molecules side by side with an MCS mapping highlighted.</td>
+</tr>
+<tr>
+<td><code>smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))</code></td>
+<td>Find a substructure and return an RDKit image with the matched atoms highlighted.</td>
+</tr>
+<tr>
+<td><code>smsd.depict_svg(mol_or_smiles, opts=None, **kwargs)</code></td>
+<td>Render a molecule as an SVG string.</td>
+</tr>
+<tr>
+<td><code>smsd.save_svg(svg_str, path)</code></td>
+<td>Write SVG text to a file as UTF-8.</td>
+</tr>
+<tr>
+<td><code>smsd.to_svg(mol_or_smiles, *, size=(300, 200))</code></td>
+<td>Deprecated RDKit rendering of a molecule as SVG.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="proof-bearing-highlights">Proof-bearing highlights<a class="headerlink" href="#proof-bearing-highlights" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/highlight.py">highlight.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)</code></td>
+<td>Render the two molecules with the best result's atom correspondence.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="packed-corpus-and-streaming">Packed corpus and streaming<a class="headerlink" href="#packed-corpus-and-streaming" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/corpus.py">corpus.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.FingerprintCorpus (class)</code></td>
+<td>A read-only packed fingerprint file, indexed in input order.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.create(path, fingerprints, *, fp_size=2048, chunk_size=4096, overwrite=False)</code></td>
+<td>Stream binary fingerprints to a new file and open it read-only.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.from_smiles(path, molecules, *, kind='ecfp', fp_size=2048, radius=2, path_length=7, options=None, chunk_size=4096, num_threads=0, overwrite=False)</code></td>
+<td>Fingerprint molecule inputs in bounded batches, then write packed rows.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.fingerprint(index)</code></td>
+<td>Return the sorted set-bit positions of one row, as an owned list.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.iter_packed_chunks(*, chunk_size=4096)</code></td>
+<td>Yield (start_index, uint8_array) copies in input order.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.cuda_calls (property)</code></td>
+<td>Number of successfully completed packed CUDA calls made by this corpus.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.screen_many(queries, *, threshold=0.0, chunk_size=4096, backend='cpu')</code></td>
+<td>Yield (query_index, target_index, Tanimoto) from at most 32 queries.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.similarities(query, *, threshold=0.0, chunk_size=4096, backend='cpu')</code></td>
+<td>Yield (target_index, Tanimoto) hits in input order for a bit set.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.threshold_pairs(threshold, *, include_self=False, chunk_size=4096, backend='cpu')</code></td>
+<td>Yield undirected (first, second, Tanimoto) pairs meeting the threshold.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.top_k_pairs(k, *, threshold=0.0, include_self=False, chunk_size=4096, backend='cpu')</code></td>
+<td>Yield at most k directed neighbours per row, ranked by similarity.</td>
+</tr>
+<tr>
+<td><code>smsd.FingerprintCorpus.close()</code></td>
+<td>Wait for an active mapped copy, then release; repeated closes are harmless.</td>
+</tr>
+<tr>
+<td><code>smsd.stream_screen_smiles(query, targets, threshold, *, chunk_size=4096, num_threads=0)</code></td>
+<td>Yield input indices passing an ECFP Tanimoto screen, one target chunk at a time.</td>
+</tr>
+<tr>
+<td><code>smsd.stream_screen_many_smiles(queries, targets, threshold, *, target_chunk_size=4096, query_chunk_size=64, max_queries=4096, num_threads=0)</code></td>
+<td>Yield (query_index, target_index) ECFP screen hits, one bounded chunk at a time.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="clustering-and-selection">Clustering and selection<a class="headerlink" href="#clustering-and-selection" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/clustering.py">clustering.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.butina(corpus, threshold=0.7, *, reordering=False, chunk_size=4096, backend='cpu')</code></td>
+<td>Cluster by a binary Tanimoto similarity threshold (Butina, 1999).</td>
+</tr>
+<tr>
+<td><code>smsd.maxmin(corpus, count, *, seed=0, chunk_size=4096, backend='cpu')</code></td>
+<td>Select diverse row indices by greedy MaxMin Tanimoto distance.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="optional-data-adapters">Optional data adapters<a class="headerlink" href="#optional-data-adapters" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/adapters.py">adapters.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.adapters.to_numpy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)</code></td>
+<td>Expand fingerprints to a NumPy array of shape (n_molecules, fp_size).</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.to_torch(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None, device='cpu')</code></td>
+<td>Expand fingerprints to a PyTorch tensor without requiring NumPy.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.fingerprints_numpy(molecules, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None)</code></td>
+<td>Compute native fingerprints and expand them to a NumPy feature matrix.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.fingerprints_torch(molecules, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None, device='cpu')</code></td>
+<td>Compute native fingerprints and expand them to a PyTorch feature tensor.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.FingerprintTransformer (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.SimilarityTransformer (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.to_scipy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)</code></td>
+<td>Return a canonical SciPy CSR matrix without expanding dense rows.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.fingerprints_scipy(molecules, *, kind='ecfp', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None)</code></td>
+<td>Compute native fingerprints as an integer CSR feature matrix.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.molecules_pandas(molecules, *, kind='ecfp', fp_size=2048, radius=2, path_length=7, options=None, num_threads=0)</code></td>
+<td>Return a pandas DataFrame with molecule and fingerprint object columns.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.molecules_polars(molecules, *, kind='ecfp', fp_size=2048, radius=2, path_length=7, options=None, num_threads=0)</code></td>
+<td>Return a Polars DataFrame with explicit Object molecules and typed lists.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.to_arrow(fingerprints, *, fp_size=2048, counts=False, dtype=None, copy=False, zero_copy_only=False)</code></td>
+<td>Export a fixed-size-list Arrow fingerprint column with ownership metadata.</td>
+</tr>
+<tr>
+<td><code>smsd.adapters.to_pyg(molecule, *, device='cpu')</code></td>
+<td>Export native graph features as a PyTorch Geometric Data object.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="warm-start">Warm start<a class="headerlink" href="#warm-start" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/_accelerator.py">_accelerator.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.warm_start(corpus, query, threshold=0.0, *, num_threads=0)</code></td>
+<td>Prepare and screen a real target corpus before its next query.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="molecular-tools">Molecular tools<a class="headerlink" href="#molecular-tools" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/mcp_server.py">mcp_server.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.mcp_server.create_server()</code></td>
+<td>Create the official SDK stdio server without starting it.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.find_mcs(query_smiles: str, target_smiles: str, objective: str='mcis', connected: bool=True, timeout_ms: int=1000, node_limit: int=100000, match_stereo: bool=False, complete_rings_only: bool=False, ring_matches_ring_only: bool=False)</code></td>
+<td>Find one common graph and retain native proof and stopping flags.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.find_substructure(query: str, target_smiles: str, query_format: str='smarts', induced: bool=False, timeout_ms: int=1000, node_limit: int=100000, match_stereo: bool=False, complete_rings_only: bool=False, ring_matches_ring_only: bool=False)</code></td>
+<td>Find one SMARTS or molecule embedding, retaining native stopping status.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.molecular_fingerprint(smiles: str, kind: str='ecfp', fp_size: int=2048, radius: int=2, path_length: int=7, counts: bool=False)</code></td>
+<td>Compute native set-bit positions or sparse position/count pairs, not an MCS proof.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.search_smarts(query_smarts: str, target_smiles: str, max_matches: int=16, timeout_ms: int=1000, node_limit: int=100000, match_stereo: bool=False, complete_rings_only: bool=False, ring_matches_ring_only: bool=False)</code></td>
+<td>Enumerate bounded SMARTS embeddings without turning incomplete results into absence.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.molecular_similarity(query_smiles: str, target_smiles: str, metric: str='tanimoto', kind: str='ecfp', fp_size: int=2048, radius: int=2, path_length: int=7, counts: bool=False)</code></td>
+<td>Compare native fingerprints; the coefficient is not an MCS or biological-accuracy proof.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.screen_molecules(query_smiles: str, targets_smiles: list[str], threshold: float=0.7, max_hits: int=32, offset: int=0, kind: str='ecfp', fp_size: int=2048, radius: int=2, path_length: int=7, counts: bool=False)</code></td>
+<td>Screen a bounded in-memory list by Tanimoto, with stable ranked ties and explicit pagination.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.standardise_molecule(smiles: str, remove_atom_maps: bool=False, cleanup: bool=False, largest_fragment: bool=False, neutralise: bool=False, canonical_tautomer: bool=False)</code></td>
+<td>Canonicalise representation; chemical transformations require explicit options and RDKit.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.depict_mcs(query_smiles: str, target_smiles: str, objective: str='mcis', connected: bool=True, timeout_ms: int=1000, node_limit: int=100000, match_stereo: bool=False, complete_rings_only: bool=False, ring_matches_ring_only: bool=False, width: int=800, height: int=360)</code></td>
+<td>Return a native mapping-highlight SVG and the unchanged search proof/status.</td>
+</tr>
+<tr>
+<td><code>smsd.mcp_server.main()</code></td>
+<td>Serve over standard input/output, with diagnostics on standard error.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tool-definitions">Tool definitions<a class="headerlink" href="#tool-definitions" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../python/smsd/tool_definitions.py">tool_definitions.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.tool_definitions.ToolDefinition (class)</code></td>
+<td>A registered molecular callable with a fresh JSON schema on each access.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.ToolDefinition.name (property)</code></td>
+<td>The public callable name.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.ToolDefinition.description (property)</code></td>
+<td>The callable's opening documentation paragraph.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.ToolDefinition.input_schema (property)</code></td>
+<td>Object schema with finite single-argument bounds and Python defaults.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.TOOL_REGISTRY (class/enum)</code></td>
+<td>See the native graph/options table or the adapter contract above.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.get_tool_definitions(provider: str='mcp')</code></td>
+<td>Export definitions in the <code>mcp</code>, <code>input-schema</code>, <code>function</code> or <code>chat-function</code> format.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.call_tool(name: str, arguments: dict)</code></td>
+<td>Invoke a registered tool with checked JSON arguments and ordinary defaults.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.langchain_tools()</code></td>
+<td>Make LangChain StructuredTools with lazy optional imports and the same bounds.</td>
+</tr>
+<tr>
+<td><code>smsd.tool_definitions.llamaindex_tools()</code></td>
+<td>Make LlamaIndex FunctionTools with lazy optional imports and the same bounds.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cuda-package-entry-points">CUDA package entry points<a class="headerlink" href="#cuda-package-entry-points" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="../packaging/smsd-cuda/python/smsd_cuda/__init__.py"><strong>init</strong>.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd_cuda.capsule()</code></td>
+<td>A capsule holding the accelerator's table, which smsd attaches.</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.device_info()</code></td>
+<td>A description of the device, such as 'Tesla T4 (compute 7.5, 14930 MB)'.</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.is_available()</code></td>
+<td>Whether a CUDA device can be used.</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.preload()</code></td>
+<td>Initialise the current CUDA device and load screening kernels without screening data.</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.unavailable_reason()</code></td>
+<td>Why no CUDA device can be used, or None when one can.</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../EXAMPLES/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Examples">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Examples
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../ALGORITHMS/" class="md-footer__link md-footer__link--next" aria-label="Next: Algorithms">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Algorithms
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

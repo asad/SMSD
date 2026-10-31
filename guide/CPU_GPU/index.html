@@ -1,0 +1,2965 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/guide/CPU_GPU/">
+      
+      
+        <link rel="prev" href="../PACKED_INDEX/">
+      
+      
+        <link rel="next" href="../COMMAND_LINE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>CPU and GPU screening - SMSD Pro</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cpu-and-gpu-screening" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CPU and GPU screening
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-runs-where" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What runs where
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-the-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check the backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-cuda-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install the CUDA package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automatic-use-in-prepared-screens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic use in prepared screens
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-the-gpu-for-a-corpus-pre-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request the GPU for a corpus pre-screen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-backend-for-packed-indexes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a backend for packed indexes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keep-work-on-the-cpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keep work on the CPU
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-and-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback and errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prove-that-the-gpu-ran" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prove that the GPU ran
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-and-compare-cpu-and-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time and compare CPU and GPU
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Containers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metal-and-c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metal and C++
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-runs-where" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What runs where
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-the-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check the backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-cuda-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install the CUDA package
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#automatic-use-in-prepared-screens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic use in prepared screens
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-the-gpu-for-a-corpus-pre-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request the GPU for a corpus pre-screen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-backend-for-packed-indexes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a backend for packed indexes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keep-work-on-the-cpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keep work on the CPU
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback-and-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback and errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prove-that-the-gpu-ran" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prove that the GPU ran
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#time-and-compare-cpu-and-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time and compare CPU and GPU
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Containers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metal-and-c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metal and C++
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cpu-and-gpu-screening">CPU and GPU screening<a class="headerlink" href="#cpu-and-gpu-screening" title="Permanent link">&para;</a></h1>
+<p>Graph matching in SMSD Pro, which covers every substructure, SMARTS and MCS
+search, always runs on the CPU. An NVIDIA GPU can take over screening steps:
+the ECFP4 screens of a prepared <code>TargetCorpus</code>, the pre-screen of a corpus
+search and the scans of a packed fingerprint index. Hits, scores and search
+decisions are identical on either device. Every Python program on this page
+runs on a CPU-only machine; the GPU branches run only where a device is ready.</p>
+<h2 id="what-runs-where">What runs where<a class="headerlink" href="#what-runs-where" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>CPU</th>
+<th>NVIDIA GPU (<code>smsd-cuda</code>)</th>
+<th>How it is chosen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Substructure, SMARTS and MCS matching</td>
+<td>Always</td>
+<td>Never</td>
+<td>Not applicable</td>
+</tr>
+<tr>
+<td>Fingerprints, <code>batch_similarity</code> and similarity coefficients</td>
+<td>Always</td>
+<td>Never</td>
+<td>Not applicable</td>
+</tr>
+<tr>
+<td><code>screen_targets</code>, <code>TargetCorpus.screen_targets_many</code>, and <code>Substructure.match_many</code> on a <code>TargetCorpus</code></td>
+<td>Always</td>
+<td>Never with <code>smsd-cuda</code> 8.1.0</td>
+<td>Not applicable</td>
+</tr>
+<tr>
+<td>ECFP4 screens of a prepared <code>TargetCorpus</code>: <code>screen</code>, <code>screen_many</code>, <code>warm_start</code>, <code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code></td>
+<td>Below the device rule, without a usable device, or after a device failure</td>
+<td>A Tesla T4 for 100,000 targets or more, or any supported device from <code>SMSD_CUDA_MIN_TARGETS</code> targets</td>
+<td>Automatically, for each screen</td>
+</tr>
+<tr>
+<td>Pre-screen of <code>Substructure.match_corpus</code> and <code>MCS.match_corpus</code></td>
+<td><code>gpu_prefilter=False</code> (the default), or without a usable device</td>
+<td><code>gpu_prefilter=True</code> with an attached device</td>
+<td>By the caller, with CPU fallback</td>
+</tr>
+<tr>
+<td>Packed <code>FingerprintCorpus</code> scans, <code>butina</code> and <code>maxmin</code></td>
+<td><code>backend="cpu"</code> (the default), or <code>"auto"</code> without a usable device</td>
+<td><code>backend="cuda"</code>, or <code>"auto"</code> with a usable device</td>
+<td>By the caller; <code>"cuda"</code> raises without a device</td>
+</tr>
+</tbody>
+</table>
+<p>The searches that follow a pre-screen, and every <code>match</code>, <code>match_all</code> and
+<code>match_many</code> call, use the CPU. Python never uses Metal; see
+<a href="#metal-and-c">Metal and C++</a>.</p>
+<p>The <code>smsd</code> package looks for <code>smsd-cuda</code> once per process, the first time a
+prepared screen, <code>warm_start</code>, a <code>gpu_prefilter=True</code> search,
+<code>gpu_is_available()</code> or <code>gpu_device_info()</code> needs it. Importing <code>smsd</code> does
+not load the CUDA runtime, so the first such call carries the device start-up
+cost; <code>smsd_cuda.preload()</code> moves that cost to a point the program chooses.</p>
+<h2 id="check-the-backend">Check the backend<a class="headerlink" href="#check-the-backend" title="Permanent link">&para;</a></h2>
+<p><code>smsd.gpu_is_available()</code> returns True when an attached <code>smsd-cuda</code> package
+has found a usable device. <code>smsd.gpu_device_info()</code> describes the backend: on
+a CPU-only machine it starts with <code>CPU:</code> and names the OpenMP version and
+thread count; with an attached device it starts with <code>GPU:</code>, followed by the
+device name, its compute capability, its memory and, in brackets, the CPU
+threading. Both report what is available, not which device a call used.</p>
+<p>The <code>cuda_status()</code> helper below is the one in the
+<a href="../../python/examples/gpu_screening.py">GPU screening example</a>. It decides
+whether <code>backend="cuda"</code> can be used and gives the reason when it cannot.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">smsd_cuda</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">smsd_cuda</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">cuda_status</span><span class="p">():</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="sd">"""Return whether backend="cuda" can be used here, and the reason when it cannot."""</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"0"</span><span class="p">):</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"disabled by SMSD_DISABLE_GPU"</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"smsd-cuda is not installed"</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span> <span class="o">!=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">:</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"smsd-cuda </span><span class="si">{</span><span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2"> does not match "</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                       <span class="sa">f</span><span class="s2">"smsd </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">reason</span> <span class="o">=</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">unavailable_reason</span><span class="p">()</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="k">return</span> <span class="n">reason</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">reason</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="n">ready</span><span class="p">,</span> <span class="n">reason</span> <span class="o">=</span> <span class="n">cuda_status</span><span class="p">()</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"CUDA screening:"</span><span class="p">,</span> <span class="s2">"ready"</span> <span class="k">if</span> <span class="n">ready</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"unavailable (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="k">assert</span> <span class="n">ready</span> <span class="ow">or</span> <span class="n">reason</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="n">available</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_is_available</span><span class="p">()</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"GPU available:"</span><span class="p">,</span> <span class="n">available</span><span class="p">)</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">available</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1"># 'CPU: ...' without a device; 'GPU: &lt;device&gt;  [...]' once smsd-cuda is attached.</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="n">backend</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">()</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">backend</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>    <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">preload</span><span class="p">()</span>  <span class="c1"># initialise the device and load its kernels now</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>    <span class="k">assert</span> <span class="s2">"compute"</span> <span class="ow">in</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">device_info</span><span class="p">()</span>
+</code></pre></div>
+<p>On a machine without <code>smsd-cuda</code>, the program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>CUDA screening: unavailable (smsd-cuda is not installed)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>GPU available: False
+</code></pre></div>
+<p>With <code>smsd-cuda</code> and a usable device, the program prints
+<code>CUDA screening: ready</code> and <code>GPU available: True</code>. Otherwise
+<code>smsd_cuda.unavailable_reason()</code> explains why, for example
+<code>no CUDA device was found</code>, or a reason that names a device below compute
+capability 7.5.</p>
+<h2 id="install-the-cuda-package">Install the CUDA package<a class="headerlink" href="#install-the-cuda-package" title="Permanent link">&para;</a></h2>
+<p>The <code>smsd-cuda</code> package adds NVIDIA screening to <code>smsd</code> on Linux x86_64.
+Install it with the same version of <code>smsd</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.1.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.1.0"</span>
+</code></pre></div>
+<p>Packed indexes and clustering also need NumPy, which neither package
+installs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.1.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.1.0"</span>
+</code></pre></div>
+<ul>
+<li>The package needs Linux x86_64 and CPython 3.12–3.15; the
+  <a href="../../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a> gives
+  the C library version.</li>
+<li>The device must be an NVIDIA GPU of compute capability 7.5 or later, with a
+  driver compatible with the CUDA 12 runtime. The runtime is installed as a
+  dependency; the CUDA toolkit is not needed.</li>
+<li>The versions must match exactly. <code>smsd-cuda</code> 8.1.0 requires <code>smsd</code> 8.1.0,
+  and <code>smsd</code> does not attach a package built for another version.</li>
+<li>No <code>smsd-cuda</code> wheel is published for Windows or macOS. On Windows, the GPU
+  container runs through WSL2; see <a href="#containers">Containers</a>.</li>
+</ul>
+<p>Prepared screens, the stream functions and <code>match_corpus</code> need no NumPy.</p>
+<h2 id="automatic-use-in-prepared-screens">Automatic use in prepared screens<a class="headerlink" href="#automatic-use-in-prepared-screens" title="Permanent link">&para;</a></h2>
+<p>Prepared ECFP4 screens choose their device automatically.
+<code>TargetCorpus.screen</code> and <code>screen_many</code> after <code>prewarm()</code>, <code>warm_start</code>, and
+the stream functions <code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code>
+use the GPU when <code>smsd-cuda</code> is attached and the corpus is large enough.
+Otherwise, and whenever device work fails, they run on the CPU with the same
+hits. The code is the same on every machine.</p>
+<p>By default the GPU is used only on a Tesla T4 (compute capability 7.5), and
+only for a prepared corpus of at least 100,000 targets. Setting
+<code>SMSD_CUDA_MIN_TARGETS</code> to a positive whole number N lets any supported device
+take corpora of N targets or more; on a Tesla T4, N replaces 100,000. The
+stream functions apply the rule to each chunk of targets (4,096 by default),
+so they use the device only when a chunk is large enough.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">stream_screen_smiles</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">benzodiazepines</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="p">}</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="p">)</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="n">queries</span> <span class="o">=</span> <span class="p">[</span><span class="n">benzodiazepines</span><span class="p">[</span><span class="s2">"diazepam"</span><span class="p">],</span> <span class="n">benzodiazepines</span><span class="p">[</span><span class="s2">"alprazolam"</span><span class="p">]]</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="c1"># The same calls on every machine; each screen chooses its device.</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">()</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="n">hits</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">found</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="s2">"diazepam"</span><span class="p">,</span> <span class="s2">"alprazolam"</span><span class="p">),</span> <span class="n">hits</span><span class="p">):</span>
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">:"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">found</span><span class="p">))</span>
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="k">assert</span> <span class="n">hits</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">13</span><span class="p">],</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]]</span>
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>
+<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="c1"># warm_start prepares the corpus it is given; streams prepare one chunk at a time.</span>
+<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="n">fresh</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>
+<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">warm_start</span><span class="p">(</span><span class="n">fresh</span><span class="p">,</span> <span class="n">queries</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">==</span> <span class="n">hits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="n">streamed</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">stream_screen_smiles</span><span class="p">(</span><span class="n">queries</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">iter</span><span class="p">(</span><span class="n">library</span><span class="p">),</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>
+<a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="k">assert</span> <span class="n">streamed</span> <span class="o">==</span> <span class="n">hits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>
+<a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="c1"># Let any supported GPU take corpora of one target or more; the CPU ignores it.</span>
+<a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_CUDA_MIN_TARGETS"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+<a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="n">same</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">==</span> <span class="n">hits</span>
+<a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"same hits with SMSD_CUDA_MIN_TARGETS=1:"</span><span class="p">,</span> <span class="n">same</span><span class="p">)</span>
+<a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a><span class="k">assert</span> <span class="n">same</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>diazepam: diazepam, nordazepam, temazepam, tetrazepam, clobazam
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>alprazolam: alprazolam, triazolam, midazolam
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>same hits with SMSD_CUDA_MIN_TARGETS=1: True
+</code></pre></div>
+<p>A CPU-only machine ignores <code>SMSD_CUDA_MIN_TARGETS</code>. No public record shows
+which device ran a prepared screen; the hits are the same either way.</p>
+<h2 id="request-the-gpu-for-a-corpus-pre-screen">Request the GPU for a corpus pre-screen<a class="headerlink" href="#request-the-gpu-for-a-corpus-pre-screen" title="Permanent link">&para;</a></h2>
+<p><code>Substructure.match_corpus</code> and <code>MCS.match_corpus</code> rule out, with a proof,
+the targets that cannot contain the query or cannot share <code>minimum_atoms</code>
+atoms with it, and search the remaining targets on the CPU. With
+<code>gpu_prefilter=True</code> they ask an attached device to run that pre-screen,
+whatever the corpus size. Without a usable device, or if device work fails,
+the CPU pre-screen runs instead. Decisions, bounds and matches are identical
+either way, and no <code>prewarm()</code> is needed.</p>
+<p>SMARTS queries, and searches with <code>match_atom_type=False</code>, a node limit, an
+immediate timeout or a cancellation token, search every target on the CPU
+without a pre-screen. MCS searches do the same for MCES, atom weights and
+excluded target atoms.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">benzodiazepines</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="p">}</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="p">)</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="k">def</span><span class="w"> </span><span class="nf">decisions</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">    </span><span class="sd">"""Each target's decision, atom bound and matches, leaving out timings."""</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="k">return</span> <span class="p">[(</span><span class="n">item</span><span class="o">.</span><span class="n">target_index</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">atom_upper_bound</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">threshold_reached</span><span class="p">,</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>             <span class="n">item</span><span class="o">.</span><span class="n">proven_below_threshold</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>             <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">complete</span><span class="p">,</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>              <span class="n">item</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">matches</span><span class="p">))</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="c1"># 5-phenyl-1,4-benzodiazepin-2-one core</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="n">core</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"O=C1CN=C(c2ccccc2)c2ccccc2N1"</span><span class="p">)</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="n">on_cpu</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="n">requested</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">gpu_prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">(</span><span class="n">requested</span><span class="p">)</span> <span class="o">==</span> <span class="n">decisions</span><span class="p">(</span><span class="n">on_cpu</span><span class="p">)</span>
+<a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">target_index</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">on_cpu</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">threshold_reached</span><span class="p">]</span>
+<a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a><span class="n">ruled_out</span> <span class="o">=</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">target_index</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">on_cpu</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+<a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"core found in"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">),</span> <span class="s2">"targets"</span><span class="p">)</span>
+<a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"ruled out before matching:"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ruled_out</span><span class="p">))</span>
+<a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="o">==</span> <span class="mi">9</span>
+<a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a><span class="k">assert</span> <span class="n">ruled_out</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"alprazolam"</span><span class="p">,</span> <span class="s2">"triazolam"</span><span class="p">,</span> <span class="s2">"midazolam"</span><span class="p">,</span> <span class="s2">"clobazam"</span><span class="p">]</span>
+<a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a>
+<a id="__codelineno-6-44" name="__codelineno-6-44" href="#__codelineno-6-44"></a><span class="c1"># Targets that share all 22 atoms of alprazolam</span>
+<a id="__codelineno-6-45" name="__codelineno-6-45" href="#__codelineno-6-45"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="p">[</span><span class="s2">"alprazolam"</span><span class="p">])</span>
+<a id="__codelineno-6-46" name="__codelineno-6-46" href="#__codelineno-6-46"></a><span class="n">on_cpu</span> <span class="o">=</span> <span class="n">mcs</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">22</span><span class="p">)</span>
+<a id="__codelineno-6-47" name="__codelineno-6-47" href="#__codelineno-6-47"></a><span class="n">requested</span> <span class="o">=</span> <span class="n">mcs</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="n">gpu_prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">(</span><span class="n">requested</span><span class="p">)</span> <span class="o">==</span> <span class="n">decisions</span><span class="p">(</span><span class="n">on_cpu</span><span class="p">)</span>
+<a id="__codelineno-6-49" name="__codelineno-6-49" href="#__codelineno-6-49"></a><span class="n">shared</span> <span class="o">=</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">target_index</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">on_cpu</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">threshold_reached</span><span class="p">]</span>
+<a id="__codelineno-6-50" name="__codelineno-6-50" href="#__codelineno-6-50"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"all 22 atoms shared:"</span><span class="p">,</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">shared</span><span class="p">))</span>
+<a id="__codelineno-6-51" name="__codelineno-6-51" href="#__codelineno-6-51"></a><span class="k">assert</span> <span class="n">shared</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"alprazolam"</span><span class="p">,</span> <span class="s2">"triazolam"</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>core found in 9 targets
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>ruled out before matching: alprazolam, triazolam, midazolam, clobazam
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>all 22 atoms shared: alprazolam, triazolam
+</code></pre></div>
+<p>A target that was ruled out has <code>result</code> set to <code>None</code> and
+<code>proven_below_threshold</code> set to True. The other <code>CorpusSearchResult</code> fields
+are described in
+<a href="../SCREENING/#substructure-screen-with-exact-confirmation">Screening a library</a>.</p>
+<h2 id="choose-a-backend-for-packed-indexes">Choose a backend for packed indexes<a class="headerlink" href="#choose-a-backend-for-packed-indexes" title="Permanent link">&para;</a></h2>
+<p>The searches of a packed <code>FingerprintCorpus</code> (<code>similarities</code>, <code>screen_many</code>,
+<code>threshold_pairs</code> and <code>top_k_pairs</code>) and the clustering functions <code>butina</code>
+and <code>maxmin</code> take a <code>backend</code> argument:</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"cpu"</code></td>
+<td>The default. The scan runs on the CPU and does not load <code>smsd-cuda</code>.</td>
+</tr>
+<tr>
+<td><code>"cuda"</code></td>
+<td>The scan runs on the GPU. It raises <code>RuntimeError</code> when no device is usable and <code>ValueError</code> for fingerprints wider than 65,536 bits.</td>
+</tr>
+<tr>
+<td><code>"auto"</code></td>
+<td>The scan runs on the GPU whenever a device is usable and the width is supported, for an index of any size, and on the CPU otherwise.</td>
+</tr>
+</tbody>
+</table>
+<p>Hits, scores, their order, clusters and selections are identical for all
+three. Once device work has started, an error is raised rather than retried
+on the CPU, under <code>"auto"</code> as well. A packed index needs NumPy; see
+<a href="../PACKED_INDEX/">Packed fingerprint index</a> for building and reopening one.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.clustering</span><span class="w"> </span><span class="kn">import</span> <span class="n">butina</span><span class="p">,</span> <span class="n">maxmin</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">smsd_cuda</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">smsd_cuda</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">cuda_status</span><span class="p">():</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">    </span><span class="sd">"""Return whether backend="cuda" can be used here, and the reason when it cannot."""</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"0"</span><span class="p">):</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"disabled by SMSD_DISABLE_GPU"</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"smsd-cuda is not installed"</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span> <span class="o">!=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">:</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"smsd-cuda </span><span class="si">{</span><span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2"> does not match "</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>                       <span class="sa">f</span><span class="s2">"smsd </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>    <span class="n">reason</span> <span class="o">=</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">unavailable_reason</span><span class="p">()</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="k">return</span> <span class="n">reason</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">reason</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="n">benzodiazepines</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-8-39" name="__codelineno-8-39" href="#__codelineno-8-39"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-8-40" name="__codelineno-8-40" href="#__codelineno-8-40"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-8-41" name="__codelineno-8-41" href="#__codelineno-8-41"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-8-43" name="__codelineno-8-43" href="#__codelineno-8-43"></a><span class="p">}</span>
+<a id="__codelineno-8-44" name="__codelineno-8-44" href="#__codelineno-8-44"></a><span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="p">)</span>
+<a id="__codelineno-8-45" name="__codelineno-8-45" href="#__codelineno-8-45"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-8-46" name="__codelineno-8-46" href="#__codelineno-8-46"></a><span class="n">ready</span><span class="p">,</span> <span class="n">reason</span> <span class="o">=</span> <span class="n">cuda_status</span><span class="p">()</span>
+<a id="__codelineno-8-47" name="__codelineno-8-47" href="#__codelineno-8-47"></a>
+<a id="__codelineno-8-48" name="__codelineno-8-48" href="#__codelineno-8-48"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-8-49" name="__codelineno-8-49" href="#__codelineno-8-49"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"benzodiazepines.fp"</span>
+<a id="__codelineno-8-50" name="__codelineno-8-50" href="#__codelineno-8-50"></a>    <span class="k">with</span> <span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+<a id="__codelineno-8-51" name="__codelineno-8-51" href="#__codelineno-8-51"></a>                                       <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-8-52" name="__codelineno-8-52" href="#__codelineno-8-52"></a>        <span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">benzodiazepines</span><span class="p">[</span><span class="s2">"diazepam"</span><span class="p">],</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-8-53" name="__codelineno-8-53" href="#__codelineno-8-53"></a>        <span class="n">hits</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">corpus</span><span class="o">.</span><span class="n">similarities</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">))</span>
+<a id="__codelineno-8-54" name="__codelineno-8-54" href="#__codelineno-8-54"></a>        <span class="n">named</span> <span class="o">=</span> <span class="p">[(</span><span class="n">names</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">]</span>
+<a id="__codelineno-8-55" name="__codelineno-8-55" href="#__codelineno-8-55"></a>        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">named</span><span class="p">:</span>
+<a id="__codelineno-8-56" name="__codelineno-8-56" href="#__codelineno-8-56"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&lt;11</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-8-57" name="__codelineno-8-57" href="#__codelineno-8-57"></a>        <span class="k">assert</span> <span class="n">named</span> <span class="o">==</span> <span class="p">[(</span><span class="s2">"diazepam"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">"nordazepam"</span><span class="p">,</span> <span class="mf">0.528</span><span class="p">),</span>
+<a id="__codelineno-8-58" name="__codelineno-8-58" href="#__codelineno-8-58"></a>                         <span class="p">(</span><span class="s2">"temazepam"</span><span class="p">,</span> <span class="mf">0.582</span><span class="p">),</span> <span class="p">(</span><span class="s2">"tetrazepam"</span><span class="p">,</span> <span class="mf">0.542</span><span class="p">),</span>
+<a id="__codelineno-8-59" name="__codelineno-8-59" href="#__codelineno-8-59"></a>                         <span class="p">(</span><span class="s2">"clobazam"</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)]</span>
+<a id="__codelineno-8-60" name="__codelineno-8-60" href="#__codelineno-8-60"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"CUDA calls after the CPU scan:"</span><span class="p">,</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span><span class="p">)</span>
+<a id="__codelineno-8-61" name="__codelineno-8-61" href="#__codelineno-8-61"></a>        <span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">==</span> <span class="mi">0</span>
+<a id="__codelineno-8-62" name="__codelineno-8-62" href="#__codelineno-8-62"></a>
+<a id="__codelineno-8-63" name="__codelineno-8-63" href="#__codelineno-8-63"></a>        <span class="c1"># "auto" may run on either device, so check its results, not where it ran.</span>
+<a id="__codelineno-8-64" name="__codelineno-8-64" href="#__codelineno-8-64"></a>        <span class="n">automatic</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">corpus</span><span class="o">.</span><span class="n">similarities</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">))</span>
+<a id="__codelineno-8-65" name="__codelineno-8-65" href="#__codelineno-8-65"></a>        <span class="k">assert</span> <span class="n">automatic</span> <span class="o">==</span> <span class="n">hits</span>
+<a id="__codelineno-8-66" name="__codelineno-8-66" href="#__codelineno-8-66"></a>        <span class="n">clusters</span> <span class="o">=</span> <span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">)</span>
+<a id="__codelineno-8-67" name="__codelineno-8-67" href="#__codelineno-8-67"></a>        <span class="k">assert</span> <span class="n">clusters</span> <span class="o">==</span> <span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
+<a id="__codelineno-8-68" name="__codelineno-8-68" href="#__codelineno-8-68"></a>        <span class="n">picked</span> <span class="o">=</span> <span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">)</span>
+<a id="__codelineno-8-69" name="__codelineno-8-69" href="#__codelineno-8-69"></a>        <span class="k">assert</span> <span class="n">picked</span> <span class="o">==</span> <span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
+<a id="__codelineno-8-70" name="__codelineno-8-70" href="#__codelineno-8-70"></a>
+<a id="__codelineno-8-71" name="__codelineno-8-71" href="#__codelineno-8-71"></a>        <span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+<a id="__codelineno-8-72" name="__codelineno-8-72" href="#__codelineno-8-72"></a>            <span class="n">before</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span>
+<a id="__codelineno-8-73" name="__codelineno-8-73" href="#__codelineno-8-73"></a>            <span class="n">on_gpu</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">corpus</span><span class="o">.</span><span class="n">similarities</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">))</span>
+<a id="__codelineno-8-74" name="__codelineno-8-74" href="#__codelineno-8-74"></a>            <span class="k">assert</span> <span class="n">on_gpu</span> <span class="o">==</span> <span class="n">hits</span>
+<a id="__codelineno-8-75" name="__codelineno-8-75" href="#__codelineno-8-75"></a>            <span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">&gt;</span> <span class="n">before</span>  <span class="c1"># the device completed the scan</span>
+<a id="__codelineno-8-76" name="__codelineno-8-76" href="#__codelineno-8-76"></a>            <span class="k">assert</span> <span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span> <span class="o">==</span> <span class="n">clusters</span>
+<a id="__codelineno-8-77" name="__codelineno-8-77" href="#__codelineno-8-77"></a>            <span class="k">assert</span> <span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span> <span class="o">==</span> <span class="n">picked</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>diazepam    1.000
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>nordazepam  0.528
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>temazepam   0.582
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>tetrazepam  0.542
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>clobazam    0.500
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>CUDA calls after the CPU scan: 0
+</code></pre></div>
+<p>The branch under <code>if ready:</code> runs only where <code>backend="cuda"</code> can be used;
+on any other machine the program prints the same lines.</p>
+<h2 id="keep-work-on-the-cpu">Keep work on the CPU<a class="headerlink" href="#keep-work-on-the-cpu" title="Permanent link">&para;</a></h2>
+<p>Three switches keep work on the CPU:</p>
+<ul>
+<li><code>SMSD_DISABLE_GPU</code>, set to any value other than an empty string or <code>0</code>,
+  disables every GPU route in the process. Prepared screens and pre-screens
+  run on the CPU, <code>"auto"</code> uses the CPU and <code>backend="cuda"</code> raises. The
+  variable is read at each call, so a program can set and remove it as it
+  runs. It is the only switch for prepared screens.</li>
+<li><code>gpu_prefilter=False</code>, the default, keeps a corpus pre-screen on the CPU.</li>
+<li><code>backend="cpu"</code>, the default, keeps a packed scan or clustering run on the
+  CPU.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">available</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_is_available</span><span class="p">()</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"GPU available:"</span><span class="p">,</span> <span class="n">available</span><span class="p">)</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="k">assert</span> <span class="n">available</span> <span class="ow">is</span> <span class="kc">False</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">marked</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"[GPU disabled]"</span><span class="p">)</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"backend string ends with [GPU disabled]:"</span><span class="p">,</span> <span class="n">marked</span><span class="p">)</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="k">assert</span> <span class="n">marked</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="c1"># Prepared screens and pre-screens run on the CPU with their usual results.</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"c1ccccc1O"</span><span class="p">])</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">()</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="n">search</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1O"</span><span class="p">)</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="k">assert</span> <span class="n">search</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">gpu_prefilter</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">threshold_reached</span>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>    <span class="k">with</span> <span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"bits.fp"</span><span class="p">,</span> <span class="p">[[</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>                                  <span class="n">fp_size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="k">as</span> <span class="n">packed</span><span class="p">:</span>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>        <span class="n">hits</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">packed</span><span class="o">.</span><span class="n">similarities</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">))</span>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"auto:"</span><span class="p">,</span> <span class="n">hits</span><span class="p">,</span> <span class="s2">"| CUDA calls:"</span><span class="p">,</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span><span class="p">)</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>        <span class="k">assert</span> <span class="n">hits</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)]</span> <span class="ow">and</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">==</span> <span class="mi">0</span>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="c1"># The variable is read at each call, so removing it allows the GPU again.</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">]</span>
+<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="n">marked</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"[GPU disabled]"</span><span class="p">)</span>
+<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"after removing the variable:"</span><span class="p">,</span> <span class="n">marked</span><span class="p">)</span>
+<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">marked</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>GPU available: False
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>backend string ends with [GPU disabled]: True
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>auto: [(0, 1.0), (1, 0.5)] | CUDA calls: 0
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>after removing the variable: False
+</code></pre></div>
+<h2 id="fallback-and-errors">Fallback and errors<a class="headerlink" href="#fallback-and-errors" title="Permanent link">&para;</a></h2>
+<p>The routes treat a missing or failing device differently:</p>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>No usable device</th>
+<th>Error during device work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prepared screens, <code>warm_start</code> and the stream functions</td>
+<td>The CPU</td>
+<td>The CPU, silently, with the same hits</td>
+</tr>
+<tr>
+<td><code>match_corpus(..., gpu_prefilter=True)</code></td>
+<td>The CPU pre-screen</td>
+<td>The CPU pre-screen, with the same decisions</td>
+</tr>
+<tr>
+<td>Packed <code>backend="auto"</code></td>
+<td>The CPU</td>
+<td>The error is raised</td>
+</tr>
+<tr>
+<td>Packed <code>backend="cuda"</code></td>
+<td><code>RuntimeError</code></td>
+<td>The error is raised</td>
+</tr>
+</tbody>
+</table>
+<p>The packed searches are generators. A <code>backend="cuda"</code> request that cannot be
+met raises when the first item is requested, not when the method is called,
+so keep the iteration inside the <code>try</code> block. The program below sets
+<code>SMSD_DISABLE_GPU</code> so that its output is the same on every machine.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># Make the device unusable, so that every machine prints the same lines.</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="k">with</span> <span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"bits.fp"</span><span class="p">,</span> <span class="p">[[</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>                                  <span class="n">fp_size</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>        <span class="n">pending</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">similarities</span><span class="p">([</span><span class="mi">1</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"the call returns a"</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"generator"</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>            <span class="nb">next</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>        <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>            <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"backend='cuda' should fail without a device"</span><span class="p">)</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"first item:"</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>        <span class="k">assert</span> <span class="n">message</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"CUDA screening is disabled by SMSD_DISABLE_GPU"</span><span class="p">)</span>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>    <span class="c1"># Fingerprints wider than 65,536 bits stay on the CPU under "auto".</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>    <span class="k">with</span> <span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"wide.fp"</span><span class="p">,</span> <span class="p">[[</span><span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">70000</span><span class="p">]],</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>                                  <span class="n">fp_size</span><span class="o">=</span><span class="mi">70001</span><span class="p">)</span> <span class="k">as</span> <span class="n">wide</span><span class="p">:</span>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>        <span class="n">hits</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">wide</span><span class="o">.</span><span class="n">similarities</span><span class="p">([</span><span class="mi">70000</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">))</span>
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"auto, 70,001 bits:"</span><span class="p">,</span> <span class="n">hits</span><span class="p">)</span>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>        <span class="k">assert</span> <span class="n">hits</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]</span>
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>            <span class="nb">list</span><span class="p">(</span><span class="n">wide</span><span class="o">.</span><span class="n">similarities</span><span class="p">([</span><span class="mi">70000</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">))</span>
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>            <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"backend='cuda' should refuse 70,001 bits"</span><span class="p">)</span>
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"cuda, 70,001 bits:"</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>        <span class="k">assert</span> <span class="n">message</span> <span class="o">==</span> <span class="s2">"CUDA packed screening supports at most 65536 bits"</span>
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a><span class="c1"># Argument errors are raised at once, whatever the machine.</span>
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">])</span>
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a>    <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CO"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">gpu_prefilter</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a><span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-12-46" name="__codelineno-12-46" href="#__codelineno-12-46"></a>    <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-12-47" name="__codelineno-12-47" href="#__codelineno-12-47"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"gpu_prefilter=1:"</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+<a id="__codelineno-12-48" name="__codelineno-12-48" href="#__codelineno-12-48"></a><span class="k">assert</span> <span class="n">message</span> <span class="o">==</span> <span class="s2">"GPU prefilter flag must be a bool"</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>the call returns a generator
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>first item: The requested CUDA packed-screening backend is unavailable: CUDA screening is disabled by SMSD_DISABLE_GPU
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>auto, 70,001 bits: [(1, 1.0)]
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>cuda, 70,001 bits: CUDA packed screening supports at most 65536 bits
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>gpu_prefilter=1: GPU prefilter flag must be a bool
+</code></pre></div>
+<p>The <code>RuntimeError</code> message gives the cause after the colon:
+<code>No module named 'smsd_cuda'</code> when the package is missing,
+<code>smsd and smsd-cuda must have the same version</code> for a version mismatch,
+<code>no CUDA device was found</code>, or a reason that names a device below compute
+capability 7.5. A <code>backend</code> value other than <code>"cpu"</code>, <code>"cuda"</code> or <code>"auto"</code>
+raises <code>ValueError</code>.</p>
+<p>If the installed <code>smsd-cuda</code> serves another version of <code>smsd</code>, the first call
+that looks for it issues one <code>RuntimeWarning</code>. The warning names both versions,
+asks for <code>smsd-cuda==8.1.0</code> and says that screening runs on the CPU; prepared
+screens and pre-screens then stay on the CPU.</p>
+<h2 id="prove-that-the-gpu-ran">Prove that the GPU ran<a class="headerlink" href="#prove-that-the-gpu-ran" title="Permanent link">&para;</a></h2>
+<p><code>gpu_is_available()</code> and <code>gpu_device_info()</code> report what is available, not
+what any call used. The only public evidence that work ran on the device is
+<code>FingerprintCorpus.cuda_calls</code>: the number of packed CUDA calls, including
+clustering passes, that the corpus has completed. Read it before and after a
+call, as the packed-index example does; an increase proves that the device
+ran. It is not a count of queries, hits or kernels, and it says nothing about
+speed.</p>
+<p>Prepared screens and <code>gpu_prefilter=True</code> searches have no public counter and
+do not change <code>cuda_calls</code>. Their results are identical on either device, so
+compare results rather than devices.</p>
+<h2 id="time-and-compare-cpu-and-gpu">Time and compare CPU and GPU<a class="headerlink" href="#time-and-compare-cpu-and-gpu" title="Permanent link">&para;</a></h2>
+<p>Timings depend on the device, the processor, the corpus, the thread count and
+the load on the machine. Measure on the hardware and data that matter, and
+treat any figure as specific to that set-up. A fair comparison:</p>
+<ul>
+<li>calls <code>smsd_cuda.preload()</code> first, so that device start-up is not timed;</li>
+<li>prepares the corpus and runs each call once before timing, so that the
+  first transfer to the device is not timed;</li>
+<li>times with <code>time.perf_counter()</code> and keeps the best of several runs;</li>
+<li>asserts that the GPU results equal the CPU results.</li>
+</ul>
+<p>The harness below writes its timings to standard error and prints only
+results that agree on every machine. It holds the prepared screen on the CPU
+with <code>SMSD_DISABLE_GPU</code>, then allows the GPU for the 2,000-target corpus with
+<code>SMSD_CUDA_MIN_TARGETS</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">smsd_cuda</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>    <span class="n">smsd_cuda</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="k">def</span><span class="w"> </span><span class="nf">cuda_status</span><span class="p">():</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">    </span><span class="sd">"""Return whether backend="cuda" can be used here, and the reason when it cannot."""</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"0"</span><span class="p">):</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"disabled by SMSD_DISABLE_GPU"</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"smsd-cuda is not installed"</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>    <span class="k">if</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span> <span class="o">!=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">:</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"smsd-cuda </span><span class="si">{</span><span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2"> does not match "</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>                       <span class="sa">f</span><span class="s2">"smsd </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>    <span class="n">reason</span> <span class="o">=</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">unavailable_reason</span><span class="p">()</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>    <span class="k">return</span> <span class="n">reason</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">reason</span>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a><span class="k">def</span><span class="w"> </span><span class="nf">timed</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">work</span><span class="p">,</span> <span class="n">repeats</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a><span class="w">    </span><span class="sd">"""Run once to warm up, then write the best of several timed runs to stderr."""</span>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">work</span><span class="p">()</span>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a>    <span class="n">best</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeats</span><span class="p">):</span>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a>        <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a>        <span class="k">assert</span> <span class="n">work</span><span class="p">()</span> <span class="o">==</span> <span class="n">result</span>
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a>        <span class="n">best</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">best</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)</span>
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">best</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> s"</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a>    <span class="k">return</span> <span class="n">result</span>
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a>
+<a id="__codelineno-14-40" name="__codelineno-14-40" href="#__codelineno-14-40"></a>
+<a id="__codelineno-14-41" name="__codelineno-14-41" href="#__codelineno-14-41"></a><span class="c1"># Substituted rings with chains of 0 to 49 carbons: 5 x 8 x 50 = 2,000 molecules.</span>
+<a id="__codelineno-14-42" name="__codelineno-14-42" href="#__codelineno-14-42"></a><span class="n">rings</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="s2">"c1ccncc1"</span><span class="p">,</span> <span class="s2">"C1CCCCC1"</span><span class="p">,</span> <span class="s2">"c1ccoc1"</span><span class="p">,</span> <span class="s2">"c1ccsc1"</span><span class="p">]</span>
+<a id="__codelineno-14-43" name="__codelineno-14-43" href="#__codelineno-14-43"></a><span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"O"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"C#N"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">]</span>
+<a id="__codelineno-14-44" name="__codelineno-14-44" href="#__codelineno-14-44"></a><span class="n">library</span> <span class="o">=</span> <span class="p">[</span><span class="n">ring</span> <span class="o">+</span> <span class="n">group</span> <span class="o">+</span> <span class="s2">"C"</span> <span class="o">*</span> <span class="n">length</span>
+<a id="__codelineno-14-45" name="__codelineno-14-45" href="#__codelineno-14-45"></a>           <span class="k">for</span> <span class="n">ring</span> <span class="ow">in</span> <span class="n">rings</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span> <span class="k">for</span> <span class="n">length</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span>
+<a id="__codelineno-14-46" name="__codelineno-14-46" href="#__codelineno-14-46"></a><span class="n">queries</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"c1ccccc1O"</span><span class="p">,</span> <span class="s2">"c1ccncc1Cl"</span><span class="p">,</span> <span class="s2">"C1CCCCC1C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-14-47" name="__codelineno-14-47" href="#__codelineno-14-47"></a><span class="n">ready</span><span class="p">,</span> <span class="n">reason</span> <span class="o">=</span> <span class="n">cuda_status</span><span class="p">()</span>
+<a id="__codelineno-14-48" name="__codelineno-14-48" href="#__codelineno-14-48"></a><span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+<a id="__codelineno-14-49" name="__codelineno-14-49" href="#__codelineno-14-49"></a>    <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">preload</span><span class="p">()</span>  <span class="c1"># keep device start-up out of the timings</span>
+<a id="__codelineno-14-50" name="__codelineno-14-50" href="#__codelineno-14-50"></a>
+<a id="__codelineno-14-51" name="__codelineno-14-51" href="#__codelineno-14-51"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>
+<a id="__codelineno-14-52" name="__codelineno-14-52" href="#__codelineno-14-52"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">()</span>
+<a id="__codelineno-14-53" name="__codelineno-14-53" href="#__codelineno-14-53"></a><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+<a id="__codelineno-14-54" name="__codelineno-14-54" href="#__codelineno-14-54"></a><span class="n">cpu_hits</span> <span class="o">=</span> <span class="n">timed</span><span class="p">(</span><span class="s2">"prepared screen, CPU"</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">))</span>
+<a id="__codelineno-14-55" name="__codelineno-14-55" href="#__codelineno-14-55"></a><span class="k">del</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">]</span>
+<a id="__codelineno-14-56" name="__codelineno-14-56" href="#__codelineno-14-56"></a><span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+<a id="__codelineno-14-57" name="__codelineno-14-57" href="#__codelineno-14-57"></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"SMSD_CUDA_MIN_TARGETS"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">))</span>
+<a id="__codelineno-14-58" name="__codelineno-14-58" href="#__codelineno-14-58"></a>    <span class="n">gpu_hits</span> <span class="o">=</span> <span class="n">timed</span><span class="p">(</span><span class="s2">"prepared screen, GPU allowed"</span><span class="p">,</span>
+<a id="__codelineno-14-59" name="__codelineno-14-59" href="#__codelineno-14-59"></a>                     <span class="k">lambda</span><span class="p">:</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">))</span>
+<a id="__codelineno-14-60" name="__codelineno-14-60" href="#__codelineno-14-60"></a>    <span class="k">assert</span> <span class="n">gpu_hits</span> <span class="o">==</span> <span class="n">cpu_hits</span>
+<a id="__codelineno-14-61" name="__codelineno-14-61" href="#__codelineno-14-61"></a><span class="n">counts</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="k">for</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">cpu_hits</span><span class="p">]</span>
+<a id="__codelineno-14-62" name="__codelineno-14-62" href="#__codelineno-14-62"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"targets:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">),</span> <span class="s2">"| hits per query:"</span><span class="p">,</span> <span class="n">counts</span><span class="p">)</span>
+<a id="__codelineno-14-63" name="__codelineno-14-63" href="#__codelineno-14-63"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2000</span> <span class="ow">and</span> <span class="n">counts</span> <span class="o">==</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+<a id="__codelineno-14-64" name="__codelineno-14-64" href="#__codelineno-14-64"></a>
+<a id="__codelineno-14-65" name="__codelineno-14-65" href="#__codelineno-14-65"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-14-66" name="__codelineno-14-66" href="#__codelineno-14-66"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-14-67" name="__codelineno-14-67" href="#__codelineno-14-67"></a>    <span class="k">with</span> <span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">library</span><span class="p">)</span> <span class="k">as</span> <span class="n">packed</span><span class="p">:</span>
+<a id="__codelineno-14-68" name="__codelineno-14-68" href="#__codelineno-14-68"></a>        <span class="n">probes</span> <span class="o">=</span> <span class="p">[</span><span class="n">packed</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">450</span><span class="p">,</span> <span class="mi">1600</span><span class="p">)]</span>
+<a id="__codelineno-14-69" name="__codelineno-14-69" href="#__codelineno-14-69"></a>        <span class="n">cpu_rows</span> <span class="o">=</span> <span class="n">timed</span><span class="p">(</span><span class="s2">"packed scan, CPU"</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span>
+<a id="__codelineno-14-70" name="__codelineno-14-70" href="#__codelineno-14-70"></a>            <span class="n">packed</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">probes</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)))</span>
+<a id="__codelineno-14-71" name="__codelineno-14-71" href="#__codelineno-14-71"></a>        <span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+<a id="__codelineno-14-72" name="__codelineno-14-72" href="#__codelineno-14-72"></a>            <span class="n">before</span> <span class="o">=</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span>
+<a id="__codelineno-14-73" name="__codelineno-14-73" href="#__codelineno-14-73"></a>            <span class="n">gpu_rows</span> <span class="o">=</span> <span class="n">timed</span><span class="p">(</span><span class="s2">"packed scan, GPU"</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span>
+<a id="__codelineno-14-74" name="__codelineno-14-74" href="#__codelineno-14-74"></a>                <span class="n">packed</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">probes</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)))</span>
+<a id="__codelineno-14-75" name="__codelineno-14-75" href="#__codelineno-14-75"></a>            <span class="k">assert</span> <span class="n">gpu_rows</span> <span class="o">==</span> <span class="n">cpu_rows</span> <span class="ow">and</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">&gt;</span> <span class="n">before</span>
+<a id="__codelineno-14-76" name="__codelineno-14-76" href="#__codelineno-14-76"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"packed hits:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">cpu_rows</span><span class="p">))</span>
+<a id="__codelineno-14-77" name="__codelineno-14-77" href="#__codelineno-14-77"></a>        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cpu_rows</span><span class="p">)</span> <span class="o">==</span> <span class="mi">12</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>targets: 2000 | hits per query: [2, 9, 2]
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>packed hits: 12
+</code></pre></div>
+<p>A prepared screen gives no public record of the device it used, so the
+harness labels its second timing "GPU allowed". The packed timing is backed by
+the <code>cuda_calls</code> assertion.</p>
+<h2 id="containers">Containers<a class="headerlink" href="#containers" title="Permanent link">&para;</a></h2>
+<p>The GPU image <code>smsd:8.1.0-cuda12.8</code> (linux/amd64) contains <code>smsd</code>, the
+matching <code>smsd-cuda</code> and the CUDA 12 runtime, with Python as its entry point.
+It has no Java command-line tool, no CUDA toolkit and no NumPy. As shipped,
+it supports prepared screens, <code>warm_start</code>, the stream functions and
+<code>match_corpus(..., gpu_prefilter=True)</code>; packed indexes and clustering need
+NumPy added in an image built from it. The image needs the NVIDIA Container
+Toolkit and a compatible host driver, including under WSL2 on Windows.</p>
+<p>After loading the image archive from the release:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.1.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
+</code></pre></div>
+<p>As elsewhere, the backend string shows availability, not use.
+<a href="../COMMAND_LINE/#docker-images">Command line and containers</a> describes the
+CPU images, and the <a href="../../HOWTO-INSTALL/#docker">installation guide</a> covers
+loading and building every image.</p>
+<h2 id="metal-and-c">Metal and C++<a class="headerlink" href="#metal-and-c" title="Permanent link">&para;</a></h2>
+<p>Python never screens on Metal, and the published wheels include neither
+Metal nor native CUDA support. A Python source build with Metal or CUDA
+switched on changes only what <code>gpu_is_available()</code> and <code>gpu_device_info()</code>
+report. In C++, a program built from source can link the Metal library and
+request Metal fingerprint screening explicitly; see
+<a href="../../CPP/#optional-metal-fingerprint-screening">Optional Metal fingerprint screening</a>.
+Matching stays on the CPU there as well.</p>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Used by</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpu_prefilter</code></td>
+<td><code>Substructure.match_corpus</code>, <code>MCS.match_corpus</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td><code>True</code> asks an attached device to run the pre-screen; a value that is not a <code>bool</code> raises <code>TypeError</code></td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td><code>FingerprintCorpus.similarities</code>, <code>screen_many</code>, <code>threshold_pairs</code>, <code>top_k_pairs</code>; <code>butina</code>, <code>maxmin</code></td>
+<td><code>str</code></td>
+<td><code>"cpu"</code></td>
+<td><code>"cpu"</code>, <code>"cuda"</code> or <code>"auto"</code>; any other value raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>num_threads</code></td>
+<td><code>TargetCorpus.prewarm</code>, <code>screen</code>, <code>screen_many</code>; <code>warm_start</code>; the stream functions; <code>match_corpus</code></td>
+<td><code>int</code></td>
+<td><code>0</code></td>
+<td>CPU threads; <code>0</code> uses the OpenMP default</td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td><code>warm_start</code></td>
+<td><code>float</code></td>
+<td><code>0.0</code></td>
+<td>Inclusive ECFP4 Tanimoto threshold; the default returns every target, so pass one</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Function or attribute</th>
+<th>Returns</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.gpu_is_available()</code></td>
+<td><code>bool</code></td>
+<td>Whether a GPU backend is available</td>
+</tr>
+<tr>
+<td><code>smsd.gpu_device_info()</code></td>
+<td><code>str</code></td>
+<td>A description of the backend, such as <code>CPU: ...</code> or <code>GPU: ...</code></td>
+</tr>
+<tr>
+<td><code>smsd.warm_start(corpus, query, threshold=0.0, *, num_threads=0)</code></td>
+<td><code>list[int]</code></td>
+<td>Prepares the corpus when needed and screens one query</td>
+</tr>
+<tr>
+<td><code>FingerprintCorpus.cuda_calls</code></td>
+<td><code>int</code></td>
+<td>Packed CUDA calls completed by this corpus</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.is_available()</code></td>
+<td><code>bool</code></td>
+<td>Whether a device of compute capability 7.5 or later is present</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.unavailable_reason()</code></td>
+<td><code>str</code> or <code>None</code></td>
+<td>Why no device can be used, or <code>None</code></td>
+</tr>
+<tr>
+<td><code>smsd_cuda.device_info()</code></td>
+<td><code>str</code></td>
+<td>Device name, compute capability and memory; raises <code>RuntimeError</code> without a usable device</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.preload()</code></td>
+<td><code>None</code></td>
+<td>Initialises the device and loads the screening kernels, without uploading data or changing automatic use</td>
+</tr>
+<tr>
+<td><code>smsd_cuda.__version__</code></td>
+<td><code>str</code></td>
+<td>Must equal <code>smsd.__version__</code></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compute capability</td>
+<td>7.5 or later</td>
+</tr>
+<tr>
+<td>Automatic device rule</td>
+<td>A Tesla T4 and 100,000 targets, unless <code>SMSD_CUDA_MIN_TARGETS</code> is set</td>
+</tr>
+<tr>
+<td>Packed fingerprint width on the GPU</td>
+<td>65,536 bits; wider indexes use the CPU under <code>"auto"</code> and raise <code>ValueError</code> under <code>"cuda"</code></td>
+</tr>
+<tr>
+<td>Queries in one packed <code>screen_many</code> call</td>
+<td>32, on either device</td>
+</tr>
+<tr>
+<td>Byte order for packed GPU scans</td>
+<td>Little-endian host</td>
+</tr>
+</tbody>
+</table>
+<h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SMSD_DISABLE_GPU</code></td>
+<td>Unset</td>
+<td>Unset, empty or <code>0</code> allows the GPU. Any other value keeps every route on the CPU and makes <code>backend="cuda"</code> raise. Read at each call.</td>
+</tr>
+<tr>
+<td><code>SMSD_CUDA_MIN_TARGETS</code></td>
+<td>Unset</td>
+<td>A positive whole number N, written in decimal digits only, lets automatic prepared screens use any supported device for corpora of N targets or more; on a Tesla T4 it replaces 100,000. Signs, spaces, exponents, <code>0</code> and values too large for 64 bits are ignored. Read at each screen. It does not affect <code>gpu_prefilter</code> or <code>backend</code>.</td>
+</tr>
+<tr>
+<td><code>OMP_NUM_THREADS</code></td>
+<td>Unset</td>
+<td>The CPU threads used when <code>num_threads</code> is <code>0</code>; when unset, OpenMP chooses.</td>
+</tr>
+</tbody>
+</table>
+<p><code>SMSD_CUDA_POOL</code> and <code>SMSD_CUDA_GRAPHS</code> tune the device workspace; see
+<a href="../../packaging/smsd-cuda/README.md#retained-workspace-and-graph-replay">Retained workspace and graph replay</a>.</p>
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Graph matching never runs on the GPU. A GPU screens or pre-screens, and
+  every reported match comes from a CPU search.</li>
+<li>Prepared screens need <code>prewarm()</code> after construction and after every
+  addition; without it, <code>screen</code> and <code>screen_many</code> return no hits rather than
+  raising. <code>warm_start</code> prepares the corpus when needed. See
+  <a href="../SCREENING/#similarity-screen-in-memory">Screening a library</a>.</li>
+<li>A prepared corpus keeps its fingerprints on the device between screens.
+  Adding targets drops that copy, and the next screen transfers them again.</li>
+<li>Results do not depend on the device or the thread count, and thresholds are
+  inclusive on both devices.</li>
+<li><code>cuda_calls</code> counts packed calls only; it stays at 0 for CPU and fallback
+  work.</li>
+<li>The automatic rule is narrow by default, so a small demonstration corpus
+  stays on the CPU unless <code>SMSD_CUDA_MIN_TARGETS</code> is set.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../SCREENING/">Screening a library</a></li>
+<li><a href="../PACKED_INDEX/">Packed fingerprint index</a></li>
+<li><a href="../COMMAND_LINE/">Command line and containers</a></li>
+<li><a href="../../PYTHON/#optional-cuda-screening">Optional CUDA screening</a> in the
+  Python guide</li>
+<li><a href="../../PACKED_CORPORA/#cpu-and-cuda-backends">CPU and CUDA backends</a> for
+  packed corpora</li>
+<li><a href="../../packaging/smsd-cuda/README.md">The smsd-cuda package</a></li>
+<li><a href="../../python/examples/gpu_screening.py">GPU screening example</a> and the
+  <a href="../../python/examples/cpu_gpu_screening.ipynb">CPU and GPU screening notebook</a></li>
+<li><a href="../../HOWTO-INSTALL/#supported-platforms">Supported platforms</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../PACKED_INDEX/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Packed fingerprint index">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Packed fingerprint index
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../COMMAND_LINE/" class="md-footer__link md-footer__link--next" aria-label="Next: Command line and containers">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Command line and containers
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>
