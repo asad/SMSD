@@ -111,3 +111,7 @@
 /* Notebook output: keep printed columns intact and give phones the full width. */
 .jp-RenderedText pre { white-space: pre; word-break: normal; overflow-wrap: normal; overflow-x: auto; }
 @media screen and (max-width: 44.984375em) { .jp-InputPrompt, .jp-OutputPrompt { display: none; } }
+
+/* Live version badges under the hero buttons. */
+.smsd-badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: 1rem; }
+.smsd-badges img { height: 20px; }

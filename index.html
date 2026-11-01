@@ -1842,8 +1842,16 @@ molecules in C++, Java and Python. Every result states whether the search
 completed and whether its answer is proved optimal, so you always know what
 you can rely on.</p>
 <p><a class="md-button md-button--primary" href="guide/GETTING_STARTED/">Get started</a>
-<a class="md-button" href="notebooks/substructure_search/">Try the notebooks</a>
+<a class="md-button" href="notebooks/">Try the notebooks</a>
 <a class="md-button" href="https://github.com/asad/SMSD">GitHub</a></p>
+<p class="smsd-badges">
+<a href="https://pypi.org/project/smsd/"><img src="https://img.shields.io/pypi/v/smsd?label=pypi" alt="PyPI version"></a>
+<a href="https://anaconda.org/bioinception/smsd"><img src="https://img.shields.io/conda/vn/bioinception/smsd?label=conda" alt="Conda version"></a>
+<a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fbioinceptionlabs%2Fsmsd%2Fmaven-metadata.xml&label=maven%20central" alt="Maven Central version"></a>
+<a href="https://github.com/asad/SMSD/releases"><img src="https://img.shields.io/github/v/release/asad/SMSD?label=release" alt="Latest release"></a>
+<a href="https://doi.org/10.5281/zenodo.23639199"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.23639199.svg" alt="Software DOI"></a>
+<a href="https://github.com/asad/SMSD/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache%202.0-0d3330" alt="Licence: Apache 2.0"></a>
+</p>
 </div>
 <p><img src="assets/img/icon.svg" alt="SMSD Pro icon"></p>
 </div>
@@ -1854,50 +1862,54 @@ you can rely on.</p>
 <div><strong>Apache 2.0</strong><span>Open source, citable by DOI</span></div>
 </div>
 <h2 id="start-in-a-minute">Start in a minute<a class="headerlink" href="#start-in-a-minute" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">NVIDIA GPU (Linux)</label><label for="__tabbed_1_3">Apple GPU (macOS)</label><label for="__tabbed_1_4">Docker</label><label for="__tabbed_1_5">Java (Maven)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:6"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">conda</label><label for="__tabbed_1_3">NVIDIA GPU (Linux)</label><label for="__tabbed_1_4">Apple GPU (macOS)</label><label for="__tabbed_1_5">Docker</label><label for="__tabbed_1_6">Java (Maven)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioinception<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>smsd
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># smsd-8.2.0-cpu-linux-amd64.tar.xz is on the GitHub release page</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>--help
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">&lt;dependency&gt;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.bioinceptionlabs<span class="nt">&lt;/groupId&gt;</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>smsd<span class="nt">&lt;/artifactId&gt;</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.2.0<span class="nt">&lt;/version&gt;</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">&lt;/dependency&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># smsd-8.2.0-cpu-linux-amd64.tar.xz is on the GitHub release page</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>--help
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">&lt;dependency&gt;</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.bioinceptionlabs<span class="nt">&lt;/groupId&gt;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>smsd<span class="nt">&lt;/artifactId&gt;</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.2.0<span class="nt">&lt;/version&gt;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Is benzoic acid inside aspirin?</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">hit</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>                               <span class="c1"># True</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># What do two molecules share, and is that proved maximal?</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">)</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">mcs</span><span class="o">.</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">mcs</span><span class="o">.</span><span class="n">optimal</span><span class="p">)</span>  <span class="c1"># 10 True</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># How similar are they?</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">a</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">b</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># 0.185</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Is benzoic acid inside aspirin?</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">hit</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>                               <span class="c1"># True</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># What do two molecules share, and is that proved maximal?</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">mcs</span><span class="o">.</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">mcs</span><span class="o">.</span><span class="n">optimal</span><span class="p">)</span>  <span class="c1"># 10 True</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="c1"># How similar are they?</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">a</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">b</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="nb">print</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># 0.185</span>
 </code></pre></div>
 <p>Python wheels cover CPython 3.12–3.15 on Linux, Windows and Apple silicon
 Macs, and the Java library and command-line tool are on Maven Central. The
@@ -2107,32 +2119,32 @@ This DOI covers every release; Zenodo also gives each version its own DOI.</p>
 Schrader, R. &amp; Thornton, J. M. (2009). Small Molecule Subgraph Detector
 (SMSD) toolkit. <em>Journal of Cheminformatics</em>, 1, 12.
 <a href="https://doi.org/10.1186/1758-2946-1-12">doi:10.1186/1758-2946-1-12</a></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2026smsdpro</span><span class="p">,</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search}</span><span class="p">,</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{ChemRxiv}</span><span class="p">,</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2026}</span><span class="p">,</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.26434/chemrxiv.15001534/v1}</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">rahman_smsd_pro</span><span class="p">,</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="na">author</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="na">title</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Small Molecule Subgraph Detector}</span><span class="p">,</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="na">publisher</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Zenodo}</span><span class="p">,</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span><span class="na">doi</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{10.5281/zenodo.23639199}</span><span class="p">,</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="na">url</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{https://github.com/asad/SMSD}</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="p">}</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2009smsd</span><span class="p">,</span>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad and Bashton, Matthew and Holliday, Gemma L. and</span>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="s">             Schrader, Rainer and Thornton, Janet M.}</span><span class="p">,</span>
-<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{Small Molecule Subgraph Detector ({SMSD}) toolkit}</span><span class="p">,</span>
-<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Journal of Cheminformatics}</span><span class="p">,</span>
-<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">  </span><span class="na">volume</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{1}</span><span class="p">,</span>
-<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span><span class="na">pages</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{12}</span><span class="p">,</span>
-<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2009}</span><span class="p">,</span>
-<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.1186/1758-2946-1-12}</span>
-<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2026smsdpro</span><span class="p">,</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search}</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{ChemRxiv}</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2026}</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.26434/chemrxiv.15001534/v1}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">}</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">rahman_smsd_pro</span><span class="p">,</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="na">author</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="na">title</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Small Molecule Subgraph Detector}</span><span class="p">,</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span><span class="na">publisher</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Zenodo}</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span><span class="na">doi</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{10.5281/zenodo.23639199}</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span><span class="na">url</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{https://github.com/asad/SMSD}</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="p">}</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2009smsd</span><span class="p">,</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad and Bashton, Matthew and Holliday, Gemma L. and</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="s">             Schrader, Rainer and Thornton, Janet M.}</span><span class="p">,</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{Small Molecule Subgraph Detector ({SMSD}) toolkit}</span><span class="p">,</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Journal of Cheminformatics}</span><span class="p">,</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">  </span><span class="na">volume</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{1}</span><span class="p">,</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="w">  </span><span class="na">pages</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{12}</span><span class="p">,</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2009}</span><span class="p">,</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.1186/1758-2946-1-12}</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="p">}</span>
 </code></pre></div>
 <p>GitHub's <em>Cite this repository</em> button reads the same details from
 <a href="https://github.com/asad/SMSD/blob/master/CITATION.cff">CITATION.cff</a>.</p>

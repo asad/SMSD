@@ -1912,8 +1912,8 @@ Python or Java runtime.</p>
 SMSD source build to avoid incompatible bundled runtimes. Portable SMARTS
 rejects unsupported matching constraints instead of silently dropping them.</p>
 <p>The <code>bioinception</code> conda channel carries <code>smsd</code> for <code>linux-64</code>,
-<code>linux-aarch64</code> and <code>osx-arm64</code>, and <code>smsd-cuda</code> for <code>linux-64</code>; <code>win-64</code>
-packages are to follow. <code>conda search -c bioinception --override-channels smsd</code>
+<code>linux-aarch64</code> and <code>osx-arm64</code>, <code>smsd-cuda</code> for <code>linux-64</code> and <code>smsd-metal</code>
+for <code>osx-arm64</code>; <code>win-64</code> packages are to follow. <code>conda search -c bioinception --override-channels smsd</code>
 lists the versions available for your platform. Install from that channel, with dependencies from
 conda-forge:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioinception<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>smsd
@@ -1929,9 +1929,10 @@ conda environment with CPython 3.12–3.15:</p>
 </code></pre></div>
 <p>SMSD has no required dependencies, so pip adds only SMSD to the environment.
 The <a href="https://github.com/asad/SMSD/blob/master/packaging/conda/README.md">conda guide</a> describes the recipes that
-build <code>smsd</code> and, on Linux x86_64, <code>smsd-cuda</code> for NVIDIA GPU screening. It
-also covers the conda, mamba and Pixi install routes. The conda <code>smsd</code> package is currently built without OpenMP;
-the PyPI wheels use OpenMP for batch work.</p>
+build <code>smsd</code>, <code>smsd-cuda</code> for NVIDIA GPU screening on Linux x86_64 and
+<code>smsd-metal</code> for Apple GPU screening. It also covers the conda, mamba and Pixi
+install routes. Like the PyPI wheels, the conda packages use OpenMP for batch
+work.</p>
 <p><a id="platform-requirements"></a></p>
 <h2 id="supported-platforms">Supported platforms<a class="headerlink" href="#supported-platforms" title="Permanent link">&para;</a></h2>
 <table>
