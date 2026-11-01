@@ -11,7 +11,7 @@ only what it uses:
 
 Both run on Java 8 and later; Java 25 LTS is recommended.
 The [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
-also covers the CLI installers.
+gives the requirements.
 
 From 8.2.0, the Java library and command-line tool receive bug fixes only;
 new features are added to C++ and Python.
@@ -20,19 +20,18 @@ new features are added to C++ and Python.
 
 ### Library
 
-Maven Central has version 8.0.3, without the Java changes made since then; to
-use those, [build from source](#build-from-source). Maven:
+Maven Central has version 8.2.0. Maven:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.3</version>
+  <version>8.2.0</version>
 </dependency>
 ```
 
 Gradle (Kotlin DSL; in the Groovy DSL, write
-`implementation 'com.bioinceptionlabs:smsd:8.0.3'`):
+`implementation 'com.bioinceptionlabs:smsd:8.2.0'`):
 
 ```kotlin
 repositories {
@@ -40,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.3")
+    implementation("com.bioinceptionlabs:smsd:8.2.0")
 }
 ```
 
@@ -63,22 +62,18 @@ automatic module `com.bioinception.smsd`.
 
 ### Command-line tool
 
-The self-contained `smsd-cli-8.0.3-jar-with-dependencies.jar` runs with
-`java -jar`, in the same way as the source-built 8.2.0 JAR under
-[Command-line interface](#command-line-interface).
-Maven Central and the
-[8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3) carry the
-8.0.3 tool: download it from that release, or copy it from Maven Central:
+The self-contained `smsd-cli-8.2.0-jar-with-dependencies.jar` runs with
+`java -jar`, as shown under [Command-line interface](#command-line-interface).
+Copy it from Maven Central:
 
 ```bash
 mvn dependency:copy \
-  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.3:jar:jar-with-dependencies \
+  -Dartifact=com.bioinceptionlabs:smsd-cli:8.2.0:jar:jar-with-dependencies \
   -DoutputDirectory=.
 ```
 
-The CPU [Docker images](../docs/HOWTO-INSTALL.md#docker) of this release carry
-the 8.2.0 tool, and a [source build](#build-from-source) writes it to
-`java/cli/target`.
+The CPU [Docker images](../docs/HOWTO-INSTALL.md#docker) also carry the tool,
+and a [source build](#build-from-source) writes it to `java/cli/target`.
 
 To call the CLI classes, such as `com.bioinception.smsd.cli.SMSDcli`, from an
 application, depend on the CLI module, which brings the library, picocli,
@@ -88,7 +83,7 @@ Jackson and the CDK file readers. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-cli</artifactId>
-  <version>8.0.3</version>
+  <version>8.2.0</version>
 </dependency>
 ```
 
@@ -100,14 +95,14 @@ repositories {
 }
 
 dependencies {
-    implementation("com.bioinceptionlabs:smsd-cli:8.0.3")
+    implementation("com.bioinceptionlabs:smsd-cli:8.2.0")
 }
 ```
 
 On the module path, the CLI JAR is the automatic module
-`com.bioinception.smsd.cli`. Packaged installers for Windows, macOS and Linux
-are described under
-[Java CLI installers](../docs/HOWTO-INSTALL.md#portable-java-cli).
+`com.bioinception.smsd.cli`. The
+[installation guide](../docs/HOWTO-INSTALL.md#portable-java-cli) shows how to
+download and run the self-contained JAR.
 
 ### Build from source
 

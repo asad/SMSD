@@ -10,10 +10,10 @@ similarity screening are not available on the command line; the
 
 ## Get the command-line tool
 
-The 8.2.0 tool comes from a Java source build or from the CPU
-[Docker images](#docker-images). Maven Central and the 8.0.3 release carry the
-8.0.3 tool, which the
-[installation guide](../HOWTO-INSTALL.md#portable-java-cli) describes. From
+The 8.2.0 tool is on Maven Central as `com.bioinceptionlabs:smsd-cli:8.2.0`;
+the [installation guide](../HOWTO-INSTALL.md#portable-java-cli) shows how to
+download and run it. The CPU [Docker images](#docker-images) and a Java source
+build also provide it. From
 8.2.0, the tool and the Java library receive bug fixes only. To build 8.2.0,
 use a JDK (Java 25 LTS preferred) and Maven 3.9 or later, and from the
 repository root run:
@@ -614,8 +614,8 @@ The [molecular tools guide](../MCP_SERVER.md) lists the tools and their limits.
 
 - [Java guide, command-line interface](../JAVA.md#command-line-interface): the
   reference for the tool and the Java library.
-- [Installation guide](../HOWTO-INSTALL.md): source builds, the portable 8.0.3
-  tool and the Docker images.
+- [Installation guide](../HOWTO-INSTALL.md): source builds, the portable
+  command-line tool and the Docker images.
 - [C++ and Java](OTHER_LANGUAGES.md): fingerprints and screening in the other
   languages.
 - [CPU and GPU screening](CPU_GPU.md): where screening work runs.

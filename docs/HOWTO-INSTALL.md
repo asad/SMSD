@@ -21,8 +21,8 @@ screening on an Apple silicon Mac, add the Metal package instead:
 screening runs under WSL2, with the Linux CUDA package or the GPU Docker image;
 see [GPU screening on Windows](guide/GPU_ON_WINDOWS.md). From 8.2.0, the Java
 library and command-line tool receive bug fixes only; new features are added
-to C++ and Python. Maven Central carries them at 8.0.3, as
-`com.bioinceptionlabs:smsd:8.0.3` and `com.bioinceptionlabs:smsd-cli:8.0.3`;
+to C++ and Python. Maven Central carries them at 8.2.0, as
+`com.bioinceptionlabs:smsd:8.2.0` and `com.bioinceptionlabs:smsd-cli:8.2.0`;
 the [Java module README](../java/README.md#installation) gives their Maven and
 Gradle dependencies. The [CPU Docker images](#docker) carry the 8.2.0
 command-line tool, and a [Java source build](#java-source-build) produces the
@@ -75,7 +75,6 @@ the PyPI wheels use OpenMP for batch work.
 | `smsd-cuda` wheel | Linux with glibc 2.34 or later, x86_64 | CPython 3.12–3.15; matching `smsd`; NVIDIA driver compatible with the installed CUDA 12 runtime | ECFP4 screening on NVIDIA GPUs of compute capability 7.5 or later; automatic by default on a Tesla T4 |
 | `smsd-metal` wheel | macOS 14 or later, arm64 (Apple silicon) | CPython 3.12–3.15; matching `smsd` | ECFP4 screening on Apple silicon GPUs; automatic by default on an Apple M5 |
 | Java library, CLI JAR and portable CLI | Windows, macOS or Linux | Java 8 or later; Java 25 LTS preferred | CPU |
-| Java CLI installers (8.0.3 release) | Windows x86_64 (MSI), macOS arm64 (DMG), Linux amd64 (DEB) | Bundled Java 25 runtime | CPU |
 | Python source build | A platform with a C++17 compiler | Python 3.12 or later; CMake 3.18 or later | CPU; optional CUDA or Metal package built separately |
 | C++ headers | A platform with a C++17 compiler | No Python or Java runtime needed | CPU; native CUDA or macOS Metal source build optional |
 
@@ -118,37 +117,22 @@ Replace the file name to check another download.
 
 ## Portable Java CLI
 
-The standalone Java command-line tool is at 8.0.3, so this section uses the
-files of the [8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3);
-the [CPU Docker images](#docker) carry the 8.2.0 tool, and a
-[Java source build](#java-source-build) produces it.
-
-`smsd-cli-8.0.3-jar-with-dependencies.jar` contains the SMSD library, CDK 2.13
-and the other CLI dependencies, and runs on Java 8 or later. From its directory:
+The standalone Java command-line tool,
+`smsd-cli-8.2.0-jar-with-dependencies.jar`, is on Maven Central as
+`com.bioinceptionlabs:smsd-cli:8.2.0` with the classifier
+`jar-with-dependencies`. It contains the SMSD library, CDK 2.13 and the other
+CLI dependencies, and runs on Java 8 or later:
 
 ```bash
-java -jar smsd-cli-8.0.3-jar-with-dependencies.jar --version
-java -jar smsd-cli-8.0.3-jar-with-dependencies.jar \
+curl -fLO https://repo1.maven.org/maven2/com/bioinceptionlabs/smsd-cli/8.2.0/smsd-cli-8.2.0-jar-with-dependencies.jar
+java -jar smsd-cli-8.2.0-jar-with-dependencies.jar --version
+java -jar smsd-cli-8.2.0-jar-with-dependencies.jar \
   --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-The second command runs a substructure search and writes every mapping as JSON
-to standard output. The same JAR is on Maven Central as
-`com.bioinceptionlabs:smsd-cli:8.0.3` with the classifier `jar-with-dependencies`.
-
-`smsd-8.0.3-cli.tar.gz` holds Unix and Windows launchers. Extract it into one
-directory so that `bin` and `repo` stay together:
-
-```bash
-mkdir smsd-cli
-tar -xzf smsd-8.0.3-cli.tar.gz -C smsd-cli
-./smsd-cli/bin/smsd --version
-```
-
-On Windows, run `smsd-cli\bin\smsd.bat`. Neither package includes a Java runtime.
-
-The 8.0.3 MSI, DMG and DEB installers include Java 25. Their architectures are listed
-in the [supported-platforms table](#supported-platforms).
+The last command runs a substructure search and writes every mapping as JSON
+to standard output. The [CPU Docker images](#docker) also carry the 8.2.0 tool,
+and a [Java source build](#java-source-build) produces it.
 
 ## Java source build
 

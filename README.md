@@ -52,8 +52,7 @@ upgrade.
 
 The Java library and command-line tool are stable and continue to
 receive bug fixes, while new features arrive in C++ and
-Python first. Maven Central carries 8.0.3, and a [source build](#java) gives
-the current library.
+Python first. Maven Central carries 8.2.0. A [source build](#java) is also available.
 
 Beyond search, the 8.x line brings [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
 [local molecular tools and MCP](docs/MCP_SERVER.md),
@@ -70,13 +69,13 @@ and [Hugging Face demonstration](examples/huggingface/README.md) are included.
 | Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.12–3.15; RDKit optional |
 | Python, NVIDIA GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
 | Python, Apple GPU (optional) | `smsd-metal` on [PyPI](https://pypi.org/project/smsd-metal/) | macOS 14 or later on Apple silicon; the same version as `smsd` |
-| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.0.3 | Java 8 or later; CDK 2.13 |
+| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.2.0 | Java 8 or later; CDK 2.13 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
 The [supported-platforms table](docs/HOWTO-INSTALL.md#supported-platforms)
-covers CPU wheels, the optional CUDA and Metal packages and the Java CLI
-installers. The
+covers the CPU wheels, the optional CUDA and Metal packages and the Java
+JARs. The
 [installation guide](docs/HOWTO-INSTALL.md) explains downloads and source builds.
 
 ## Quick start
@@ -125,19 +124,18 @@ repository:
 mvn -f java/pom.xml install
 ```
 
-Maven projects can use the library from Maven Central, where it is at 8.0.3
-and lacks the Java changes made since then. It brings only the CDK modules it
-needs:
+Maven projects can use the 8.2.0 library from Maven Central. It brings only
+the CDK modules it needs:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.3</version>
+  <version>8.2.0</version>
 </dependency>
 ```
 
-In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.3")`. The
+In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.2.0")`. The
 example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
@@ -368,8 +366,7 @@ apply to academic and commercial use, with no fee or registration. Redistributio
 must include the [LICENSE](LICENSE) and [NOTICE](NOTICE) files and retain the
 copyright notices; the NOTICE file also sets out the trademark terms. Bundled
 dependencies carry their own licence notices. The Java CLI JAR with
-dependencies, the portable CLI archive, the CLI installers and the CPU Docker
-images bundle CDK under the [LGPL-2.1](licenses/cdk/README.md), Beam under the
+dependencies and the CPU Docker images bundle CDK under the [LGPL-2.1](licenses/cdk/README.md), Beam under the
 [BSD 2-Clause License](licenses/beam/LICENSE) and vecmath under the
 [GPL-2.0 with the Classpath exception](licenses/vecmath/README.md); for the
 runtimes that Python wheels can bundle, see the

@@ -34,7 +34,7 @@ Add `"smsd-cuda==8.2.0"` for NVIDIA GPUs on Linux, or `"smsd-metal==8.2.0"` on A
 - Drawings and 2D coordinates have the new look, including the wedges written to MOL files; completed searches and every 8.x API are unchanged.
 - Tool refusal messages now carry more detail; code that checks them should match how they start.
 - Install `smsd-cuda` and `smsd-metal` at the same version as `smsd`.
-- The Java library and command-line tool are stable and continue to receive bug fixes, while new features arrive in C++ and Python first. Maven Central carries 8.0.3, and a [Java source build](HOWTO-INSTALL.md#java-source-build) gives the current library, with the changes in [Upgrading from 8.0.3](#upgrading-from-803).
+- The Java library and command-line tool are stable and continue to receive bug fixes, while new features arrive in C++ and Python first. Maven Central carries 8.2.0; [Upgrading from 8.0.3](#upgrading-from-803) lists the Java changes since 8.0.3.
 
 # SMSD Pro 8.1.0
 

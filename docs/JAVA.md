@@ -10,25 +10,24 @@ public member.
 
 From 8.2.0, the Java library and command-line tool receive bug fixes only;
 new features are added to C++ and Python. Java runs every search on the CPU;
-GPU screening and corpus pre-screens are available from C++ and Python. Maven Central carries them at 8.0.3.
-This guide covers the Java code in the 8.2.0 source, which a
-[Java source build](HOWTO-INSTALL.md#java-source-build) turns into the library
-and command-line tool; the 8.0.3 artefacts do not have the Java changes
-described in the [upgrade notes](RELEASE_NOTES.md#upgrading-from-803). The CPU
+GPU screening and corpus pre-screens are available from C++ and Python. Maven
+Central carries both at 8.2.0, the release this guide covers; the
+[upgrade notes](RELEASE_NOTES.md#upgrading-from-803) describe the Java changes
+since 8.0.3. The CPU
 [Docker images](HOWTO-INSTALL.md#docker) also carry the 8.2.0 command-line
 tool.
 
 ## Installation
 
-The JARs run on Java 8 and later; Java 25 LTS is recommended. See the
-[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) for the CLI
-installers. Maven:
+The JARs run on Java 8 and later; Java 25 LTS is recommended. The
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) gives the
+requirements. Maven:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.3</version>
+  <version>8.2.0</version>
 </dependency>
 ```
 
@@ -40,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.3")
+    implementation("com.bioinceptionlabs:smsd:8.2.0")
 }
 ```
 
@@ -683,7 +682,7 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 A source build of the module `com.bioinceptionlabs:smsd-cli` writes the
 self-contained `smsd-cli-8.2.0-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
-the 8.0.3 JAR or depend on `SMSDcli`. From the repository root, after a
+the 8.2.0 JAR or depend on `SMSDcli`. From the repository root, after a
 source build, print the version and help, test whether benzene is a
 substructure of phenol, and find the MCS of N-methylacetamide and propanamide
 (`mcs_size` is 4):
@@ -769,8 +768,8 @@ mvn -f java/pom.xml -pl core javadoc:javadoc
 
 ## Further reading
 
-- [Installation guide](HOWTO-INSTALL.md), including
-  [Java CLI installers](HOWTO-INSTALL.md#portable-java-cli).
+- [Installation guide](HOWTO-INSTALL.md), including the
+  [portable command-line tool](HOWTO-INSTALL.md#portable-java-cli).
 - [Python guide](PYTHON.md), [C++ guide](CPP.md),
   [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 

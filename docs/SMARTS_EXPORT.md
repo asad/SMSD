@@ -14,8 +14,7 @@ assert smsd.Substructure.smarts(exported.smarts).match("CCOCC").found
 ```
 
 Java also writes whole graphs with `SmartsWriter`. Both Java APIs are new in
-8.1.0 and Maven Central carries 8.0.3, so compile this example against a
-[Java source build](HOWTO-INSTALL.md#java-source-build):
+8.1.0 and are in the 8.2.0 artefacts on Maven Central:
 
 ```java
 import com.bioinception.smsd.core.MCS;

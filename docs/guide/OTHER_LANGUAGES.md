@@ -127,9 +127,9 @@ build and its options.
 
 The Java library is `com.bioinceptionlabs:smsd` and the command-line tool
 `com.bioinceptionlabs:smsd-cli`. From 8.2.0, both receive bug fixes only.
-Maven Central has 8.0.3; for 8.2.0, run
-`mvn -f java/pom.xml install` from the repository root, which installs both in
-the local Maven repository (Gradle then needs `mavenLocal()`). The
+Both are on Maven Central at 8.2.0; a source build with
+`mvn -f java/pom.xml install` from the repository root installs them in the
+local Maven repository instead (Gradle then needs `mavenLocal()`). The
 [Java module README](../../java/README.md#installation) gives the Maven and
 Gradle dependencies, and the code runs on Java 8 or later.
 
