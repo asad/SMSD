@@ -6,7 +6,7 @@
 
 # SMSD Pro™ for Python
 
-[![PyPI](https://img.shields.io/pypi/v/smsd)](https://pypi.org/project/smsd/)
+[![PyPI](https://img.shields.io/pypi/v/smsd?label=pypi)](https://pypi.org/project/smsd/)
 [![Documentation](https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330)](https://asad.github.io/SMSD/)
 [![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
@@ -34,8 +34,8 @@ for operating-system requirements. Free-threaded CPython and Intel macOS need a
 source build.
 
 The [conda guide](https://github.com/asad/SMSD/blob/master/packaging/conda/README.md)
-describes the CPU and Linux CUDA recipes and the conda, mamba and Pixi install
-routes. The conda `smsd` package is currently built without OpenMP.
+describes the CPU, CUDA and Metal recipes and the conda, mamba and Pixi install
+routes. Like the wheels, the conda packages use OpenMP for batch work.
 
 ### Optional GPU packages
 

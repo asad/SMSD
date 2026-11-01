@@ -1,22 +1,25 @@
 # Conda packages
 
-Two native recipes build from one frozen full-source archive:
+Three recipes build from one frozen full-source archive:
 
 | Recipe | Package | Intended targets |
 | --- | --- | --- |
 | `packaging/conda` | `smsd` | CPython 3.12–3.15; Linux x86-64/aarch64, macOS x86-64/arm64, Windows x86-64 |
 | `packaging/conda/cuda` | `smsd-cuda` | CPython 3.12–3.15; Linux x86-64; CUDA 12.8 build variant |
+| `packaging/conda/metal` | `smsd-metal` | CPython 3.12–3.15; macOS 14 or later, arm64; installs the released wheel proved on the Apple GPU |
 
 These are recipe targets, not claims of completed builds or platform tests.
 Render with the final source inputs before building.
-The CPU recipe disables OpenMP, CUDA and Metal explicitly and needs no GPU.
+The CPU recipe builds with OpenMP from each platform's shared runtime (libgomp,
+llvm-openmp or the Visual C++ runtime), leaves GPU screening to the separate
+packages and needs no GPU.
 Its compiler and C standard-library variants follow the
 [conda-forge platform configuration](https://conda-forge.org/docs/maintainer/infrastructure/).
 The macOS recipe targets macOS 11 or newer; package builds must verify that target.
 CUDA uses GCC 14 and the Linux 2.17 sysroot with its CUDA 12.8 toolchain.
 The CUDA package requires the **exact same SMSD version** and a conda CUDA
 runtime. Native Windows CUDA, macOS CUDA and Linux aarch64 CUDA packages are
-not produced by this recipe. Neither package is `noarch`.
+not produced by this recipe. No package is `noarch`.
 
 ## Freeze source inputs
 
@@ -136,7 +139,8 @@ consumes the same conda outputs.
 ## Install from the channel
 
 The `bioinception` channel carries `smsd` for `linux-64`, `linux-aarch64` and
-`osx-arm64`, and `smsd-cuda` for `linux-64`; `win-64` packages are to follow.
+`osx-arm64`, `smsd-cuda` for `linux-64` and `smsd-metal` for `osx-arm64`;
+`win-64` packages are to follow.
 `conda search -c bioinception --override-channels smsd` lists the versions
 available for your platform. Install SMSD from that channel and its dependencies from conda-forge:
 
@@ -149,6 +153,12 @@ the same channels; it requires the same `smsd` version:
 
 ```sh
 conda install -c bioinception -c conda-forge smsd smsd-cuda
+```
+
+On an Apple silicon Mac with macOS 14 or later, add `smsd-metal` the same way:
+
+```sh
+conda install -c bioinception -c conda-forge smsd smsd-metal
 ```
 
 For mamba or Pixi, use the `bioinception` channel in place of the local build
@@ -169,8 +179,7 @@ python -m pip install smsd
 
 SMSD has no required dependencies, so pip adds only SMSD and leaves the
 packages that conda manages unchanged. Install optional packages such as NumPy
-or RDKit with conda before SMSD. Unlike the conda package, the wheel uses
-OpenMP for batch work.
+or RDKit with conda before SMSD.
 
 The `win-64` packages are built on a GitHub-hosted Windows runner by the
 manually started `conda-windows` workflow
