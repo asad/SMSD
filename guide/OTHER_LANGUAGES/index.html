@@ -1886,9 +1886,9 @@ build and its options.</p>
 <h2 id="java">Java<a class="headerlink" href="#java" title="Permanent link">&para;</a></h2>
 <p>The Java library is <code>com.bioinceptionlabs:smsd</code> and the command-line tool
 <code>com.bioinceptionlabs:smsd-cli</code>. From 8.2.0, both receive bug fixes only.
-Maven Central has 8.0.3; for 8.2.0, run
-<code>mvn -f java/pom.xml install</code> from the repository root, which installs both in
-the local Maven repository (Gradle then needs <code>mavenLocal()</code>). The
+Both are on Maven Central at 8.2.0; a source build with
+<code>mvn -f java/pom.xml install</code> from the repository root installs them in the
+local Maven repository instead (Gradle then needs <code>mavenLocal()</code>). The
 <a href="https://github.com/asad/SMSD/blob/master/java/README.md#installation">Java module README</a> gives the Maven and
 Gradle dependencies, and the code runs on Java 8 or later.</p>
 <p>This program computes the same ECFP4 similarities and runs exact substructure

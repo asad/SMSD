@@ -2126,21 +2126,20 @@ command-line interface (CLI) is <code>com.bioinception.smsd.cli.SMSDcli</code>
 public member.</p>
 <p>From 8.2.0, the Java library and command-line tool receive bug fixes only;
 new features are added to C++ and Python. Java runs every search on the CPU;
-GPU screening and corpus pre-screens are available from C++ and Python. Maven Central carries them at 8.0.3.
-This guide covers the Java code in the 8.2.0 source, which a
-<a href="../HOWTO-INSTALL/#java-source-build">Java source build</a> turns into the library
-and command-line tool; the 8.0.3 artefacts do not have the Java changes
-described in the <a href="../RELEASE_NOTES/#upgrading-from-803">upgrade notes</a>. The CPU
+GPU screening and corpus pre-screens are available from C++ and Python. Maven
+Central carries both at 8.2.0, the release this guide covers; the
+<a href="../RELEASE_NOTES/#upgrading-from-803">upgrade notes</a> describe the Java changes
+since 8.0.3. The CPU
 <a href="../HOWTO-INSTALL/#docker">Docker images</a> also carry the 8.2.0 command-line
 tool.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>The JARs run on Java 8 and later; Java 25 LTS is recommended. See the
-<a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a> for the CLI
-installers. Maven:</p>
+<p>The JARs run on Java 8 and later; Java 25 LTS is recommended. The
+<a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a> gives the
+requirements. Maven:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">&lt;dependency&gt;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.bioinceptionlabs<span class="nt">&lt;/groupId&gt;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>smsd<span class="nt">&lt;/artifactId&gt;</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.0.3<span class="nt">&lt;/version&gt;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.2.0<span class="nt">&lt;/version&gt;</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div>
 <p>Gradle (Kotlin DSL):</p>
@@ -2149,7 +2148,7 @@ installers. Maven:</p>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="s">"com.bioinceptionlabs:smsd:8.0.3"</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="s">"com.bioinceptionlabs:smsd:8.2.0"</span><span class="p">)</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
 </code></pre></div>
 <p>To parse SMILES, as the examples do, add <code>org.openscience.cdk:cdk-smiles:2.13</code>.
@@ -2746,7 +2745,7 @@ bounded by <code>CIPAssigner.MAX_DEPTH</code>, so check which centres were assig
 <p>A source build of the module <code>com.bioinceptionlabs:smsd-cli</code> writes the
 self-contained <code>smsd-cli-8.2.0-jar-with-dependencies.jar</code>; the
 <a href="https://github.com/asad/SMSD/blob/master/java/README.md#command-line-tool">Java module README</a> shows how to obtain
-the 8.0.3 JAR or depend on <code>SMSDcli</code>. From the repository root, after a
+the 8.2.0 JAR or depend on <code>SMSDcli</code>. From the repository root, after a
 source build, print the version and help, test whether benzene is a
 substructure of phenol, and find the MCS of N-methylacetamide and propanamide
 (<code>mcs_size</code> is 4):</p>
@@ -2815,8 +2814,8 @@ incomplete search (SDF: any target failed or incomplete).</p>
 </code></pre></div>
 <h2 id="further-reading">Further reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../HOWTO-INSTALL/">Installation guide</a>, including
-  <a href="../HOWTO-INSTALL/#portable-java-cli">Java CLI installers</a>.</li>
+<li><a href="../HOWTO-INSTALL/">Installation guide</a>, including the
+  <a href="../HOWTO-INSTALL/#portable-java-cli">portable command-line tool</a>.</li>
 <li><a href="../PYTHON/">Python guide</a>, <a href="../CPP/">C++ guide</a>,
   <a href="https://github.com/asad/SMSD/blob/master/benchmarks/README.md">benchmark guide</a> and <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a>.</li>
 </ul>
