@@ -8,7 +8,7 @@
 <p align="center"><strong>Substructure and MCS search for chemical graphs</strong></p>
 
 <p align="center">
-  <a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-central/v/com.bioinceptionlabs/smsd" alt="Maven Central"/></a>
+  <a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fbioinceptionlabs%2Fsmsd%2Fmaven-metadata.xml&label=maven%20central" alt="Maven Central"/></a>
   <a href="https://pypi.org/project/smsd/"><img src="https://img.shields.io/pypi/v/smsd" alt="PyPI"/></a>
   <a href="https://asad.github.io/SMSD/"><img src="https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330" alt="Documentation"/></a>
   <a href="https://doi.org/10.5281/zenodo.23639199"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.23639199.svg" alt="DOI"/></a>
