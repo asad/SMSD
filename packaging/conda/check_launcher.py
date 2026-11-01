@@ -25,7 +25,8 @@ result = subprocess.run([str(launcher), "--help"], stdin=subprocess.DEVNULL, cap
                         text=True, errors="replace", timeout=300)
 lines = result.stderr.strip().splitlines()
 if result.returncode == 0 or not lines or lines[-1] != MISSING_SDK:
-    raise SystemExit("smsd-mcp --help did not stop at the missing MCP SDK:\n" + result.stderr)
+    raise SystemExit(f"smsd-mcp --help did not stop at the missing MCP SDK (exit code {result.returncode}):\n"
+                     + result.stdout + result.stderr)
 if os.path.normcase(smsd.mcp_server.__file__) not in os.path.normcase(result.stderr):
     raise SystemExit("smsd-mcp loaded SMSD from another environment:\n" + result.stderr)
 print(f"{launcher.name} --help ran SMSD from {Path(smsd.mcp_server.__file__).parent}")
