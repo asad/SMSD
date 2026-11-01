@@ -7,6 +7,7 @@
 # SMSD Pro™ for Python
 
 [![PyPI](https://img.shields.io/pypi/v/smsd?label=pypi)](https://pypi.org/project/smsd/)
+[![Conda](https://img.shields.io/conda/vn/bioinception/smsd?label=conda)](https://anaconda.org/bioinception/smsd)
 [![Documentation](https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330)](https://asad.github.io/SMSD/)
 [![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
