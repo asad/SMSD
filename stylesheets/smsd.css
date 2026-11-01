@@ -114,4 +114,4 @@
 
 /* Live version badges under the hero buttons. */
 .smsd-badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: 1rem; }
-.smsd-badges img { height: 20px; }
+.smsd-badges img { height: 20px; width: auto; max-width: none; }
