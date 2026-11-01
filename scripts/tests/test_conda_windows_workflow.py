@@ -365,6 +365,14 @@ class PackageScanTest(unittest.TestCase):
         self.package("py314", paths_json=False)
         self.assertRefused("info/paths.json is missing")
 
+    def test_the_pip_record_is_accepted_in_either_windows_layout(self):
+        record = b'{"dir_info": {}, "url": "file:///C:/b/croot/smsd_1793000000000/work"}'
+        for prefix in ("Lib", "lib/python"):
+            with self.subTest(prefix=prefix):
+                shutil.rmtree(self.work / "conda-win-64", ignore_errors=True)
+                self.package("py315", {f"{prefix}/site-packages/smsd-{VERSION}.dist-info/direct_url.json": record})
+                self.run_check()
+
     def test_relocated_and_inert_build_paths_are_accepted(self):
         script = b"#!" + (self.BUILD + "\\python.exe").encode() + b"\nfrom smsd.mcp_server import main\n"
         self.package("py314", {"Scripts/smsd-mcp.exe": self.LAUNCHER, "Scripts/smsd-mcp-script.py": script,

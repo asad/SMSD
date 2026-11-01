@@ -245,7 +245,9 @@ jobs:
 
           # pip's record of the folder it installed from is read, never run. Compiled
           # bytecode records its source path only for tracebacks.
-          pip_record = 'Lib/site-packages/smsd-' + version + '.dist-info/direct_url.json'
+          # pip's install record, in the site-packages of either Windows Python layout.
+          pip_records = {prefix + '/site-packages/smsd-' + version + '.dist-info/direct_url.json'
+                         for prefix in ('Lib', 'lib/python')}
           problems = []
           for tag, path in sorted(built.items()):
               metadata, build_paths, count = {}, {}, 0
@@ -253,7 +255,7 @@ jobs:
                   count += 1
                   for marker in holds(member.encode('utf-8') + b'\n' + data, RUNNER):
                       problems.append(f'{path.name}: {member} holds {marker!r}')
-                  if installed and not member.endswith('.pyc') and member != pip_record:
+                  if installed and not member.endswith('.pyc') and member not in pip_records:
                       build_paths[member] = holds(data, BUILD_ROOT)
                   if member in ('info/index.json', 'info/about.json', 'info/paths.json'):
                       metadata[member] = json.loads(data)
