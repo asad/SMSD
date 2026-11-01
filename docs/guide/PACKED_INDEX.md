@@ -8,7 +8,7 @@ it. Every operation on the index, including opening it, needs NumPy, which the
 `numpy` extra installs:
 
 ```bash
-python -m pip install "smsd[numpy]==8.1.0"
+python -m pip install "smsd[numpy]==8.2.0"
 ```
 
 The examples use the same inline library as [Screening a library](SCREENING.md):

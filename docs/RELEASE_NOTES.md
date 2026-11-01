@@ -1,3 +1,41 @@
+# SMSD Pro 8.2.0
+
+**Exact search on the hardware you already own.**
+
+SMSD Pro 8.2.0 brings GPU screening to Apple silicon, publication-ready structure figures and clearer guidance for AI assistants. Exact, provable substructure and maximum common substructure (MCS) search now runs on even more of the hardware researchers already own, from an Apple silicon laptop to a GPU server. Completed searches return the same results as in 8.1.0, so existing pipelines upgrade with confidence.
+
+## What's new
+
+- **GPU screening on Apple silicon.** The new optional [`smsd-metal`](../packaging/smsd-metal/README.md) package lets prepared fingerprint screens of large compound libraries run on the Mac's GPU, with exactly the same hits and scores as the CPU. See [CPU and GPU screening](guide/CPU_GPU.md#install-the-metal-package).
+- **GPU screening on Windows.** A [step-by-step guide](guide/GPU_ON_WINDOWS.md) covers NVIDIA GPUs through WSL2.
+- **Publication-ready figures.** Regular rings, crisp labels and one soft halo over the shared core: gold for MCS, mint for substructure hits. Drawings go straight into papers, theses and slides, and `smsd.highlight.substructure_svg` records each hit's search status in the image.
+- **Errors AI assistants can act on.** When a model calls SMSD's chemistry tools with a wrong argument, SMSD names it and lists what it accepts, so the model can correct itself and carry on. See [Read a tool result](guide/AI_TOOLS.md#read-a-tool-result).
+- **Time limits that hold.** Short time limits now hold on very large molecules, so high-throughput pipelines keep to schedule.
+- **Learn by doing.** Seven [ready-to-run notebooks](guide/README.md#notebooks), covering MCS and substructure search, fingerprints, library screening, CPU and GPU screening and AI tools, run in Colab and set themselves up.
+
+## Built for
+
+- **Drug discovery and biotech teams:** exact matching and screening from the workstation to the GPU, with every result reporting whether it is complete and proved optimal.
+- **Academic groups:** open source under Apache 2.0, citable by DOI, with figures ready for papers and theses.
+- **Students:** seven notebooks that set themselves up and run in Colab, in the browser.
+
+## Get started
+
+```bash
+python -m pip install "smsd==8.2.0"
+```
+
+New to SMSD? [Open the MCS notebook in Colab](https://colab.research.google.com/github/asad/SMSD/blob/v8.2.0/python/examples/mcs_search.ipynb); it sets itself up. Explore the user guide, notebooks and reference at [asad.github.io/SMSD](https://asad.github.io/SMSD/).
+
+Add `"smsd-cuda==8.2.0"` for NVIDIA GPUs on Linux, or `"smsd-metal==8.2.0"` on Apple silicon. Wheels cover CPython 3.12–3.15 on Linux (x86_64 and aarch64), Windows (x86_64) and Apple silicon Macs with macOS 14 or later, and run batch work in parallel across CPU cores. Conda users on Linux and macOS can run `conda install -c bioinception -c conda-forge smsd`. The [installation guide](HOWTO-INSTALL.md) covers Docker images, the header-only C++17 library and source builds, and the [changelog](../CHANGELOG.md) lists every change.
+
+## Upgrading from 8.1.0
+
+- Drawings and 2D coordinates have the new look, including the wedges written to MOL files; completed searches and every 8.x API are unchanged.
+- Tool refusal messages now carry more detail; code that checks them should match how they start.
+- Install `smsd-cuda` and `smsd-metal` at the same version as `smsd`.
+- The Java library and command-line tool are stable and continue to receive bug fixes, while new features arrive in C++ and Python first. Maven Central carries 8.0.3, and a [Java source build](HOWTO-INSTALL.md#java-source-build) gives the current library, with the changes in [Upgrading from 8.0.3](#upgrading-from-803).
+
 # SMSD Pro 8.1.0
 
 SMSD Pro 8.1.0 adds Python data and machine-learning adapters, local MCP tools,

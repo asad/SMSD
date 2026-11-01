@@ -6,11 +6,19 @@
  */
 #include <cmath>
 #undef M_PI
+// <windows.h> defines near and far as empty macros and small as char, so the
+// headers must compile with them defined.
+#define near
+#define far
+#define small char
 #include "smsd/depict.hpp"
 #include "smsd/mol_reader.hpp"
-#include "test_support.hpp"
 #include "smsd/bitops.hpp"
 #include "smsd/batch.hpp"
+#undef near
+#undef far
+#undef small
+#include "test_support.hpp"
 
 #include <chrono>
 #include <iostream>

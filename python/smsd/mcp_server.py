@@ -215,7 +215,7 @@ def _fingerprint_parameters(kind, fp_size, radius, path_length, counts):
         raise ValueError("MCP fingerprint limits are fp_size <= 65536, radius <= 8 and path_length <= 8")
     _switch(counts, "counts")
     if kind not in _KINDS:
-        raise ValueError("Unknown fingerprint kind")
+        raise ValueError("Unknown fingerprint kind; allowed values: " + ", ".join(repr(value) for value in _KINDS))
     if counts and kind == "mcs":
         raise ValueError("The MCS fingerprint has no count mode")
     return FingerprintOptions(family=kind, size=fp_size, radius=radius,
@@ -423,7 +423,8 @@ def depict_mcs(query_smiles: str, target_smiles: str, objective: str = "mcis",
     """Return a native mapping-highlight SVG and the unchanged search proof/status.
 
     No SVG is returned when no match was found; a stopped match stays unproved.
-    Input bonds between highlighted atoms are drawn too; for MCES the JSON
+    The drawing highlights mapped atoms and each input bond between them that
+    the mapping carries onto a bond of the other molecule; for MCES the JSON
     bond_mapping, rather than the drawing, defines the selected common edges.
 
     Example::

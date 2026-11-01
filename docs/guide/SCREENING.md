@@ -14,7 +14,7 @@ trisubstituted benzenes, so each program runs as it stands, with no data files.
 | Task | Use | Fingerprint | Prepare first | Needs NumPy | GPU |
 | --- | --- | --- | --- | --- | --- |
 | Rank a small list | `batch_similarity` | ECFP; radius 2 and 2048 bits by default | Nothing | No | No |
-| Threshold screen in memory | `TargetCorpus.screen` or `screen_many` | ECFP radius 2, 2048 bits, fixed | `prewarm()` after every addition | No | With `smsd-cuda`, automatic on a Tesla T4 for 100,000 targets or more, or on any supported device from `SMSD_CUDA_MIN_TARGETS` targets; see the [device rule](CPU_GPU.md#automatic-use-in-prepared-screens) |
+| Threshold screen in memory | `TargetCorpus.screen` or `screen_many` | ECFP radius 2, 2048 bits, fixed | `prewarm()` after every addition | No | With `smsd-cuda` or `smsd-metal`, automatic on a Tesla T4 or an Apple M5 for 100,000 targets or more, or on any supported device from `SMSD_CUDA_MIN_TARGETS` or `SMSD_METAL_MIN_TARGETS` targets; see the [device rule](CPU_GPU.md#automatic-use-in-prepared-screens) |
 | Screen a large file once | `stream_screen_smiles` or `stream_screen_many_smiles` | ECFP radius 2, 2048 bits, fixed | Nothing | No | As above, chunk by chunk |
 | Search a saved index many times | `FingerprintCorpus`; see the [packed index](PACKED_INDEX.md) | Any binary specification | Build the file once | Yes | On request, with `backend="cuda"` or `"auto"` |
 | Exact substructure | `Substructure.match_corpus` | None: exact search | A `TargetCorpus` | No | Optional pre-screen, with `gpu_prefilter=True` |
@@ -537,7 +537,7 @@ because a lower-case `c` in SMARTS is an aromatic carbon.
 SMARTS queries, and searches with a node limit, a cancellation token or an
 immediate time limit, search every target without ruling any out first. ECFP
 similarity bits cannot rule out a substructure, so do not filter a substructure
-screen by fingerprint similarity. With `smsd-cuda` installed,
+screen by fingerprint similarity. With `smsd-cuda` or `smsd-metal` installed,
 `gpu_prefilter=True` asks the GPU to rule targets out; the decisions are the
 same, and the step falls back to the CPU on any failure (see
 [Request the GPU for a corpus pre-screen](CPU_GPU.md#request-the-gpu-for-a-corpus-pre-screen)).

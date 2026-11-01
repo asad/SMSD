@@ -1,9 +1,21 @@
 # SMARTS export
 
-Java can write a portable SMARTS query from an MCS match or a whole molecular
-graph. `SmartsWriter` and `SearchResult.Match.toSmarts` are new in 8.1.0, while
-the published Java artefacts stay at 8.0.3 in this release, so compile this
-example against a [Java source build](HOWTO-INSTALL.md#java-source-build):
+An MCS match can be written as a portable SMARTS query and used to search a
+library. `MCS.match_with_smarts` (C++ `MCS::matchWithSmarts`) returns the result
+and the pattern together; `Match.to_smarts(query, chemistry)` (C++
+`Match::toSmarts`) exports an existing match.
+
+```python
+import smsd
+
+exported = smsd.MCS.find("CCO").match_with_smarts("CCCO")
+assert exported.result.found
+assert smsd.Substructure.smarts(exported.smarts).match("CCOCC").found
+```
+
+Java also writes whole graphs with `SmartsWriter`. Both Java APIs are new in
+8.1.0 and Maven Central carries 8.0.3, so compile this example against a
+[Java source build](HOWTO-INSTALL.md#java-source-build):
 
 ```java
 import com.bioinception.smsd.core.MCS;
@@ -55,7 +67,7 @@ Portable output assumes molecular targets with consistent aromatic bond flags
 and bond orders. Contradictory source annotations supplied through a graph builder
 are rejected. Java SMARTS target preparation applies Daylight aromaticity. Strict
 export therefore also rejects selected aromatic flags that change under that model,
-including an uppercase Kekule benzene graph whose original flags are non-aromatic.
+including an uppercase Kekulé benzene graph whose original flags are non-aromatic.
 This check uses the full source graph, preserving the context of selected atoms
 and bonds. Strict predicate parity with molecule matching requires library targets
 whose aromatic flags also agree with that preparation. At most 99 Java ring closures

@@ -1,13 +1,12 @@
-# SMSD Pro 8.1.0 API reference
+# SMSD Pro 8.2.0 API reference
 
-This reference describes the 8.1.0 source API. Use a matching wheel or build;
+This reference describes the 8.2.0 source API. Use a matching wheel or build;
 an earlier installed native extension cannot provide new Python APIs.
 
 The Python package provides molecular graphs, exact searches, fingerprints,
 screening, depiction and optional data adapters. Java and C++ expose related
 graph operations; their names and available options are documented in the
-[Java guide](../java/README.md) and [C++ guide](CPP.md). Identical fingerprint
-parameters do not establish bit identity across toolkits.
+[Java guide](../java/README.md) and [C++ guide](CPP.md).
 
 ## MCS and substructure searches
 
@@ -50,8 +49,7 @@ or cancellation-stopped call can retain a useful witness without proving an
 optimum. An unfinished result with no witness does not prove absence.
 `complete` also records enumeration completeness; a requested result limit
 can stop enumeration after an optimum is found. Ring-perception work limits
-can prevent a proof even when a mapping is feasible. Preserve stopped cases
-when analysing outcomes; stopped latency is not completed-work throughput.
+can prevent a proof even when a mapping is feasible.
 
 Search budgets apply after input parsing and preparation. General API options
 permit native defaults and unlimited node settings; set explicit finite limits
@@ -63,8 +61,8 @@ later independent request.
 `ChemOptions` controls atom type, charge, isotope, bond order, aromatic
 compatibility, stereo, ring and optional tautomer handling. The default
 profile does not require matching formal charges or isotopes. Use explicit
-options or `ChemOptions.profile("strict")` when those restrictions matter;
-do not infer them from a tool or method name. `complete_rings_only`,
+options or `ChemOptions.profile("strict")` when those restrictions matter.
+`complete_rings_only`,
 `ring_matches_ring_only` and `ring_fusion_mode` impose different restrictions.
 The graph aromaticity model is a preparation choice, selected through
 `perceive_aromaticity` or the builder. The deprecated chemistry
@@ -82,8 +80,7 @@ assert len(embeddings.matches) == 2
 `Substructure.find` takes a molecule query; `Substructure.smarts` compiles a
 predicate query. `with_induced(True)` additionally requires query non-bonds
 to remain non-bonds. SMARTS predicates can specify hydrogen, isotope, charge,
-aromaticity and topology directly. A parsed SMARTS string and a proved search
-result are separate facts.
+aromaticity and topology directly.
 
 `MCS.match_constrained` processes queries in order while excluding already
 used target atoms. `MCS.consensus` builds a progressive common graph with a
@@ -117,10 +114,13 @@ assert '<svg' in svg and 'data-search-status=' in svg
 ```
 
 Native `depict_svg`, `depict_mapping` and `depict_pair` return SVG strings and
-use `DepictOptions`. The pair renderer highlights mapped atoms and input
-bonds between them. `smsd.highlight.mcs_svg` carries search flags in the SVG
+use `DepictOptions`. The pair renderer highlights mapped atoms and each bond
+between them that the mapping carries onto a bond of the other molecule.
+`smsd.highlight.mcs_svg` carries search flags in the SVG
 and rejects selected-edge witnesses that this renderer would over-highlight;
-render `best.to_graph(query)` separately in that case. The MCP depiction tool
+render `best.to_graph(query)` separately in that case.
+`smsd.highlight.substructure_svg` draws a substructure hit on the target with
+the same flags. The MCP depiction tool
 instead labels this highlighting scope and returns the selected bond mapping
 alongside the image.
 
@@ -203,8 +203,7 @@ requested. `fingerprint_from_smiles` is a text convenience helper. Families
 include MCS-aware paths, element paths, ECFP/circular, FCFP and topological
 torsions; `FingerprintOptions` adds configurable invariants, fragment/scaffold
 choices, stereo and SMARTS keys. `FingerprintOptions.maccs()` supplies 166
-MACCS keys, with key number `k` at position `k - 1`. Fingerprint family names
-and options are not guarantees of cross-tool bit identity.
+MACCS keys, with key number `k` at position `k - 1`.
 
 ```python
 specification = smsd.FingerprintOptions.ecfp(radius=2, size=2048)
@@ -267,7 +266,7 @@ fingerprint width and row count. `create`/`from_smiles` construct it;
 `threshold_pairs` and `top_k_pairs` read it. Use its context manager or `close`.
 The underlying file must remain unchanged while open. Chunk bounds limit
 working arrays, not returned-hit storage, mapped pages or total comparison
-work. Counts of representable rows are not throughput or memory measurements.
+work.
 
 `stream_screen_smiles` and `stream_screen_many_smiles` process target
 iterables in chunks. `butina` clusters by similarity to a chosen centre;
@@ -290,8 +289,8 @@ The `smsd.adapters` module imports optional dependencies only when requested:
 Arrow can share a native-endian, C-contiguous 2-D integer NumPy buffer and
 retains its owner. Shared input must not be mutated. Other inputs/layouts can
 require copies; `zero_copy_only=True` rejects those cases and table metadata
-records the ownership/copy result. A tensor/graph adapter's device argument
-does not itself establish a GPU chemistry kernel.
+records the ownership/copy result. The `device` argument of the tensor and
+graph adapters only places the output; the chemistry runs on the CPU.
 
 ## Accelerators and molecular tools
 
@@ -300,12 +299,14 @@ build-, device- and package-dependent; availability alone does not prove a
 particular call dispatched to a device. `gpu_is_available` and
 `gpu_device_info` describe discovery. `warm_start` explicitly prepares a
 reusable corpus/query path. Packed corpus APIs expose explicit backends and
-retain deterministic CPU-defined score/hit semantics. Native Metal packed
-fingerprint screening is available only in C++ and runs only when requested
-explicitly; Python screening and search never run on Metal. See
-[CUDA operation scope](PYTHON.md#optional-cuda-screening),
+retain deterministic CPU-defined score/hit semantics. The optional `smsd-cuda`
+and `smsd-metal` packages let prepared ECFP4 screens and requested corpus
+pre-screens use an NVIDIA or Apple GPU; packed corpora use CUDA only. The C++
+Metal packed-fingerprint provider runs only when requested explicitly. See
+[CPU and GPU screening](guide/CPU_GPU.md),
 [native Metal scope](CPP.md#optional-metal-fingerprint-screening) and the optional
-[`smsd-cuda` package](../packaging/smsd-cuda/README.md) for build and device
+[`smsd-cuda`](../packaging/smsd-cuda/README.md) and
+[`smsd-metal`](../packaging/smsd-metal/README.md) packages for build and device
 requirements; the [supported-platforms table](HOWTO-INSTALL.md#supported-platforms)
 lists the GPU that automatic screening uses by default.
 
@@ -321,9 +322,8 @@ LangChain and LlamaIndex tools, without creating a model client.
 The 8.x API retains deprecated names such as `canonical_smiles`,
 `prewarm_graph`, `read_molfile`, `export_sdf`, `dearomatize`,
 `overlapCoefficient`, `count_overlapCoefficient`, `to_svg` and `chem=`.
-Use their documented replacements. Retaining these names is not permission
-to remove or reinterpret them in a minor release; warnings and old return
-values remain part of the compatibility behaviour.
+Use their documented replacements; the old names keep their warnings and
+return values throughout 8.x.
 
 ## Native graph and option objects
 
@@ -348,7 +348,8 @@ Native enums are `SearchStatus`, `BondOrderMode`, `AromaticityMode`,
 `FragmentMode`, `ScaffoldMode`, `RSLabel`, `EZLabel`, and the nested
 `MCS.Objective`/`MCS.Connectivity`. Use their named values rather than numeric
 ordinals. Graph atom arrays are in graph index order; `canonical_label` and
-`orbit` are derived data and are not permission to replace caller numbering.
+`orbit` are derived values, and results always use the caller's atom
+numbering.
 `properties` supports ordinary string-key/value mapping operations.
 
 `smsd.RingBasisUnavailable` is the native `RuntimeError` subclass raised when
@@ -372,31 +373,31 @@ Source: [_molecule.py](../python/smsd/_molecule.py).
 | Callable | Contract |
 | --- | --- |
 | `smsd.canonical_hash(mol)` | The canonical hash of a molecule as a Python int. |
-| `smsd.canonical_smiles(mol)` | Deprecated alias of :func:to_smiles. |
-| `smsd.count_components(mol)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.export_sdf(molecules, filename)` | Deprecated alias of :func:write_sdf. |
+| `smsd.canonical_smiles(mol)` | Deprecated alias of `to_smiles`. |
+| `smsd.count_components(mol)` | Count the number of connected components in a molecule. |
+| `smsd.export_sdf(molecules, filename)` | Deprecated alias of `write_sdf`. |
 | `smsd.clear_cache()` | Clear reusable toolkit conversions; live graphs keep their atom correspondence. |
-| `smsd.extract_subgraph(mol, atom_indices)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.murcko_scaffold(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.extract_subgraph(mol, atom_indices)` | Extract a subgraph containing only the specified atoms. |
+| `smsd.murcko_scaffold(mol)` | Compute the Bemis-Murcko scaffold (ring systems and linkers). |
 | `smsd.parse_mapped_smiles(smiles)` | Parse a SMILES string that contains atom map numbers. |
 | `smsd.parse_smiles(smiles, *, lenient=False)` | Parse a SMILES string into a MolGraph. |
 | `smsd.prewarm(mol)` | Compute and cache the common lazy invariants of a molecule once; returns its graph. |
-| `smsd.prewarm_graph(mol)` | Deprecated alias of :func:prewarm that returns None. |
-| `smsd.read_mol_block(mol_block)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.prewarm_graph(mol)` | Deprecated alias of `prewarm` that returns None. |
+| `smsd.read_mol_block(mol_block)` | Parse an MDL MOL V2000 block into a MolGraph. |
 | `smsd.read_mol_file(filename)` | Read a MOL file (V2000 or V3000) into a MolGraph; one that cannot be opened or read raises ValueError. |
-| `smsd.read_molfile(filename)` | Deprecated alias of :func:read_mol_file that reads the file as UTF-8 text. |
+| `smsd.read_molfile(filename)` | Deprecated alias of `read_mol_file` that reads the file as UTF-8 text. |
 | `smsd.read_sdf(filename)` | Read every record of an SDF file at once; malformed records become empty graphs. |
-| `smsd.same_canonical_graph(mol1, mol2)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.split_components(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.same_canonical_graph(mol1, mol2)` | Check if two molecules are canonically identical. |
+| `smsd.split_components(mol)` | Split a molecule into its connected components. |
 | `smsd.strip_atom_maps(smiles)` | Remove atom map numbers from a SMILES string. |
-| `smsd.to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)` | Generate canonical SMARTS with configurable predicates. |
 | `smsd.to_smiles(mol)` | Canonical SMILES of a MolGraph, SMILES string or RDKit Mol. |
-| `smsd.translate_to_atom_ids(mapping, g1, g2)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.write_mol_block(mol)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.write_mol_block_v3000(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.translate_to_atom_ids(mapping, g1, g2)` | Translate MCS mapping from internal 0-based indices to external atom IDs. |
+| `smsd.write_mol_block(mol)` | Write a MolGraph as an MDL MOL V2000 block. |
+| `smsd.write_mol_block_v3000(mol)` | Write a MolGraph as an MDL MOL V3000 block. |
 | `smsd.write_molfile(mol, filename, *, v3000=False, sdf=False)` | Write a molecule to disk as MOL V2000, MOL V3000 or a single SDF record. |
 | `smsd.write_sdf(molecules, filename)` | Write molecules as SDF records, each a V2000 MOL block followed by $$$$. |
-| `smsd.write_sdf_record(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.write_sdf_record(mol)` | Write a MolGraph as a single SDF record. |
 
 ### Chemical graph helpers
 
@@ -404,22 +405,22 @@ Source: [_chemistry.py](../python/smsd/_chemistry.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.CIPDescriptors (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.EZLabel (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.RSLabel (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.RelevantCycleFamilies (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.RelevantCycleFamily (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.assign_cip(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.CIPDescriptors` (class) | CIP stereo descriptors for all centres and double bonds. |
+| `smsd.EZLabel` (enum) | CIP E/Z labels returned by `assign_cip`. |
+| `smsd.RSLabel` (enum) | CIP R/S labels returned by `assign_cip`. |
+| `smsd.RelevantCycleFamilies` (class) | Relevant cycles grouped into families, in ascending ring size, then root. |
+| `smsd.RelevantCycleFamily` (class) | One family of relevant cycles: its ring size, root and member cycles. |
+| `smsd.assign_cip(mol)` | Compute the CIP descriptors of every stereocentre and stereogenic double bond. |
 | `smsd.assign_ez(mol)` | Assign CIP E/Z descriptors to all stereogenic double bonds. |
 | `smsd.assign_rs(mol)` | Assign CIP R/S descriptors to all tetrahedral stereocentres. |
-| `smsd.classify_pharmacophore(mol, atom_index)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.classify_pharmacophore(mol, atom_index)` | Classify an atom into pharmacophoric feature classes (FCFP invariant). |
 | `smsd.compute_relevant_cycle_families(mol)` | The relevant cycles grouped into families, each with one member and its exact number of members. |
-| `smsd.compute_sssr(mol)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.dearomatize(mol)` | Deprecated alias of :func:kekulize. |
-| `smsd.implicit_h(atomic_num, bond_order_sum, formal_charge, aromatic=False)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.compute_sssr(mol)` | Return the Smallest Set of Smallest Rings (minimum cycle basis) as lists of atom indices, sorted by ring size. |
+| `smsd.dearomatize(mol)` | Deprecated alias of `kekulize`. |
+| `smsd.implicit_h(atomic_num, bond_order_sum, formal_charge, aromatic=False)` | Compute implicit hydrogen count for an atom with the SMILES valence model. |
 | `smsd.kekulize(mol)` | Convert an aromatic MolGraph into an explicit Kekule form. |
 | `smsd.perceive_aromaticity(mol, *, model=_smsd.AromaticityModel.DAYLIGHT_LIKE)` | Recompute ring membership and aromaticity on a MolGraph. |
-| `smsd.rings_truncated(mol)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.rings_truncated(mol)` | Whether the bounded Horton/minimum-basis perception stopped early or failed to reach the graph's cycle rank. |
 | `smsd.relevant_cycles_truncated(mol)` | Whether full relevant-cycle enumeration is incomplete, independently of the minimum-basis flag. |
 | `smsd.relevant_cycle_family_members(mol, family, limit)` | Up to `limit` members of a family as atom-index lists, starting with its prototype. |
 | `smsd.relevant_cycle_family_of(mol, families, ring)` | The index in `families.families` of the family that has `ring` as a member, or -1. |
@@ -480,32 +481,32 @@ Source: [_fingerprints.py](../python/smsd/_fingerprints.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.analyze_fp_quality(fp, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.cosine(fp1, fp2, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.analyze_fp_quality(fp, fp_size=2048)` | Analyse fingerprint quality: density, set bits, collision rate. |
+| `smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")` | Circular fingerprint (Morgan). |
+| `smsd.circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")` | Count-based circular fingerprint (Morgan). |
+| `smsd.cosine(fp1, fp2, fp_size=2048)` | Cosine similarity between two fingerprints (lists of set bit positions). |
 | `smsd.count_cosine(fp1, fp2)` | Count-vector cosine: dot(a,b) / (\|a\| * \|b\|). |
 | `smsd.count_dice(fp1, fp2)` | Count-vector Dice: 2*sum(min(a,b)) / (sum(a) + sum(b)). |
-| `smsd.count_overlapCoefficient(fp1, fp2)` | Deprecated alias of :func:count_overlap_coefficient. |
+| `smsd.count_overlapCoefficient(fp1, fp2)` | Deprecated alias of `count_overlap_coefficient`. |
 | `smsd.count_overlap_coefficient(fp1, fp2)` | Count-vector Szymkiewicz-Simpson overlap: sum(min(a,b)) / min(sum(a), sum(b)). |
 | `smsd.count_tanimoto_coefficient(fp1, fp2)` | Count-vector Tanimoto (generalised Jaccard): sum(min(a,b)) / sum(max(a,b)). |
 | `smsd.counts_to_array(counts_dict, fp_size)` | Convert a sparse count dict {bit_position: count} into a dense list of length fp_size. |
-| `smsd.dice(fp1, fp2, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.dice(fp1, fp2, fp_size=2048)` | Dice similarity between two fingerprints (lists of set bit positions). |
 | `smsd.fingerprint(mol, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None)` | Compute a molecular fingerprint. |
 | `smsd.fingerprint_from_smiles(smiles, radius=2, fp_size=2048, mode='ecfp', *, path_length=7, options=None)` | Parse a SMILES string and compute its fingerprint in one call. |
-| `smsd.fingerprint_subset(fp1, fp2)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.fingerprint_subset(fp1, fp2)` | Check if fingerprint fp1 is a subset of fp2 (all bits in fp1 are set in fp2). |
 | `smsd.fingerprints(mols, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0)` | Compute the fingerprints of many molecules in one call. |
 | `smsd.from_hex(hex_str)` | Convert a hex string back to a fingerprint (list of set-bit positions). |
-| `smsd.mcs_fingerprint(mol, path_length=7, fp_size=2048, tautomer_aware=False)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.overlapCoefficient(fp1, fp2, fp_size=2048)` | Deprecated alias of :func:overlap_coefficient. |
+| `smsd.mcs_fingerprint(mol, path_length=7, fp_size=2048, tautomer_aware=False)` | Compute MCS-aware path fingerprint. |
+| `smsd.overlapCoefficient(fp1, fp2, fp_size=2048)` | Deprecated alias of `overlap_coefficient`. |
 | `smsd.overlap_coefficient(fp1, fp2, fp_size=2048)` | Overlap coefficient (Szymkiewicz-Simpson): \|A∩B\| / min(\|A\|, \|B\|). |
-| `smsd.path_fingerprint(mol, path_length=7, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.soergel(fp1, fp2, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.path_fingerprint(mol, path_length=7, fp_size=2048)` | Element path fingerprint over heavy atoms: each path of up to path_length bonds is hashed by its atomic numbers. |
+| `smsd.soergel(fp1, fp2, fp_size=2048)` | Soergel distance between two fingerprints (lists of set bit positions). |
 | `smsd.tanimoto_coefficient(fp1, fp2, fp_size=2048)` | Tanimoto coefficient (Jaccard index): \|A∩B\| / \|A∪B\|. |
 | `smsd.to_binary_string(fp, fp_size=2048)` | Convert a fingerprint to a binary string of '0' and '1' characters. |
 | `smsd.to_hex(fp, fp_size=2048)` | Convert a fingerprint (list of set-bit positions) to a hex string. |
 | `smsd.topological_torsion(mol, fp_size=2048)` | Compute a topological torsion fingerprint (Nilakantan et al. 1987). |
-| `smsd.topological_torsion_counts(mol, fp_size=2048)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.topological_torsion_counts(mol, fp_size=2048)` | Count-based topological torsion fingerprint. |
 
 ### Graph and fingerprint screening
 
@@ -518,13 +519,13 @@ Source: [_screening.py](../python/smsd/_screening.py).
 | `smsd.TargetCorpus.add_target(target)` | Capture a molecule and its current input atom numbering. |
 | `smsd.TargetCorpus.add_targets(targets)` | Capture targets together; later input changes do not alter them. |
 | `smsd.TargetCorpus.prewarm(*, num_threads=0)` | Compute graph invariants and ECFP fingerprints once; later searches read the prewarmed graphs. |
-| `smsd.TargetCorpus.is_prewarmed (property)` | Whether :meth:prewarm has run since the last targets were added. |
+| `smsd.TargetCorpus.is_prewarmed (property)` | Whether `prewarm` has run since the last targets were added. |
 | `smsd.TargetCorpus.screen(query, threshold, *, num_threads=0)` | Return target indices meeting the ECFP Tanimoto threshold. |
 | `smsd.TargetCorpus.screen_many(queries, threshold, *, num_threads=0)` | Return ECFP Tanimoto hit indices for each query in input order. |
 | `smsd.TargetCorpus.screen_targets_many(queries, threshold, chemistry=None, *, num_threads=0)` | Return similarity-bound hit indices for each query in input order. |
 | `smsd.batch_similarity(query, targets, fp_size=2048, radius=2)` | Rank targets by ECFP Tanimoto similarity to a query. |
 | `smsd.gpu_device_info()` | Human-readable compute backend string, including a CPU-only backend. |
-| `smsd.gpu_is_available()` | True when a GPU is available at run time: through an installed smsd-cuda package that finds a device, or through a native module built with CUDA or Metal. Python screening and search never run on Metal; a Metal-enabled source build changes only what this function and `gpu_device_info()` report. |
+| `smsd.gpu_is_available()` | True when a GPU is available at run time: through an installed smsd-cuda or smsd-metal package that finds a device, or through a native module built with CUDA or Metal. A CUDA- or Metal-enabled source build of `smsd` itself changes only what this function and `gpu_device_info()` report. |
 | `smsd.screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_threads=0)` | Indices of the targets whose similarity bound to the query reaches threshold. |
 | `smsd.similarity(mol1, mol2)` | Upper bound on the similarity of two molecules, in [0.0, 1.0]. |
 | `smsd.similarity_upper_bound(g1, g2, chemistry=None, *, chem=None)` | Linear-time upper bound on the similarity of two molecules, in [0.0, 1.0]. |
@@ -535,29 +536,29 @@ Source: [_layout.py](../python/smsd/_layout.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.Point2D (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.Point3D (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.align_2d(coords, reference)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.bounding_box_2d(coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.canonical_orientation(mol, coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.center_2d(coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.count_crossings(mol, coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.generate_coords_2d(mol, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.generate_coords_3d(mol, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.is_degenerate_layout(coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.layout_quality(mol, coords, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.layout_sssr(mol)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.match_template(mol, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.mirror_x(coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.mirror_y(coords)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.normalise_bond_length(mol, coords, target=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.reduce_crossings(mol, coords, max_iter=1000)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.resolve_overlaps(coords, threshold=0.3, max_iter=100)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.rotate_2d(coords, angle)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.scale_2d(coords, factor)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)` | Native callable; its runtime docstring includes an ordinary example. |
-| `smsd.translate_2d(coords, dx, dy)` | Native callable; its runtime docstring includes an ordinary example. |
+| `smsd.Point2D` (class) | A 2D point with writable coordinates. |
+| `smsd.Point3D` (class) | A 3D point with writable coordinates. |
+| `smsd.align_2d(coords, reference)` | Align 2D coordinates to a reference by the optimal rotation. |
+| `smsd.bounding_box_2d(coords)` | float, float, float] |
+| `smsd.canonical_orientation(mol, coords)` | Rotate to the canonical orientation (30-degree grid alignment). |
+| `smsd.center_2d(coords)` | Centre 2D coordinates on the origin. |
+| `smsd.count_crossings(mol, coords)` | Count the number of bond crossings in a 2D layout. |
+| `smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)` | Force-directed 2D layout minimisation. |
+| `smsd.generate_coords_2d(mol, target_bond_length=1.5)` | Generate 2D coordinates for a molecule. |
+| `smsd.generate_coords_3d(mol, target_bond_length=1.5)` | Generate an approximate 3D geometry for a molecule. |
+| `smsd.is_degenerate_layout(coords)` | Check if a 2D layout is degenerate (all points collinear or stacked). |
+| `smsd.layout_quality(mol, coords, target_bond_length=1.5)` | Compute a layout quality score (0.0 = perfect). |
+| `smsd.layout_sssr(mol)` | The ring set used by 2D layout, as lists of atom indices. |
+| `smsd.match_template(mol, target_bond_length=1.5)` | Check whether a molecule matches a known scaffold template. |
+| `smsd.mirror_x(coords)` | Mirror 2D coordinates about the X axis (flip vertically). |
+| `smsd.mirror_y(coords)` | Mirror 2D coordinates about the Y axis (flip horizontally). |
+| `smsd.normalise_bond_length(mol, coords, target=1.5)` | Normalise bond lengths to the target value. |
+| `smsd.reduce_crossings(mol, coords, max_iter=1000)` | Reduce bond crossings in a 2D layout by optimising ring orientations. |
+| `smsd.resolve_overlaps(coords, threshold=0.3, max_iter=100)` | Resolve atom-atom overlaps by pushing the atoms apart. |
+| `smsd.rotate_2d(coords, angle)` | Rotate 2D coordinates by angle (radians) about the centroid. |
+| `smsd.scale_2d(coords, factor)` | Scale 2D coordinates uniformly about the centroid. |
+| `smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)` | Stress majorisation for 2D layout. |
+| `smsd.translate_2d(coords, dx, dy)` | Translate 2D coordinates by (dx, dy). |
 
 ### Depiction
 
@@ -565,11 +566,11 @@ Source: [_depiction.py](../python/smsd/_depiction.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.DepictOptions (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)` | Render a molecule with MCS or substructure atoms highlighted and numbered. |
-| `smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))` | Find the MCS and return an RDKit image with matched atoms highlighted; `highlight_color` is deprecated and has no effect. |
-| `smsd.depict_pair(mol1, mol2, mapping, opts=None, **kwargs)` | Render two molecules side by side with an MCS mapping highlighted. |
-| `smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))` | Find a substructure and return an RDKit image with the matched atoms highlighted. |
+| `smsd.DepictOptions` (class) | Native SVG drawing options. |
+| `smsd.depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight='gold', **kwargs)` | Render a molecule with MCS or substructure atoms highlighted and numbered. |
+| `smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0), highlight='gold')` | Find the MCS and return an RDKit image with the matched atoms and bonds highlighted; `highlight_color` is deprecated and has no effect. |
+| `smsd.depict_pair(mol1, mol2, mapping, opts=None, *, highlight='gold', **kwargs)` | Render two molecules side by side with an MCS mapping highlighted. |
+| `smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300), highlight='mint')` | Find a substructure and return an RDKit image with the matched atoms and bonds highlighted. |
 | `smsd.depict_svg(mol_or_smiles, opts=None, **kwargs)` | Render a molecule as an SVG string. |
 | `smsd.save_svg(svg_str, path)` | Write SVG text to a file as UTF-8. |
 | `smsd.to_svg(mol_or_smiles, *, size=(300, 200))` | Deprecated RDKit rendering of a molecule as SVG. |
@@ -580,7 +581,8 @@ Source: [highlight.py](../python/smsd/highlight.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)` | Render the two molecules with the best result's atom correspondence. |
+| `smsd.highlight.mcs_svg(query, target, result, *, highlight='gold', opts=None, **kwargs)` | Render the two molecules with the best result's atom correspondence. |
+| `smsd.highlight.substructure_svg(query, target, result, *, highlight='mint', opts=None, **kwargs)` | Render the target with the best hit's atoms and the bonds the hit carries. |
 
 ### Packed corpus and streaming
 
@@ -621,8 +623,8 @@ Source: [adapters.py](../python/smsd/adapters.py).
 | `smsd.adapters.to_torch(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None, device='cpu')` | Expand fingerprints to a PyTorch tensor without requiring NumPy. |
 | `smsd.adapters.fingerprints_numpy(molecules, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None)` | Compute native fingerprints and expand them to a NumPy feature matrix. |
 | `smsd.adapters.fingerprints_torch(molecules, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None, device='cpu')` | Compute native fingerprints and expand them to a PyTorch feature tensor. |
-| `smsd.adapters.FingerprintTransformer (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.adapters.SimilarityTransformer (class/enum)` | See the native graph/options table or the adapter contract above. |
+| `smsd.adapters.FingerprintTransformer` (class) | A scikit-learn transformer that turns molecules into fingerprints. |
+| `smsd.adapters.SimilarityTransformer` (class) | A scikit-learn transformer that turns molecules into Tanimoto similarities. |
 | `smsd.adapters.to_scipy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)` | Return a canonical SciPy CSR matrix without expanding dense rows. |
 | `smsd.adapters.fingerprints_scipy(molecules, *, kind='ecfp', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0, dtype=None)` | Compute native fingerprints as an integer CSR feature matrix. |
 | `smsd.adapters.molecules_pandas(molecules, *, kind='ecfp', fp_size=2048, radius=2, path_length=7, options=None, num_threads=0)` | Return a pandas DataFrame with molecule and fingerprint object columns. |
@@ -665,7 +667,7 @@ Source: [tool_definitions.py](../python/smsd/tool_definitions.py).
 | `smsd.tool_definitions.ToolDefinition.name (property)` | The public callable name. |
 | `smsd.tool_definitions.ToolDefinition.description (property)` | The callable's opening documentation paragraph. |
 | `smsd.tool_definitions.ToolDefinition.input_schema (property)` | Object schema with finite single-argument bounds and Python defaults. |
-| `smsd.tool_definitions.TOOL_REGISTRY (class/enum)` | See the native graph/options table or the adapter contract above. |
+| `smsd.tool_definitions.TOOL_REGISTRY` | The registered molecular tools, by name. |
 | `smsd.tool_definitions.get_tool_definitions(provider: str='mcp')` | Export definitions in the `mcp`, `input-schema`, `function` or `chat-function` format. |
 | `smsd.tool_definitions.call_tool(name: str, arguments: dict)` | Invoke a registered tool with checked JSON arguments and ordinary defaults. |
 | `smsd.tool_definitions.langchain_tools()` | Make LangChain StructuredTools with lazy optional imports and the same bounds. |
@@ -682,3 +684,15 @@ Source: [__init__.py](../packaging/smsd-cuda/python/smsd_cuda/__init__.py).
 | `smsd_cuda.is_available()` | Whether a CUDA device can be used. |
 | `smsd_cuda.preload()` | Initialise the current CUDA device and load screening kernels without screening data. |
 | `smsd_cuda.unavailable_reason()` | Why no CUDA device can be used, or None when one can. |
+
+### Metal package entry points
+
+Source: [__init__.py](../packaging/smsd-metal/python/smsd_metal/__init__.py).
+
+| Callable | Contract |
+| --- | --- |
+| `smsd_metal.capsule()` | A capsule holding the accelerator's table, which smsd attaches. |
+| `smsd_metal.device_info()` | A description of the device, such as 'Apple M2 Pro (Metal, 21845 MB)'. |
+| `smsd_metal.is_available()` | Whether a Metal device can be used: this is an Apple silicon Mac with a GPU. |
+| `smsd_metal.preload()` | Compile the Metal screening kernels without screening data. |
+| `smsd_metal.unavailable_reason()` | Why no Metal device can be used, or None when one can. |

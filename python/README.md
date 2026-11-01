@@ -7,6 +7,7 @@
 # SMSD Pro™ for Python
 
 [![PyPI](https://img.shields.io/pypi/v/smsd)](https://pypi.org/project/smsd/)
+[![Documentation](https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330)](https://asad.github.io/SMSD/)
 [![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
 SMSD Pro provides substructure search, maximum common substructure (MCS)
@@ -17,13 +18,13 @@ RDKit image helpers.
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 ```
 
 To include RDKit, install the `rdkit` extra:
 
 ```bash
-python -m pip install "smsd[rdkit]==8.1.0"
+python -m pip install "smsd[rdkit]==8.2.0"
 ```
 
 The CPU/OpenMP wheels cover CPython 3.12–3.15 on macOS arm64 (macOS 14 or
@@ -34,15 +35,15 @@ source build.
 
 The [conda guide](https://github.com/asad/SMSD/blob/master/packaging/conda/README.md)
 describes the CPU and Linux CUDA recipes and the conda, mamba and Pixi install
-routes.
+routes. The conda `smsd` package is currently built without OpenMP.
 
-### Optional CUDA package
+### Optional GPU packages
 
 `smsd-cuda` provides optional NVIDIA CUDA screening on Linux x86_64 and needs
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -54,6 +55,21 @@ CUDA calls have their own error contract, described below.
 The [`smsd-cuda` package](https://github.com/asad/SMSD/blob/master/packaging/smsd-cuda/README.md)
 provides preload, retained workspace, opt-in CUDA Graph replay and on-device
 top-k filtering.
+
+`smsd-metal` provides optional Apple GPU screening on Apple silicon Macs with
+macOS 14 or later, and also needs the same version of `smsd`:
+
+```bash
+python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+```
+
+Prepared corpus screens and requested pre-screens can use the Apple GPU, with
+the same hits as on the CPU; packed fingerprint corpora do not use Metal. See
+the [`smsd-metal` package](https://github.com/asad/SMSD/blob/master/packaging/smsd-metal/README.md)
+and [CPU and GPU screening](https://github.com/asad/SMSD/blob/master/docs/guide/CPU_GPU.md).
+Native Windows CUDA is not provided; on Windows, use the Linux CUDA package
+under WSL2, as described in
+[GPU screening on Windows](https://github.com/asad/SMSD/blob/master/docs/guide/GPU_ON_WINDOWS.md).
 
 ## Quick start
 
@@ -221,6 +237,9 @@ for Open Babel, without its atom numbering. See
 
 ## Documentation
 
+The documentation site, [asad.github.io/SMSD](https://asad.github.io/SMSD/),
+brings the user guide, notebooks and reference together.
+
 - [Python guide](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md):
   searches, chemistry options, timeouts and the full API reference.
 - [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md):
@@ -241,8 +260,10 @@ for Open Babel, without its atom numbering. See
   workloads and mapping validation.
 - [Changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md): what the
   release provides.
-- [Upgrading from 8.0.3](https://github.com/asad/SMSD/blob/v8.1.0/docs/RELEASE_NOTES.md#upgrading-from-803):
-  ring refusals, the changed MCIS search and other behaviour changes.
+- [Upgrading from 8.1.0](https://github.com/asad/SMSD/blob/v8.2.0/docs/RELEASE_NOTES.md#upgrading-from-810):
+  refusal messages, paired add-on versions and Java availability; the notes on
+  [upgrading from 8.0.3](https://github.com/asad/SMSD/blob/v8.2.0/docs/RELEASE_NOTES.md#upgrading-from-803)
+  cover ring refusals, the changed MCIS search and other behaviour changes.
 
 ## Build from source
 
@@ -256,8 +277,9 @@ python -m build
 ```
 
 The standard wheels use CPU/OpenMP. The optional `smsd-cuda` package needs a
-compatible NVIDIA driver; macOS uses the CPU. `gpu_device_info()` reports an
-available backend, not the one a particular call used.
+compatible NVIDIA driver, and the optional `smsd-metal` package needs an Apple
+silicon Mac. `gpu_device_info()` reports an available backend, not the one a
+particular call used.
 
 ## Other languages
 

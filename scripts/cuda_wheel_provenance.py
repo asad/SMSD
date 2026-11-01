@@ -109,7 +109,7 @@ def installed_files(wheel, package, prefix, module, native):
     files = {}
     with zipfile.ZipFile(wheel) as archive:
         for member in archive.namelist():
-            if (member.startswith(package + "/") or member.startswith(package + ".libs/")) and member.endswith((".py", ".so")):
+            if (member.startswith(package + "/") or member.startswith(package + ".libs/")) and member.endswith((".py", ".so", ".dylib")):
                 installed = (base / member).resolve()
                 expected = hashlib.sha256(archive.read(member)).hexdigest()
                 if not installed.is_relative_to(prefix) or sha256(installed) != expected:

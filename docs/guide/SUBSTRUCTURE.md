@@ -607,26 +607,40 @@ status: CANCELLED complete: False
 
 ## Draw a hit
 
-`depict_mapping(molecule, mapping)` draws a molecule natively, with no RDKit,
-and highlights the atoms in `mapping`. Its keys are atoms of the drawn
-molecule, so invert the search mapping to draw the target. This route works
-for molecule and SMARTS queries alike.
+`smsd.highlight.substructure_svg(query, target, result)` draws the target
+natively, with no RDKit, and highlights the hit atoms and the bonds joining
+them. A mint halo keeps the highlighted region continuous behind the bond
+lines and labels, and each hit atom carries a small map number. Pass the
+query molecule or SMARTS pattern and the target as searched. The SVG keeps
+the search status in its title and in its `data-search-status`,
+`data-optimal` and `data-complete` attributes, and `highlight="gold"` draws a
+gold halo instead. A hit whose target atoms share a bond that the query lacks
+raises `ValueError`, since the drawing would highlight that bond too.
+
+`depict_mapping(molecule, mapping)` draws any mapping on one molecule, on a
+gold halo unless `highlight="mint"` is given. The mapping's keys are atoms of
+the drawn molecule, so invert the search mapping to draw the target.
 
 ```python
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import smsd
+from smsd.highlight import substructure_svg
 
 paracetamol = "CC(=O)Nc1ccc(O)cc1"
-hit = smsd.Substructure.smarts("c[OX2H]").match(paracetamol)
+pattern = "c[OX2H]"
+hit = smsd.Substructure.smarts(pattern).match(paracetamol)
 assert hit.found
 
-highlight = {target: query for query, target in hit.best.atom_mapping.items()}
-print("highlighted target atoms:", sorted(highlight.items()))
-assert highlight == {7: 0, 8: 1}
+svg = substructure_svg(pattern, paracetamol, hit)
+print("status kept:", 'data-search-status="COMPLETED"' in svg)
 
-svg = smsd.depict_mapping(paracetamol, highlight)
+atoms = {target: query for query, target in hit.best.atom_mapping.items()}
+print("highlighted target atoms:", sorted(atoms.items()))
+assert atoms == {7: 0, 8: 1}
+assert "<svg" in smsd.depict_mapping(paracetamol, atoms, highlight="mint")
+
 with TemporaryDirectory() as directory:
     path = Path(directory) / "paracetamol_hit.svg"
     smsd.save_svg(svg, path)
@@ -638,13 +652,15 @@ assert "<svg" in written
 The program prints:
 
 ```text
+status kept: True
 highlighted target atoms: [(7, 0), (8, 1)]
 SVG written: True
 ```
 
 With RDKit installed, `depict_substructure(query, target, *, timeout_ms=10000,
-size=(600, 300))` runs its own molecule-query search and returns an RDKit
-image of the query and the target with the matched atoms highlighted. It does
+size=(600, 300), highlight="mint")` runs its own molecule-query search and
+returns an RDKit image of the query and the target with the matched atoms and
+bonds highlighted in mint, or in gold with `highlight="gold"`. It does
 not accept SMARTS and reports no search status: when the search stops without
 a match, it draws the pair without a highlight.
 

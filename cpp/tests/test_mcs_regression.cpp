@@ -1112,6 +1112,23 @@ void testVertexSearchHonoursTimeoutsOnSparseGraphs() {
     assert(result.elapsedMillis < smsd_test::timingAllowance(550));
 }
 
+void testVertexSearchSetUpHonoursShortTimeouts() {
+    // The domains of 32000 query atoms over 32000 target atoms take 128 MB. They are filled
+    // between reads of the clock, and a search that stops in its probe does not fill them again
+    // for the full search, so a short limit holds where both fills took 150 ms in Debug builds;
+    // optimised builds fill them within the allowance, so this guards unoptimised builds.
+    const auto graph = isolatedAtoms(32000, 8);
+    for (int64_t timeout : {1, 5}) {
+        smsd::MCSOptions opts;
+        opts.timeoutMs = timeout;
+        const auto result = smsd::MCS::find(graph).withOptions(opts).match(graph);
+        assert(result.status == smsd::SearchStatus::TimedOut && !result.optimal && !result.complete);
+        for (const auto& match : result.matches)
+            assert(smsd::MCS::validateMapping(graph, graph, match, opts).empty());
+        assert(result.elapsedMillis < timeout + smsd_test::timingAllowance(15));
+    }
+}
+
 void testCommonBondPairLimit() {
     namespace detail = smsd::common_bond_detail;
     // 8192 target bonds take 128 words a query bond, so 32768 query bonds fill the limit exactly.
@@ -1257,6 +1274,7 @@ int main() {
     testCommonAtomSeededOptionsAgreeWithGeneralSearch();
     testCommonAtomResonanceBonds();
     testVertexSearchHonoursTimeoutsOnSparseGraphs();
+    testVertexSearchSetUpHonoursShortTimeouts();
     testCommonBondPairLimit();
     testStarSeedsGrowQuickly();
     testSearchesStoppedWhileSeedingKeepTheirSeed();

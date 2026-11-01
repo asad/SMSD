@@ -3,23 +3,44 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [8.2.0] - 2026-11-01
+
+Apple GPU screening, cleaner structure drawings, clearer tool refusals and an
+MCS time-limit fix. From 8.2.0 the Java library and command-line tool receive
+bug fixes only. The [release notes](docs/RELEASE_NOTES.md) give the upgrade
+notes.
 
 ### Added
 
-- Three user-guide chapters: [clustering and diversity](docs/guide/CLUSTERING.md),
+- `smsd-metal`: optional GPU screening of prepared `TargetCorpus` libraries on
+  Apple silicon Macs with macOS 14 or later, with the same hits as the CPU.
+- [GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md) through WSL2.
+- User-guide chapters on [clustering and diversity](docs/guide/CLUSTERING.md),
   [machine learning and data frames](docs/guide/MACHINE_LEARNING.md) and
-  [chemistry tools for AI assistants](docs/guide/AI_TOOLS.md).
-- An AI tools notebook, `python/examples/ai_tools.ipynb`, that calls the
-  molecular tools directly, from a scripted tool loop and from local or hosted
-  models.
+  [chemistry tools for AI assistants](docs/guide/AI_TOOLS.md), and an AI tools
+  notebook.
+- Gold and mint match highlights, chosen with `highlight=`, and
+  `smsd.highlight.substructure_svg` for substructure hits.
 
 ### Changed
 
-- The [AI assistants guide](docs/AI_ASSISTANTS.md) opens with a model choice
-  table and reflects current provider interfaces and local runtimes.
-- `scripts/check_examples.py` removes API key variables before it runs any
-  example.
+- Refusals from `call_tool` and the MCP server name the argument and what is
+  accepted.
+- `smsd.gpu_is_available()` and `smsd.gpu_device_info()` report a Metal device
+  as they do a CUDA one.
+- The example notebooks install what they need and run in Colab as they are.
+- A cleaner drawing style; 2D coordinates, drawings and MOL-file wedges differ
+  from 8.1.0.
+- Release checks and PyPI publishing cover `smsd-metal`.
+
+### Fixed
+
+- Structure drawings keep rings regular, no longer overlap atoms in drug-sized
+  molecules, show the stored E/Z for double bonds outside rings and fit
+  fixed-size canvases without clipping.
+- An MCS search with a short time limit on very large inputs stops within the
+  limit.
+- Two native allocation-failure tests build without OpenMP.
 
 ## [8.1.0] - 2026-10-31
 

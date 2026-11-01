@@ -35,11 +35,14 @@ test:
     - smsd.clustering
     - smsd.highlight
     - smsd.mcp_server
+  files:  # [win]
+    - check_launcher.py  # [win]
   requires:
     - pip
     - numpy >=1.24,<3
   commands:
     - python -m pip check
+    - python check_launcher.py  # [win]
 
 about:
   home: https://github.com/asad/SMSD

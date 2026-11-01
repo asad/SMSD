@@ -113,21 +113,11 @@ with TemporaryDirectory() as directory:
         selected = maxmin(corpus, count=2, backend="cuda")
 ```
 
-CUDA computes exact integer intersections. `screen_many` applies integer cutoff
-tables on device, chosen to reproduce the CPU's binary64 threshold comparison;
-the host forms the returned Tanimoto scores from integer counts. `top_k_pairs`
-performs threshold selection and per-tile top-k on device, then merges those
-lists on the CPU with the same descending score and ascending target-index tie
-break. Pair searches and clustering use the same exact scores. GPU acceleration
-does not make those algorithms approximate.
-
-Butina centre selection, count updates and assignment bookkeeping remain on the
-CPU. MaxMin's minimum-distance updates and next-row choice also remain on the
-CPU. Both have deterministic lower-index tie breaks. The `cuda_calls` property
-is a cumulative count of completed packed CUDA calls, including clustering
-passes. A positive increase is evidence that this adapter completed CUDA work;
-it is not a count of queries, hits or GPU kernels, and does not establish a
-speedup or the fraction of an application executed on the GPU.
+CUDA returns exactly the CPU results: the same hits, scores, order and ties, so
+pair searches, Butina and MaxMin give the same answers on either backend.
+Clustering decisions are deterministic, with ties going to the lower index.
+`cuda_calls` counts completed packed CUDA calls, including clustering passes; an
+increase shows that the device did work for this corpus.
 
 ## Ordering, work and memory
 
@@ -136,21 +126,11 @@ query input to detect an excess before reading targets. It yields target-chunk
 order, then query index and target index. This is not a global query-major or
 similarity ranking. `similarities` yields target input order for one query.
 
-CUDA tiles contain at most 1,048,576 query/target pairs. A conservative 64 MiB
-host-work estimate also limits each tile, so the effective target chunk can be
-smaller than the requested `chunk_size`. CPU packed comparison temporaries are
-similarly bounded to approximately 64 MiB; `chunk_size` can lower the bound.
-These are array/work estimates, not hard caps on process memory. Mapped pages,
-query storage, Python objects and application results are additional costs.
-Molecule construction and parsing memory are also input-dependent.
-
-The native resident workspace separately retains at most 256 MiB of device
-scratch. That cap is not a total GPU-memory limit: resident target fingerprints,
-other temporary allocations, CUDA runtime resources and host pinned staging are
-separate. The packed adapter creates and releases a target resident handle for
-each tile; an open memory-mapped file does not imply that the entire corpus is
-resident on the GPU or that targets persist on device between calls. The native
-`TargetCorpus` API has its own retained-library lifetime.
+Work runs in bounded tiles, so comparison temporaries stay at about 64 MiB of
+host memory; a smaller `chunk_size` lowers this. Mapped pages, queries and the
+results you keep are extra. Packed CUDA calls do not keep targets on the device
+between calls; for repeated queries over one library, use `TargetCorpus`, whose
+fingerprints stay on the device.
 
 `top_k_pairs` yields directed neighbours, ordered by descending similarity and
 then target index, with at most `k` heap entries in the global merge.
@@ -169,8 +149,7 @@ work is O(n * selected_count).
 
 The format has a 24-byte little-endian header and `ceil(fp_size / 8)` bytes per
 row. The supported width is 1 to 16,777,216 bits. A 2048-bit corpus requires
-256 bytes per row plus the header. The format and bounded tiles do not establish
-validation at a particular corpus size or any throughput result.
+256 bytes per row plus the header.
 
 Keep an open corpus file unchanged, and close it with a context manager.
 Concurrent reads copy their mapped rows under a shared lifetime lock. `close()`

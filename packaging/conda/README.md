@@ -112,10 +112,10 @@ priority. These commands install local conda artefacts, not PyPI wheels:
 ```sh
 conda index /path/to/local-channel
 conda create -n smsd-cpu --strict-channel-priority \
-  -c file:///path/to/local-channel -c conda-forge "python=3.12" "smsd=8.1.0"
+  -c file:///path/to/local-channel -c conda-forge "python=3.12" "smsd=8.2.0"
 mamba create -n smsd-gpu --strict-channel-priority \
   -c file:///path/to/local-channel -c conda-forge \
-  "python=3.12" "smsd=8.1.0" "smsd-cuda=8.1.0" "cuda-version=12.8"
+  "python=3.12" "smsd=8.2.0" "smsd-cuda=8.2.0" "cuda-version=12.8"
 ```
 
 Use the frozen version in both package specifications if it changes. For Pixi:
@@ -123,11 +123,11 @@ Use the frozen version in both package specifications if it changes. For Pixi:
 ```sh
 pixi init --channel file:///path/to/local-channel --channel conda-forge \
   --platform linux-64 smsd-demo
-pixi add --manifest-path smsd-demo/pixi.toml "python=3.12" "smsd=8.1.0"
+pixi add --manifest-path smsd-demo/pixi.toml "python=3.12" "smsd=8.2.0"
 pixi run --manifest-path smsd-demo/pixi.toml python -c "import smsd; print(smsd.__version__)"
 ```
 
-On a compatible Linux NVIDIA host, add `"smsd-cuda=8.1.0"` and
+On a compatible Linux NVIDIA host, add `"smsd-cuda=8.2.0"` and
 `"cuda-version=12.8"` to the same Pixi environment. Use the native platform
 for CPU installations. No lockfile is included; Pixi creates one when it
 solves the environment. A separate Pixi build recipe is unnecessary: Pixi
@@ -135,19 +135,54 @@ consumes the same conda outputs.
 
 ## Install from the channel
 
-Packages on the `bioinception` channel follow the release. Until the channel
-carries a build for your platform, build from these recipes and install from a
-local channel as shown above. Once it does, install SMSD from the
-`bioinception` channel and the dependencies from conda-forge:
+The `bioinception` channel carries `smsd` for `linux-64`, `linux-aarch64` and
+`osx-arm64`, and `smsd-cuda` for `linux-64`; `win-64` packages are to follow.
+`conda search -c bioinception --override-channels smsd` lists the versions
+available for your platform. Install SMSD from that channel and its dependencies from conda-forge:
 
 ```sh
 conda install -c bioinception -c conda-forge smsd
 ```
 
-Where the channel also carries `smsd-cuda`, install it from the same channels on
-a Linux x86-64 host with a compatible NVIDIA driver; it requires the same `smsd`
-version. For mamba or Pixi, use the `bioinception` channel in place of the local
-build channel in the commands above once it carries the version they name.
+On a Linux x86-64 host with a compatible NVIDIA driver, add `smsd-cuda` from
+the same channels; it requires the same `smsd` version:
+
+```sh
+conda install -c bioinception -c conda-forge smsd smsd-cuda
+```
+
+For mamba or Pixi, use the `bioinception` channel in place of the local build
+channel in the commands above once it carries the version they name. For a
+platform the channel does not carry, build from these recipes and install from
+a local channel as shown above.
+
+### Windows
+
+Until `win-64` packages are on the channel, install the PyPI wheel, which
+covers Windows x86-64, into a conda environment with CPython 3.12–3.15:
+
+```powershell
+conda create -n smsd -c conda-forge python=3.12
+conda activate smsd
+python -m pip install smsd
+```
+
+SMSD has no required dependencies, so pip adds only SMSD and leaves the
+packages that conda manages unchanged. Install optional packages such as NumPy
+or RDKit with conda before SMSD. Unlike the conda package, the wheel uses
+OpenMP for batch work.
+
+The `win-64` packages are built on a GitHub-hosted Windows runner by the
+manually started `conda-windows` workflow
+([`conda-windows.yml`](../../.github/workflows/conda-windows.yml)), and the
+maintainer uploads them to the channel; the workflow itself publishes nothing.
+Given a release tag or commit, which must be on `master`, it checks the downloaded archive
+against that commit, builds and tests the CPU package for CPython 3.12–3.15
+under `C:\b`, and fails if any package records a runner
+user or workspace path, or leaves a build path in an installed file that conda
+does not relocate. On Windows the recipe test also runs the `smsd-mcp`
+launcher. The workflow's artefact holds the packages, `SHA256SUMS`, the variant inputs
+and the build logs.
 
 References: [conda-build metadata](https://docs.conda.io/projects/conda-build/en/stable/resources/define-metadata.html),
 [CUDA component/version selection](https://github.com/conda-forge/cuda-feedstock/blob/main/recipe/doc/end_user_run_guide.md),

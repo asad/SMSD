@@ -1,13 +1,13 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.1.0. The
+Reference for the `smsd` Python package, version 8.2.0. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 ```
 
 The CPU/OpenMP wheels cover CPython 3.12–3.15; the [supported-platforms
@@ -17,8 +17,8 @@ needs no other toolkit. RDKit is needed only for RDKit molecules, `to_rdkit`,
 `to_svg`, `depict_mcs` and `depict_substructure` (`python -m pip install
 "rdkit<2027"`); Open Babel only for `from_openbabel` and `to_openbabel`.
 
-Deprecated compatibility aliases remain available in 8.1. Prefer their current
-replacement names in new code.
+Deprecated compatibility aliases remain available throughout 8.x. Prefer their
+current replacement names in new code.
 
 ### Build from source
 
@@ -41,7 +41,7 @@ search do not run on them, so they change only what `gpu_is_available()` and
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -69,9 +69,28 @@ report backend availability, not whether a call used the device. Missing
 devices, allocation failure and device loss use the CPU.
 Setting `SMSD_DISABLE_GPU` to anything but an empty string or `0` disables the
 GPU at run time; an explicit packed `backend="cuda"` call then raises
-`RuntimeError`. macOS uses the CPU; the
+`RuntimeError`. The
 [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) gives the
-CUDA package requirements.
+requirements of both GPU packages.
+
+### Optional Metal screening
+
+`smsd-metal` adds Apple GPU screening on Apple silicon Macs with macOS 14 or
+later, and needs the same version of `smsd`:
+
+```bash
+python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+```
+
+Prepared ECFP4 screens of a `TargetCorpus` and
+`match_corpus(..., gpu_prefilter=True)` can then use the Apple GPU, with the
+same hits and scores as the CPU. Automatic screening uses the GPU on an Apple
+M5 for corpora of at least 100,000 targets; setting `SMSD_METAL_MIN_TARGETS`
+to a positive integer N lets any Apple GPU take corpora of at least N targets.
+Packed `FingerprintCorpus` scans run on the CPU. `SMSD_DISABLE_GPU` turns Metal
+off as it does CUDA, and `smsd_metal.preload()` readies the device before the
+first screen. See
+[CPU and GPU screening](guide/CPU_GPU.md#install-the-metal-package).
 
 ## Additions in 8.1.0
 
@@ -192,8 +211,7 @@ match, and `optimal` and `complete` both `False`, when:
   of more than 32,768 atoms each;
 - the two molecules are too large in bonds, as for two molecules of more than
   16,384 bonds each;
-- rarely, a molecule has an atom with 512 or more bonds and the two molecules
-  share many kinds of bond.
+- in rare cases, a molecule has an atom with 512 or more bonds.
 
 MCIS searches are never declined; the time and node limits bound them. C++
 and Java use the same limits.
@@ -908,15 +926,18 @@ accepts a molecule.
 ### Depiction
 
 - `depict_svg(mol_or_smiles, opts=None, **kwargs)`: SVG text.
-- `depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)`: SVG
-  highlighting and numbering mapped atoms, keyed by drawn-atom index.
-- `depict_pair(mol1, mol2, mapping, opts=None, **kwargs)`: a side-by-side SVG
-  of a mapping.
+- `depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight="gold", **kwargs)`:
+  SVG highlighting and numbering mapped atoms, keyed by drawn-atom index.
+- `depict_pair(mol1, mol2, mapping, opts=None, *, highlight="gold", **kwargs)`:
+  a side-by-side SVG of a mapping.
+- `smsd.highlight.mcs_svg(query, target, result, *, highlight="gold", opts=None, **kwargs)`
+  and `smsd.highlight.substructure_svg(query, target, result, *, highlight="mint", opts=None, **kwargs)`:
+  SVG of an MCS or substructure result that keeps its search status.
 - `save_svg(svg_str, path)`: write SVG text to a file.
-- `depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))`:
+- `depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0), highlight="gold")`:
   an RDKit image of the MCS; `highlight_color` is deprecated, ignored, and
   warns when changed.
-- `depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))`:
+- `depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300), highlight="mint")`:
   an RDKit image of a substructure match.
 - `to_svg(mol_or_smiles, *, size=(300, 200))`: deprecated RDKit SVG; use
   `depict_svg`.
@@ -925,9 +946,17 @@ The native SVG functions need no RDKit; keyword arguments set `DepictOptions`
 attributes, on `opts` when given. Defaults: `bond_length` and `padding` 30 px;
 `line_width`, `bold_width`, `font_size` and `match_width` 0 (automatic);
 `width` and `height` 0 (fitted to the molecule); `bond_spacing` and
-`highlight_radius` 0 (18% and 40% of `bond_length`); `highlight_opacity` 0.30;
-`subscript_scale` 0.70; `show_carbon_labels` and `show_atom_indices` `False`;
-`show_map_numbers` `True`; `font_family` `"Arial, Helvetica, sans-serif"`.
+`highlight_radius` 0 (18% and 32% of `bond_length`); `highlight_opacity` 0.30
+(no effect); `subscript_scale` 0.70; `show_carbon_labels` and
+`show_atom_indices` `False`; `show_map_numbers` `True`; `font_family`
+`"Arial, Helvetica, sans-serif"`. Matched atoms and bonds sit on a halo with
+a fine edge of the same hue, and each mapped atom carries a small grey-green
+map number. `highlight` sets the halo to `"gold"` or `"mint"`, and any other
+value raises `ValueError`; substructure hits default to mint and every other
+drawing to gold. `depict_mapping` highlights every bond between mapped atoms;
+`depict_pair` highlights a bond only when the mapping carries it onto a bond
+of the other molecule. `depict_mcs` and `depict_substructure` take the same
+`highlight` names and draw their RDKit images in similar shades.
 
 ## Further reading
 

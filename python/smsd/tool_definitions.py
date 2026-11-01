@@ -150,9 +150,11 @@ def _validate(value, schema, name):
     if not valid:
         raise ValueError(f"{name} must have JSON type {kind}")
     if "enum" in schema and value not in schema["enum"]:
-        raise ValueError(f"{name} is not an allowed value")
+        raise ValueError(f"{name} is not an allowed value; allowed values: "
+                         + ", ".join(repr(allowed) for allowed in schema["enum"]))
     if "minimum" in schema and not schema["minimum"] <= value <= schema["maximum"]:
-        raise ValueError(f"{name} is outside its supported range")
+        raise ValueError(f"{name} is outside its supported range; allowed range: "
+                         f"{schema['minimum']} to {schema['maximum']}")
     if kind == "string" and not schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", len(value)):
         raise ValueError(f"{name} is outside its supported text length")
     if kind == "array":
@@ -166,7 +168,9 @@ def call_tool(name: str, arguments: dict) -> dict:
     """Invoke a registered tool with checked JSON arguments and ordinary defaults.
 
     This is a local dispatcher, not a model request. Unknown tools, extra fields
-    and JSON type coercions are rejected before molecular work begins.
+    and JSON type coercions are rejected before molecular work begins. Each
+    refusal names the argument and lists the tools, arguments or values allowed,
+    so that a model can correct its call.
 
     Example::
 
@@ -177,17 +181,27 @@ def call_tool(name: str, arguments: dict) -> dict:
     return tool.function(**arguments)
 
 
+def _arguments(keys):
+    # Unknown names come from the caller, so at most eight are echoed, each cut to 64 characters.
+    shown = [repr(key)[:64] for key in keys[:8]] + (["..."] if len(keys) > 8 else [])
+    return ("argument " if len(keys) == 1 else "arguments ") + ", ".join(shown)
+
+
 def _validate_arguments(name, arguments):
     if not isinstance(name, str) or name not in TOOL_REGISTRY:
-        raise ValueError("Unknown molecular tool")
+        raise ValueError("Unknown molecular tool; available tools: " + ", ".join(TOOL_REGISTRY))
     if not isinstance(arguments, dict):
         raise ValueError("arguments must be a JSON object")
     tool = TOOL_REGISTRY[name]
     schema = tool.input_schema
-    if any(key not in schema["properties"] for key in arguments):
-        raise ValueError("Unknown tool argument")
-    if any(key not in arguments for key in schema["required"]):
-        raise ValueError("Missing required tool argument")
+    unknown = [key for key in arguments if key not in schema["properties"]]
+    if unknown:
+        raise ValueError(f"Unknown tool {_arguments(unknown)} for {name}; allowed arguments: "
+                         + ", ".join(schema["properties"]))
+    missing = [key for key in schema["required"] if key not in arguments]
+    if missing:
+        raise ValueError(f"Missing required tool {_arguments(missing)} for {name}; required arguments: "
+                         + ", ".join(schema["required"]))
     for key, value in arguments.items():
         _validate(value, schema["properties"][key], key)
     return tool

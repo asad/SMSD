@@ -1,6 +1,6 @@
 # Chemistry tools for AI assistants
 
-SMSD Pro 8.1.0 offers eight molecular tools that an AI assistant can call:
+SMSD Pro 8.2.0 offers eight molecular tools that an AI assistant can call:
 maximum common substructure (MCS), substructure and SMARTS matching,
 fingerprints, similarity, small-list screening, standardisation and MCS
 depiction. The tools run on your own machine. They are served to an assistant
@@ -51,10 +51,10 @@ one of `ecfp`, `fcfp`, `circular`, `path`, `torsion` or `mcs`; the
 
 Install SMSD Pro with the `mcp` extra, which adds the MCP Python SDK. The
 server and the tool definitions need SMSD 8.1.0 or later and Python 3.12 or
-later:
+later; the refusal messages that list allowed values need 8.2.0:
 
 ```bash
-python -m pip install "smsd[mcp]==8.1.0"
+python -m pip install "smsd[mcp]==8.2.0"
 smsd-mcp
 # Equivalent: python -m smsd.mcp_server
 ```
@@ -219,7 +219,7 @@ absent = call_tool("find_substructure", {"query": "[N]", "target_smiles": anthra
 print("absence proved:", proves_absence(absent), "| after a stop:",
       proves_absence(stopped))
 
-# Bad arguments are refused before any molecular work, with a short message.
+# Bad arguments are refused before any molecular work; the message says what is accepted.
 for arguments in ({"query_smiles": "CCO"},
                   {"query_smiles": "CCO", "target_smiles": "CCN", "timeout_ms": 60000},
                   {"query_smiles": "CCO", "target_smiles": "CCN", "timeout_ms": "500"},
@@ -241,10 +241,10 @@ The program prints:
 stopped: False TIMED_OUT False False
 capped: 2 LIMIT_REACHED complete: False truncated: True
 absence proved: True | after a stop: False
-refused: Missing required tool argument
-refused: timeout_ms is outside its supported range
+refused: Missing required tool argument 'target_smiles' for find_mcs; required arguments: query_smiles, target_smiles
+refused: timeout_ms is outside its supported range; allowed range: 0 to 30000
 refused: timeout_ms must have JSON type integer
-refused: Unknown tool argument
+refused: Unknown tool argument 'path' for find_mcs; allowed arguments: query_smiles, target_smiles, objective, connected, timeout_ms, node_limit, match_stereo, complete_rings_only, ring_matches_ring_only
 refused: Unclosed ring(s): 1
 ```
 
@@ -253,9 +253,11 @@ refused: Unclosed ring(s): 1
 and `optimal` stays true because a match was found. Arguments are refused
 before any molecular work: unknown tools, unknown or missing arguments, JSON
 type changes such as a string for an integer, and values out of range each
-raise `ValueError` with a short message. A SMILES or SMARTS parse error also
-raises `ValueError`. Return that message to the model as the tool's answer, so
-that it can correct the call.
+raise `ValueError`. The message names the argument and, where a list helps,
+what is accepted: the available tools, the tool's allowed or required
+arguments, the allowed values or the allowed range. A SMILES or SMARTS parse
+error also raises `ValueError`. Return that message to the model as the tool's
+answer, so that it can correct the call.
 
 Fingerprint, similarity, screening and standardisation results are not
 searches. They report `status: "COMPLETED"`, except a canonical tautomer
@@ -391,9 +393,10 @@ form. Tautomer enumeration stops at 128 tautomers or 256 transformations; when
 it stops, the result reports `LIMIT_REACHED` and `complete: false`, and the
 choice is made from the tautomers found.
 
-The drawing highlights the mapped atoms and the input bonds between them. For
-an MCES search, the selected common bonds are those in `bond_mapping`; the
-drawing can also highlight other bonds between mapped atoms. A search with no
+The drawing highlights the mapped atoms and each bond between them that the
+mapping carries onto a bond of the other molecule. For an MCES search, the
+selected common bonds are those in `bond_mapping`; the drawing can also
+highlight such bonds outside it. A search with no
 match returns `svg: None`, and a stopped search keeps its stopped status when
 drawn. The SVG is checked before it is returned and contains no scripts,
 external references or document declarations.
@@ -538,7 +541,7 @@ print("answer:", messages[-1]["content"])
 
 results = [json.loads(m["content"]) for m in messages if m["role"] == "tool"]
 assert results[0]["optimal"] and results[0]["matches"][0]["atom_count"] == 6
-assert results[1] == {"error": "Unknown tool argument"}
+assert results[1]["error"].startswith("Unknown tool argument 'timeout' for find_mcs")
 assert results[2]["budget"]["timeout_ms"] == 500
 assert model.requests[0]["tools"][0]["function"]["name"] == "find_mcs"
 ```
@@ -547,7 +550,7 @@ The program prints:
 
 ```text
 call_1 -> status=COMPLETED optimal=True atoms=6
-call_2 -> Unknown tool argument
+call_2 -> Unknown tool argument 'timeout' for find_mcs; allowed arguments: query_smiles, target_smiles, objective, connected, timeout_ms, node_limit, match_stereo, complete_rings_only, ring_matches_ring_only
 call_3 -> status=COMPLETED optimal=True atoms=6
 model requests: 3
 answer: The MCS has 6 atoms; COMPLETED, optimal and complete, so it is proved maximum.

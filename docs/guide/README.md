@@ -1,7 +1,7 @@
 # SMSD Pro user guide
 
 This guide shows how to search, compare and screen molecules with SMSD Pro
-8.1.0. Most chapters work in Python; the last two cover the command-line tool,
+8.2.0. Most chapters work in Python; the last two cover the command-line tool,
 the Docker images and the C++ and Java libraries. Every Python example is a
 complete program that runs on a CPU-only machine, and the output shown below
 each one comes from running it on such a machine.
@@ -27,7 +27,8 @@ task and shows the calls that carry it out. The
 | [Screening a library](SCREENING.md) | Choosing a route, preparing a library, similarity screens in memory and streamed from a file, an exact substructure screen, an MCS-similarity screen and saving the hits |
 | [Packed fingerprint index](PACKED_INDEX.md) | Building and reopening an index file, threshold and nearest-neighbour searches, several queries in one pass, neighbours and pairs within the index, clustering, diverse selection and the file format |
 | [Clustering and diversity](CLUSTERING.md) | Choosing between Butina clustering, MaxMin selection and nearest-neighbour pairs, preparing the input, thresholds and reordering, seeds, chunk size and cost, and the CPU and GPU backends |
-| [CPU and GPU screening](CPU_GPU.md) | What runs where, checking the backend, installing the CUDA package, requesting or refusing the GPU, fallback and errors, and comparing the two devices |
+| [CPU and GPU screening](CPU_GPU.md) | What runs where, checking the backend, installing the CUDA and Metal packages, requesting or refusing the GPU, fallback and errors, and comparing the devices |
+| [GPU screening on Windows](GPU_ON_WINDOWS.md) | NVIDIA GPU screening on Windows through WSL2, with the Linux CUDA package or the GPU Docker image |
 | [Machine learning and data frames](MACHINE_LEARNING.md) | Fingerprints as NumPy and SciPy matrices, pandas and Polars columns, Arrow tables and PyTorch tensors, bit order and memory, scikit-learn transformers and a worked training and screening example |
 | [Chemistry tools for AI assistants](AI_TOOLS.md) | The eight molecular tools, the local MCP server and client set-up, calling the tools from Python, reading a tool result, tool definitions for a model API, an offline tool loop and the limits on each call |
 | [Command line and containers](COMMAND_LINE.md) | The `smsd` command-line tool, SDF batch search, mapping export, exit status, the JSON report, the Docker images and the local molecular tools server |
@@ -50,7 +51,9 @@ narrow a library, and the exact searches decide which molecules match.
 file that is built once and searched in later sessions,
 [Clustering and diversity](CLUSTERING.md) groups such an index into series or
 picks a diverse subset, and [CPU and GPU screening](CPU_GPU.md) explains which
-screening steps can run on an NVIDIA GPU.
+screening steps can run on an NVIDIA or Apple GPU;
+[GPU screening on Windows](GPU_ON_WINDOWS.md) sets up the NVIDIA route on
+Windows.
 [Machine learning and data frames](MACHINE_LEARNING.md) hands fingerprints to
 data-frame and model-training libraries, and
 [Chemistry tools for AI assistants](AI_TOOLS.md) offers bounded molecular
@@ -96,7 +99,7 @@ fields and shows a stopped search.
 
 ## Running the examples
 
-Install SMSD Pro 8.1.0 as shown in
+Install SMSD Pro 8.2.0 as shown in
 [Getting started](GETTING_STARTED.md#install). Each Python block is a complete
 program: copy it into a file and run it with `python`. The values each program
 prints are also checked with `assert` statements. Programs that write files
@@ -131,15 +134,22 @@ gives the command.
 | [Fingerprints and similarity](../../python/examples/fingerprints_similarity.ipynb) | Every fingerprint family, the binary and count coefficients, configurable fingerprints and a similarity ranking of benzodiazepines |
 | [Screening a library end to end](../../python/examples/library_screening.ipynb) | Five screens of one library, clustering of the packed index and saving the hits to an SD file |
 | [CPU and GPU screening](../../python/examples/cpu_gpu_screening.ipynb) | The screening backend, automatic and requested GPU use, packed-index backends, fallback and a CPU and GPU comparison, with every cell able to run without a GPU |
-| [Chemistry tools for AI assistants](../../python/examples/ai_tools.ipynb) | The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which is skipped when no model server is running |
+| [Chemistry tools for AI assistants](../../python/examples/ai_tools.ipynb) | The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which runs only when enabled and a model server answers |
 | [MCS to a small library search](../../python/examples/feature_search.ipynb) | A common graph turned into a SMARTS query, a library search, SVG highlighting, NumPy features, packed-index neighbours, Butina clustering and MaxMin selection |
 
-Open a notebook in Jupyter with a kernel that has SMSD 8.1.0 or later
-installed. The notebooks are saved without outputs, perform no downloads,
-remove any files they write and report when an optional package is missing.
-To run one in Colab, copy the setup cell of
-[feature_search.ipynb](../../python/examples/feature_search.ipynb) to the top
-of the notebook and run it first; it installs an uploaded SMSD wheel.
+Open a notebook in Jupyter or Colab and run its setup cell first. Each notebook
+installs SMSD 8.2.0 or later into the current kernel when it is missing or older,
+then attempts to install the optional packages used by its examples. Installation
+needs internet access; no wheel upload or copied setup cell is needed. Select
+Python 3.12 or later. If an older SMSD is already imported, restart the kernel
+before setup. A missing optional package is reported by the affected cells.
+
+Drawings scale to the notebook width and carry a caption and alternative text,
+with plain SVG for front ends that do not show HTML.
+Tables display as notebook tables when pandas is available. Local and hosted
+model requests in the tools notebook are off by default: set `RUN_LOCAL_MODEL`
+or `RUN_HOSTED_APIS` to `True` in its setup cell to enable only the section you
+intend to run. The examples remove the temporary files they write.
 
 ## Reference pages
 

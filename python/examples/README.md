@@ -5,12 +5,13 @@ status, SVG highlighting, optional NumPy features and a scikit-learn
 pipeline, followed by a temporary mapped fingerprint corpus, top-k
 neighbours, Butina clustering and MaxMin selection.
 
-Use a kernel containing the matching SMSD 8.1.0 package, installed from PyPI,
-a GitHub wheel or a source checkout. Install NumPy
-for feature arrays and mapped storage, and scikit-learn for the pipeline;
-those cells report when an optional dependency is missing. Install Jupyter
-in the same environment to open the notebook. The saved notebook has empty
-outputs; running it performs no downloads and leaves no corpus file behind.
+Run its setup cell first, in Jupyter or Colab. It installs SMSD 8.2.0 or
+later into the current kernel when it is missing or older, then attempts to
+install NumPy for feature arrays and mapped storage and scikit-learn for the
+pipeline; installation needs internet access, and the cells that use an
+optional package report when it is missing. To run it locally, install
+Jupyter in the same environment. The saved notebook has empty outputs, and
+running it leaves no corpus file behind.
 
 Five further notebooks follow the chapters of the
 [user guide](../../docs/guide/README.md): `substructure_search.ipynb` searches
@@ -20,14 +21,16 @@ similarity, `fingerprints_similarity.ipynb` computes every fingerprint family
 and coefficient, `library_screening.ipynb` screens one library five ways and
 saves the hits, and `cpu_gpu_screening.ipynb` shows which screening steps can
 run on a GPU and runs every cell without one. They follow the same
-conventions: a kernel with SMSD 8.1.0 or later, empty saved outputs, no
-downloads, no files left behind, and a notice when an optional package such as
-NumPy, pandas or IPython is missing.
+conventions: a setup cell that installs SMSD 8.2.0 or later and the optional
+packages each notebook uses, empty saved outputs, no files left behind, and a
+notice when an optional package such as NumPy, pandas or IPython is missing.
 
 `ai_tools.ipynb` calls the molecular tools from Python with no model, prints
 their tool definitions and runs an assistant tool loop against a model served
-on your own machine, so that no molecule leaves it. When no local model server
-is running, the loop cells say so and the rest of the notebook still runs. The
+on your own machine, so that no molecule leaves it. Model requests are off by
+default; set `RUN_LOCAL_MODEL` to `True` in the setup cell to run the loop.
+When the switch is off or no local model server answers, the loop cells say so
+and the rest of the notebook still runs. The
 [user guide](../../docs/guide/README.md) also has chapters on
 [clustering and diversity](../../docs/guide/CLUSTERING.md),
 [machine learning and data frames](../../docs/guide/MACHINE_LEARNING.md) and

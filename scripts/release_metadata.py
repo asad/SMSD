@@ -11,8 +11,12 @@ VERSION_FILES = (
     "pyproject.toml", "pom.xml", "java/pom.xml", "java/core/pom.xml", "java/cli/pom.xml",
     "cpp/CMakeLists.txt", "python/smsd/__init__.py", "Dockerfile", "Dockerfile.cuda",
     "packaging/smsd-cuda/pyproject.toml", "packaging/smsd-cuda/python/smsd_cuda/__init__.py",
+    "packaging/smsd-metal/pyproject.toml", "packaging/smsd-metal/python/smsd_metal/__init__.py",
     "scripts/docker_install.py", "scripts/docker_smoke.py", "scripts/prepare_docker_context.py",
     "packaging/mcp/Dockerfile", "examples/huggingface/Dockerfile",
+    # Pages that name only the current release: its install pins, image tags and wheel names.
+    "llms.txt", "packaging/smsd-cuda/README.md", "packaging/smsd-metal/README.md", "packaging/mcp/README.md",
+    "packaging/conda/README.md", "examples/huggingface/README.md",
 )
 
 

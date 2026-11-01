@@ -1,6 +1,6 @@
 # Getting started
 
-This chapter installs SMSD Pro 8.1.0, runs a first substructure search and a
+This chapter installs SMSD Pro 8.2.0, runs a first substructure search and a
 first maximum common substructure (MCS) search, and sets out the conventions
 that every other chapter relies on: what a result proves, how molecules are
 given and numbered, the default chemistry, and time limits and threads.
@@ -10,14 +10,14 @@ given and numbered, the default chemistry, and time limits and threads.
 Install the Python package from PyPI:
 
 ```bash
-python -m pip install "smsd==8.1.0"
+python -m pip install "smsd==8.2.0"
 python -c "import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"
 ```
 
 The package has no required dependencies. Searches, fingerprints, prepared
 target corpora, streamed screens and corpus searches all work without the
 optional packages. Extras add the packages that particular features need, for
-example `python -m pip install "smsd[rdkit,numpy]==8.1.0"`:
+example `python -m pip install "smsd[rdkit,numpy]==8.2.0"`:
 
 | Extra | Installs | Needed for |
 | --- | --- | --- |
@@ -33,8 +33,9 @@ example `python -m pip install "smsd[rdkit,numpy]==8.1.0"`:
 | `mcp` | `mcp` | The local molecular tools server, `smsd-mcp` |
 
 For NVIDIA GPU screening on Linux x86_64, add the optional CUDA package of the
-same version, `python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"`; the
-[CPU and GPU screening](CPU_GPU.md) chapter covers it. Interpreters and
+same version, `python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"`; on an
+Apple silicon Mac, add `"smsd-metal==8.2.0"` instead for Apple GPU screening.
+The [CPU and GPU screening](CPU_GPU.md) chapter covers both. Interpreters and
 platforms are listed in the
 [supported-platforms table](../HOWTO-INSTALL.md#supported-platforms), which also
 leads to the source builds.

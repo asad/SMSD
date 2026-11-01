@@ -17,8 +17,10 @@
 #include <omp.h>
 #endif
 
+#ifdef _OPENMP
 static std::atomic<bool> failWorkerAllocation{false};
 static std::atomic<int> failedAllocations{0};
+#endif
 
 void* operator new(std::size_t bytes) {
 #ifdef _OPENMP
@@ -36,11 +38,11 @@ void operator delete[](void* allocation) noexcept { std::free(allocation); }
 void operator delete(void* allocation, std::size_t) noexcept { std::free(allocation); }
 void operator delete[](void* allocation, std::size_t) noexcept { std::free(allocation); }
 // Sanitiser runtimes supply their own nothrow forms, so route these through the same allocator.
-void* operator new(std::size_t size, const std::nothrow_t&) noexcept {
-    try { return ::operator new(size); } catch (...) { return nullptr; }
+void* operator new(std::size_t bytes, const std::nothrow_t&) noexcept {
+    try { return ::operator new(bytes); } catch (...) { return nullptr; }
 }
-void* operator new[](std::size_t size, const std::nothrow_t&) noexcept {
-    try { return ::operator new[](size); } catch (...) { return nullptr; }
+void* operator new[](std::size_t bytes, const std::nothrow_t&) noexcept {
+    try { return ::operator new[](bytes); } catch (...) { return nullptr; }
 }
 void operator delete(void* allocation, const std::nothrow_t&) noexcept { std::free(allocation); }
 void operator delete[](void* allocation, const std::nothrow_t&) noexcept { std::free(allocation); }

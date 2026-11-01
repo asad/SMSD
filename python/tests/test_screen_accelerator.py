@@ -2,7 +2,8 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Without smsd-cuda, smsd screens and reports its backend as before; an accelerator changes no hit.
+"""Without an accelerator package, smsd screens and reports its backend as before; an accelerator
+changes no hit.
 
 A table of ctypes callbacks that computes the label overlaps on the CPU stands in for the device.
 """
@@ -75,9 +76,9 @@ class FakeAccelerator:
         self._capsule_name = name
         return new(ctypes.addressof(self.table), name, None)
 
-    def module(self, available=True, version=None):
-        """A stand-in for the smsd_cuda package."""
-        module = types.ModuleType("smsd_cuda")
+    def module(self, available=True, version=None, name="smsd_cuda"):
+        """A stand-in for an accelerator package such as smsd_cuda."""
+        module = types.ModuleType(name)
         module.__version__ = version or smsd.__version__
         module.__smsd_version__ = version or smsd.__version__
         module.consulted = 0
@@ -93,9 +94,10 @@ class FakeAccelerator:
 
 @pytest.fixture(autouse=True)
 def fresh(monkeypatch):
-    """Each test starts with the GPU enabled, no smsd_cuda installed and nothing attached."""
+    """Each test starts with the GPU enabled, no accelerator package installed and nothing attached."""
     monkeypatch.delenv("SMSD_DISABLE_GPU", raising=False)
     monkeypatch.setitem(sys.modules, "smsd_cuda", None)
+    monkeypatch.setitem(sys.modules, "smsd_metal", None)
     _accelerator._reset()
     yield
     _accelerator._reset()
@@ -131,7 +133,7 @@ def screens(graphs, targets):
                 yield query, chemistry, threshold, smsd.screen_targets(query, targets, threshold, chemistry)
 
 
-def test_without_smsd_cuda_nothing_changes():
+def test_without_an_accelerator_nothing_changes():
     assert smsd.gpu_is_available() is _smsd.gpu_is_available()
     assert smsd.gpu_device_info() == _smsd.gpu_device_info()
     graphs, targets = corpus()
@@ -165,10 +167,11 @@ def test_failing_accelerator_falls_back_to_the_cpu():
     assert reason == "device lost"
 
 
-def test_installed_package_is_found_and_reported(monkeypatch):
+@pytest.mark.parametrize("name", ["smsd_cuda", "smsd_metal"])
+def test_installed_package_is_found_and_reported(monkeypatch, name):
     fake = FakeAccelerator()
-    module = fake.module()
-    monkeypatch.setitem(sys.modules, "smsd_cuda", module)
+    module = fake.module(name=name)
+    monkeypatch.setitem(sys.modules, name, module)
     assert smsd.gpu_is_available()
     native = _smsd.gpu_device_info()
     if native.startswith("CPU: "):
@@ -176,6 +179,18 @@ def test_installed_package_is_found_and_reported(monkeypatch):
     graphs, targets = corpus()
     assert smsd.screen_targets(graphs[1], targets, 0.5) == expected_hits(graphs[1], graphs, 0.5, smsd.ChemOptions())
     assert fake.calls > 0 and module.consulted == 1
+
+
+def test_smsd_metal_is_tried_after_smsd_cuda(monkeypatch):
+    cuda, metal = FakeAccelerator().module(), FakeAccelerator().module(name="smsd_metal")
+    monkeypatch.setitem(sys.modules, "smsd_cuda", cuda)
+    monkeypatch.setitem(sys.modules, "smsd_metal", metal)
+    assert smsd.gpu_is_available()
+    assert (cuda.consulted, metal.consulted) == (1, 0)
+    _accelerator._reset()
+    monkeypatch.setitem(sys.modules, "smsd_cuda", FakeAccelerator().module(available=False))
+    assert smsd.gpu_is_available()
+    assert metal.consulted == 1
 
 
 def test_package_without_a_device_is_left_alone(monkeypatch):
@@ -221,12 +236,13 @@ def test_unsuitable_tables_are_refused(fake, name, message):
     assert _smsd._screen_accelerator() is None
 
 
-def test_smsd_cuda_is_pinned_to_this_smsd():
-    package = pathlib.Path(__file__).resolve().parents[2] / "packaging" / "smsd-cuda"
+@pytest.mark.parametrize("distribution", ["smsd-cuda", "smsd-metal"])
+def test_accelerator_package_is_pinned_to_this_smsd(distribution):
+    package = pathlib.Path(__file__).resolve().parents[2] / "packaging" / distribution
     if not package.is_dir():
-        pytest.skip("the smsd-cuda sources are not part of this distribution")
+        pytest.skip(f"the {distribution} sources are not part of this distribution")
     project = (package / "pyproject.toml").read_text(encoding="utf-8")
-    module = (package / "python" / "smsd_cuda" / "__init__.py").read_text(encoding="utf-8")
+    module = (package / "python" / distribution.replace("-", "_") / "__init__.py").read_text(encoding="utf-8")
     version = smsd.__version__
     assert re.search(r'^version = "([^"]+)"', project, re.M).group(1) == version
     assert re.findall(r'"smsd==([^"]+)"', project) == [version]

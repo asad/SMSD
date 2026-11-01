@@ -11,7 +11,7 @@ it, and where the languages differ. The [C++ guide](../CPP.md) and the
 The C++ library is header-only and needs a C++17 compiler: include
 `smsd/smsd.hpp` and add `cpp/include` to the include path. An installed CMake
 package provides the target `smsd::smsd` through
-`find_package(smsd 8.1.0 CONFIG REQUIRED)`; the
+`find_package(smsd 8.2.0 CONFIG REQUIRED)`; the
 [C++ module README](../../cpp/README.md#install-and-use-with-cmake) shows the
 install and a minimal consumer project.
 
@@ -126,7 +126,8 @@ build and its options.
 ## Java
 
 The Java library is `com.bioinceptionlabs:smsd` and the command-line tool
-`com.bioinceptionlabs:smsd-cli`. Maven Central has 8.0.3; for 8.1.0, run
+`com.bioinceptionlabs:smsd-cli`. From 8.2.0, both receive bug fixes only.
+Maven Central has 8.0.3; for 8.2.0, run
 `mvn -f java/pom.xml install` from the repository root, which installs both in
 the local Maven repository (Gradle then needs `mavenLocal()`). The
 [Java module README](../../java/README.md#installation) gives the Maven and
@@ -194,8 +195,8 @@ against the self-contained JAR of the source build; on Windows, separate the
 class path entries with a semicolon:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar ScreenExample.java
-java -cp "java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:." ScreenExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar ScreenExample.java
+java -cp "java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:." ScreenExample
 ```
 
 With JDK 25, `javac --release 8` warns that release 8 is obsolete; the class
@@ -216,7 +217,7 @@ fingerprint comparisons, as above.
 | Streamed SMILES screens | `stream_screen_smiles` | No | No |
 | Packed fingerprint index files, `butina`, `maxmin` | Yes, with NumPy | No | No |
 | NVIDIA CUDA screening | The `smsd-cuda` package | A CUDA source build | No |
-| Metal fingerprint screening | No | macOS, when requested explicitly | No |
+| Metal fingerprint screening | The `smsd-metal` package (prepared corpora; Apple silicon) | macOS, when requested explicitly | No |
 | Named SMARTS predicates (`$name`) | No | Yes | Yes |
 | Default chemistry | The defaults of [default chemistry](GETTING_STARTED.md#default-chemistry) | The same | The same |
 

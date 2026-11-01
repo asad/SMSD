@@ -81,6 +81,13 @@ def test_fingerprint_tool_rejects_excessive_allocation_or_work_options(options):
         mcp_server.molecular_fingerprint("CCO", **options)
 
 
+def test_fingerprint_tool_lists_the_kinds_it_accepts():
+    with pytest.raises(ValueError) as refusal:
+        mcp_server.molecular_fingerprint("CCO", kind="maccs")
+    assert str(refusal.value) == ("Unknown fingerprint kind; allowed values: "
+                                  "'mcs', 'ecfp', 'circular', 'fcfp', 'path', 'torsion'")
+
+
 def test_fingerprint_tool_rejects_excessive_input_and_atom_inventory():
     with pytest.raises(ValueError, match="text limit"):
         mcp_server.molecular_fingerprint("C" * 16385)
@@ -145,7 +152,12 @@ def test_official_sdk_serves_real_tools_over_stdio():
                 misspelt = await client.call_tool("find_mcs", {
                     "query_smiles": "CCO", "target_smiles": "CCN", "timeout_mss": 0})
                 assert getattr(misspelt, "isError", getattr(misspelt, "is_error", False))
-                assert "Unknown tool argument" in misspelt.content[0].text
+                assert "Unknown tool argument 'timeout_mss' for find_mcs" in misspelt.content[0].text
+                assert "allowed arguments: query_smiles, target_smiles, objective" in misspelt.content[0].text
+                choice = await client.call_tool("find_mcs", {
+                    "query_smiles": "CCO", "target_smiles": "CCN", "objective": "MCS"})
+                assert getattr(choice, "isError", getattr(choice, "is_error", False))
+                assert "allowed values: 'mcis', 'mces'" in choice.content[0].text
 
     asyncio.run(exercise())
 

@@ -16,7 +16,7 @@ All three tools read a `FingerprintCorpus`, so they need NumPy, from the
 `numpy` extra:
 
 ```bash
-python -m pip install "smsd[numpy]==8.1.0"
+python -m pip install "smsd[numpy]==8.2.0"
 ```
 
 ## Choose a method
@@ -505,24 +505,12 @@ same `backend` argument as the other searches of a packed index:
 | `"cuda"` | The comparisons run on an NVIDIA GPU. It needs the `smsd-cuda` package of the same version, a usable device and a little-endian host, and raises `RuntimeError` otherwise; fingerprints wider than 65,536 bits raise `ValueError`. |
 | `"auto"` | Uses the GPU under the same conditions, for an index of any size, and the CPU otherwise. |
 
-The GPU takes only the fingerprint comparisons; the decisions stay on the CPU:
-
-| Call | On the GPU | On the CPU |
-| --- | --- | --- |
-| `butina` | Exact integer intersection counts of one row against a tile of rows | Tanimoto scores from those counts, threshold tests, neighbour counts, centre choice, membership and recounting |
-| `maxmin` | Exact integer intersection counts of the last picked row against a tile of rows | Tanimoto distances, minimum-distance updates and the choice of the next row |
-| `top_k_pairs` | Intersection counts, the threshold test and the best k of each tile | Tanimoto scores from those counts, and the merge of the tile lists into the final k with the same score and row-order tie break |
-| `threshold_pairs` | Exact integer intersection counts | Tanimoto scores and the inclusive threshold test |
-
-Both devices form each score from the same integer counts with the same
-double-precision division, and every tie is broken on the CPU by row order. The
-clusters, selections, neighbours and scores are therefore identical on either
-device; the GPU does not make any of these methods approximate. Each device
-call covers one tile of at most 1,048,576 row pairs, and a 64 MiB host-work
-estimate can make a tile smaller than `chunk_size`. The rows of a tile are
-sent to the device for that call and released afterwards, so the index is not
-kept on the GPU between calls, and a Butina run sends the library once for
-every pass it makes.
+The GPU takes only the fingerprint comparisons. Every score, threshold test and
+tie break is settled identically on either device, so clusters, selections,
+neighbours and scores are the same on the GPU as on the CPU; the GPU does not
+make any of these methods approximate. The index is not kept on the GPU between
+calls, so a Butina run sends the library to the device once for every pass it
+makes.
 
 `corpus.cuda_calls` is the cumulative number of packed CUDA calls that the
 corpus has completed, clustering passes included. Read it before and after a

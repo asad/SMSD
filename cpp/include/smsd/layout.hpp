@@ -35,6 +35,7 @@
 #include <numeric>
 #include <random>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace smsd {
@@ -1181,9 +1182,10 @@ inline void normaliseBondLength(const MolGraph& g, std::vector<Point2D>& coords,
     }
 }
 
-/// Canonical orientation: rotate to align longest axis with horizontal,
-/// then snap to nearest 30-degree increment (IUPAC convention).
-inline void canonicalOrientation(const MolGraph& /*g*/, std::vector<Point2D>& coords) {
+/// Canonical orientation: rotate to align the longest axis with the horizontal,
+/// then by at most 15 degrees more, so that the bonds lie as near as they will
+/// go to multiples of 30 degrees.
+inline void canonicalOrientation(const MolGraph& g, std::vector<Point2D>& coords) {
     if (coords.size() < 2) return;
 
     // Find principal axis via PCA (covariance matrix eigenvectors)
@@ -1200,13 +1202,35 @@ inline void canonicalOrientation(const MolGraph& /*g*/, std::vector<Point2D>& co
         syy += dy * dy;
     }
 
-    // Principal axis angle from the 2x2 covariance matrix
-    double angle = 0.5 * std::atan2(2.0 * sxy, sxx - syy);
+    // Principal axis angle from the 2x2 covariance matrix.  A symmetric shape
+    // (benzene, a large ring) has no principal axis, and terms at rounding
+    // level are taken as zero so that builds which round differently agree.
+    const double noise = 1e-9 * (sxx + syy);
+    const double twiceCovariance = std::abs(2.0 * sxy) > noise ? 2.0 * sxy : 0.0;
+    const double spread = std::abs(sxx - syy) > noise ? sxx - syy : 0.0;
+    double angle = twiceCovariance == 0.0 && spread == 0.0 ? 0.0 : 0.5 * std::atan2(twiceCovariance, spread);
 
-    // Rotate so principal axis is horizontal
+    // Turn by at most 15 degrees more, so the bonds lie as near as they can to
+    // the 30-degree grid: the mean of their directions taken twelvefold.
+    const size_t atomCount = std::min(coords.size(), static_cast<size_t>(g.n));
+    double gridX = 0, gridY = 0;
+    int bonds = 0;
+    for (size_t atom = 0; atom < atomCount; ++atom)
+        for (int neighbour : g.neighbors[atom]) {
+            if (neighbour <= static_cast<int>(atom) || static_cast<size_t>(neighbour) >= atomCount) continue;
+            const double direction = std::atan2(coords[neighbour].y - coords[atom].y,
+                                                coords[neighbour].x - coords[atom].x) - angle;
+            gridX += std::cos(12.0 * direction);
+            gridY += std::sin(12.0 * direction);
+            ++bonds;
+        }
+    const double resultant = std::hypot(gridX, gridY);
+    if (resultant > 1e-6 * bonds) {
+        if (std::abs(gridY) <= 1e-9 * resultant) gridY = 0.0;
+        angle += std::atan2(gridY, gridX) / 12.0;
+    }
+
     rotate2DAbout(coords, -angle, cx, cy);
-
-
 }
 
 /// Align 2D coordinates to a reference via Kabsch-like rotation minimising RMSD.
@@ -1674,23 +1698,665 @@ inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
 
 
 // ==========================================================================
+// Clash removal and refinement that keep ring templates exact
+// ==========================================================================
+
+namespace detail_layout {
+
+/// Bonds within this distance of the unit length count as exact, which allows
+/// for rounding to the grid of onGrid.
+constexpr double kBondLengthTolerance = 1e-5;
+/// Non-bonded atoms closer than this, in bond lengths, clash.
+constexpr double kMinNonBondedDistance = 0.8;
+/// Non-bonded atoms closer than this, in bond lengths, hide one another.
+constexpr double kHiddenDistance = 0.4;
+/// Refinement parts non-bonded atoms to at least this distance, clear of kHiddenDistance.
+constexpr double kPartedDistance = 0.5;
+
+/// True when `score` beats `best` by more than rounding.  Candidates that tie
+/// keep the earlier one, so builds that round differently choose alike.
+inline bool clearlyHigher(double score, double best) {
+    return score - best > 1e-9 * std::max(1.0, std::abs(best));
+}
+
+/// Direction, from `atom`, of the bisector of a gap between its bonds to
+/// `bonded` whose unit-length point lies furthest from the atoms in `others`.
+/// A gap inside a ring (less than a half-turn between two bonds that
+/// `ringAngles` pairs at this atom) is passed over while any other gap is
+/// open, so at a ring fusion the new bond takes the exterior gap.  With
+/// `terminal` set, as for a bond to an atom with no other neighbour, an
+/// exterior gap counts as open only while its unit-length point keeps clear
+/// of the atoms in `others`, so that a 9-alpha fluorine can take a ring's
+/// interior gap when the angular methyl already fills the bay.
+inline double clearestGapBisector(const std::vector<Point2D>& coords, int atom,
+                                  const std::vector<int>& bonded, const std::vector<int>& others,
+                                  const std::vector<std::pair<int, int>>& ringAngles = {},
+                                  bool terminal = false) {
+    if (bonded.empty()) return 0;
+    auto direction = [&](int neighbour) {
+        return std::atan2(coords[neighbour].y - coords[atom].y, coords[neighbour].x - coords[atom].x);
+    };
+    // Gaps are taken anticlockwise from the first bond, so their order never
+    // turns on which side of the -x axis a bond falls.
+    const double reference = direction(bonded.front());
+    std::vector<std::pair<double, int>> bonds{{0.0, bonded.front()}};
+    for (size_t k = 1; k < bonded.size(); ++k) {
+        const double angle = std::remainder(direction(bonded[k]) - reference, 2 * M_PI);
+        bonds.push_back({angle < 0 ? angle + 2 * M_PI : angle, bonded[k]});
+    }
+    std::sort(bonds.begin(), bonds.end());
+    auto gapEnd = [&](size_t k) { return k + 1 < bonds.size() ? bonds[k + 1].first : 2 * M_PI; };
+    auto insideRing = [&](size_t k) {
+        const int first = bonds[k].second, second = bonds[(k + 1) % bonds.size()].second;
+        if (gapEnd(k) - bonds[k].first >= M_PI) return false;
+        return std::any_of(ringAngles.begin(), ringAngles.end(), [&](const std::pair<int, int>& pair) {
+            return (pair.first == first && pair.second == second) || (pair.first == second && pair.second == first);
+        });
+    };
+    auto pointIn = [&](size_t k) {
+        const double bisector = reference + 0.5 * (bonds[k].first + gapEnd(k));
+        return Point2D{coords[atom].x + std::cos(bisector), coords[atom].y + std::sin(bisector)};
+    };
+    auto keepsClear = [&](size_t k) {
+        const Point2D point = pointIn(k);
+        return std::none_of(others.begin(), others.end(), [&](int other) {
+            return other != atom && std::hypot(point.x - coords[other].x, point.y - coords[other].y)
+                                        < kMinNonBondedDistance;
+        });
+    };
+    bool exteriorOpen = false;
+    for (size_t k = 0; k < bonds.size(); ++k)
+        exteriorOpen = exteriorOpen || (!insideRing(k) && (!terminal || keepsClear(k)));
+    double best = 0, bestScore = 0;
+    bool found = false;
+    for (size_t k = 0; k < bonds.size(); ++k) {
+        if (exteriorOpen && insideRing(k)) continue;
+        const double bisector = reference + 0.5 * (bonds[k].first + gapEnd(k));
+        const Point2D point = pointIn(k);
+        double score = 0;
+        for (int other : others) {
+            if (other == atom) continue;
+            const double dx = point.x - coords[other].x, dy = point.y - coords[other].y;
+            score -= 1.0 / std::max(0.01, dx * dx + dy * dy);
+        }
+        if (!found || clearlyHigher(score, bestScore)) { bestScore = score; best = bisector; found = true; }
+    }
+    return best;
+}
+
+/// True when a bonded pair is one bond length apart and a non-bonded pair does not clash.
+inline bool isExactPair(const MolGraph& g, const std::vector<Point2D>& coords, int first, int second) {
+    const double distance = std::hypot(coords[first].x - coords[second].x,
+                                       coords[first].y - coords[second].y);
+    return g.bondOrder(first, second) ? std::abs(distance - 1.0) <= kBondLengthTolerance
+                                      : distance >= kMinNonBondedDistance;
+}
+
+/// True when every bond has unit length, no bonds cross and no atoms clash.
+inline bool isCleanLayout(const MolGraph& g, const std::vector<Point2D>& coords) {
+    for (int first = 0; first < g.n; ++first)
+        for (int second = first + 1; second < g.n; ++second)
+            if (!isExactPair(g, coords, first, second)) return false;
+    return countCrossings(g, coords) == 0;
+}
+
+/// Members of each rigid group, indexed by group id.
+inline std::vector<std::vector<int>> groupMembers(const std::vector<int>& group) {
+    std::vector<std::vector<int>> members;
+    for (int atom = 0; atom < static_cast<int>(group.size()); ++atom) {
+        if (group[atom] < 0) continue;
+        if (group[atom] >= static_cast<int>(members.size())) members.resize(group[atom] + 1);
+        members[group[atom]].push_back(atom);
+    }
+    return members;
+}
+
+/// Rigid group of every atom (-1 for none): ring systems whose own geometry is
+/// exact.  A system spiro-fused to a group joins it while the two keep clear of
+/// each other; otherwise it moves on its own, without the shared atom, so that
+/// refinement can turn it clear while its bonds to that atom settle.  Where
+/// three or more systems meet at one atom (a chelating metal, say) and clash,
+/// regular rings cannot all fit round it, and those systems stay free.
+inline std::vector<int> rigidRingGroups(const MolGraph& g, const std::vector<Point2D>& coords,
+                                        const std::vector<RingSystem>& systems) {
+    auto allExact = [&](const std::vector<int>& atoms) {
+        for (size_t first = 0; first < atoms.size(); ++first)
+            for (size_t second = first + 1; second < atoms.size(); ++second)
+                if (!isExactPair(g, coords, atoms[first], atoms[second])) return false;
+        return true;
+    };
+    std::vector<bool> loose(systems.size(), false);
+    for (int centre = 0; centre < g.n; ++centre) {
+        std::vector<size_t> meeting;
+        std::set<int> atoms;
+        for (size_t index = 0; index < systems.size(); ++index)
+            if (systems[index].atoms.count(centre)) {
+                meeting.push_back(index);
+                atoms.insert(systems[index].atoms.begin(), systems[index].atoms.end());
+            }
+        if (meeting.size() >= 3 && !allExact(std::vector<int>(atoms.begin(), atoms.end())))
+            for (size_t index : meeting) loose[index] = true;
+    }
+    std::vector<int> group(g.n, -1);
+    int groups = 0;
+    for (size_t index = 0; index < systems.size(); ++index) {
+        const auto& system = systems[index];
+        const std::vector<int> atoms(system.atoms.begin(), system.atoms.end());
+        if (loose[index] || !allExact(atoms)) continue;
+        std::set<int> joined;
+        for (int atom : atoms)
+            if (group[atom] >= 0) joined.insert(group[atom]);
+        bool clear = true;
+        for (int other = 0; other < g.n && clear; ++other)
+            if (group[other] >= 0 && joined.count(group[other]) && !system.atoms.count(other))
+                for (size_t first = 0; first < atoms.size() && clear; ++first)
+                    clear = isExactPair(g, coords, atoms[first], other);
+        const int id = groups++;
+        for (int atom : atoms) {
+            const int previous = group[atom];
+            if (previous >= 0 && !clear) continue;
+            if (previous >= 0) std::replace(group.begin(), group.end(), previous, id);
+            group[atom] = id;
+        }
+    }
+    // A terminal substituent of a rigid system (an angular methyl, a ring halogen)
+    // moves with it, so that refinement cannot fold its bond onto a ring bond,
+    // unless it already clashes with the system or another such substituent.
+    const auto members = groupMembers(group);
+    std::vector<bool> joinedGroup(g.n, false);
+    for (int atom = 0; atom < g.n; ++atom) {
+        if (group[atom] >= 0 || g.neighbors[atom].size() != 1) continue;
+        const int root = g.neighbors[atom].front();
+        if (group[root] < 0) continue;
+        bool clear = true;
+        for (int member : members[group[root]])
+            clear = clear && isExactPair(g, coords, atom, member);
+        for (int other = 0; other < atom && clear; ++other)
+            if (joinedGroup[other] && group[other] == group[root]) clear = isExactPair(g, coords, atom, other);
+        if (!clear) continue;
+        group[atom] = group[root];
+        joinedGroup[atom] = true;
+    }
+    return group;
+}
+
+/// Crossing bonds and clashing atom pairs, compared by crossings, then by the
+/// pairs close enough to hide an atom, then by clashes.
+struct LayoutDefects {
+    int hidden = 0;
+    int crossings = 0;
+    int clashes = 0;
+    std::vector<bool> involved; // atoms on a crossing bond or in a clashing pair
+
+    bool none() const { return crossings == 0 && clashes == 0; }
+    bool fewerThan(const LayoutDefects& other) const {
+        if (crossings != other.crossings) return crossings < other.crossings;
+        return hidden != other.hidden ? hidden < other.hidden : clashes < other.clashes;
+    }
+    bool noneAdded(const LayoutDefects& before) const {
+        return crossings <= before.crossings && hidden <= before.hidden && clashes <= before.clashes;
+    }
+};
+
+/**
+ * The defects of a layout.  Atoms and bonds are binned in cells one bond
+ * length wide, so that only nearby pairs are tested: a clashing pair lies in
+ * the same or neighbouring cells, and two bonds can cross only where their
+ * bounding boxes meet, which happens first in one cell that both reach.
+ */
+inline LayoutDefects findDefects(const MolGraph& g, const std::vector<Point2D>& coords) {
+    LayoutDefects defects;
+    defects.involved.assign(g.n, false);
+    auto clash = [&](int first, int second) {
+        if (g.bondOrder(first, second) || isExactPair(g, coords, first, second)) return;
+        ++defects.clashes;
+        defects.hidden += std::hypot(coords[first].x - coords[second].x,
+                                     coords[first].y - coords[second].y) < kHiddenDistance;
+        defects.involved[first] = defects.involved[second] = true;
+    };
+    auto cross = [&](const std::pair<int, int>& one, const std::pair<int, int>& other) {
+        const auto [a1, a2] = one;
+        const auto [b1, b2] = other;
+        if (a1 == b1 || a1 == b2 || a2 == b1 || a2 == b2) return;
+        if (!segmentsCross(coords[a1], coords[a2], coords[b1], coords[b2])) return;
+        ++defects.crossings;
+        defects.involved[a1] = defects.involved[a2] = defects.involved[b1] = defects.involved[b2] = true;
+    };
+    std::vector<std::pair<int, int>> bonds;
+    for (int first = 0; first < g.n; ++first)
+        for (int second : g.neighbors[first])
+            if (second > first) bonds.push_back({first, second});
+    std::sort(bonds.begin(), bonds.end());
+    const bool binnable = std::all_of(coords.begin(), coords.end(), [](const Point2D& point) {
+        return std::abs(point.x) < 1e6 && std::abs(point.y) < 1e6;
+    });
+    if (!binnable) {
+        for (int first = 0; first < g.n; ++first)
+            for (int second = first + 1; second < g.n; ++second) clash(first, second);
+        for (size_t i = 0; i < bonds.size(); ++i)
+            for (size_t j = i + 1; j < bonds.size(); ++j) cross(bonds[i], bonds[j]);
+        return defects;
+    }
+    auto cellIndex = [](double value) { return static_cast<int64_t>(std::floor(value)); };
+    auto cell = [](int64_t column, int64_t row) {
+        return (static_cast<uint64_t>(column) << 32) ^ (static_cast<uint64_t>(row) & 0xffffffffu);
+    };
+    std::unordered_map<uint64_t, std::vector<int>> atomCells;
+    for (int atom = 0; atom < g.n; ++atom) atomCells[cell(cellIndex(coords[atom].x), cellIndex(coords[atom].y))].push_back(atom);
+    for (int first = 0; first < g.n; ++first)
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy) {
+                const auto found = atomCells.find(cell(cellIndex(coords[first].x) + dx, cellIndex(coords[first].y) + dy));
+                if (found == atomCells.end()) continue;
+                for (int second : found->second)
+                    if (second > first) clash(first, second);
+            }
+    // Bounding boxes, a little enlarged, and the cells each reaches.
+    std::vector<std::array<double, 4>> boxes;
+    std::unordered_map<uint64_t, std::vector<size_t>> bondCells;
+    for (size_t k = 0; k < bonds.size(); ++k) {
+        const Point2D& a = coords[bonds[k].first];
+        const Point2D& b = coords[bonds[k].second];
+        boxes.push_back({std::min(a.x, b.x) - 1e-6, std::min(a.y, b.y) - 1e-6,
+                         std::max(a.x, b.x) + 1e-6, std::max(a.y, b.y) + 1e-6});
+        const auto& box = boxes.back();
+        for (int64_t column = cellIndex(box[0]); column <= cellIndex(box[2]); ++column)
+            for (int64_t row = cellIndex(box[1]); row <= cellIndex(box[3]); ++row) bondCells[cell(column, row)].push_back(k);
+    }
+    for (const auto& [key, members] : bondCells)
+        for (size_t i = 0; i < members.size(); ++i)
+            for (size_t j = i + 1; j < members.size(); ++j) {
+                const auto& one = boxes[members[i]];
+                const auto& other = boxes[members[j]];
+                const double left = std::max(one[0], other[0]), top = std::max(one[1], other[1]);
+                if (left > std::min(one[2], other[2]) || top > std::min(one[3], other[3])) continue;
+                if (cell(cellIndex(left), cellIndex(top)) != key) continue;  // tested where the boxes first meet
+                cross(bonds[std::min(members[i], members[j])], bonds[std::max(members[i], members[j])]);
+            }
+    return defects;
+}
+
+/// Atoms reached from `root` without the bond to `pivot`; empty when that bond is in a ring.
+inline std::vector<int> branchFrom(const MolGraph& g, int root, int pivot) {
+    std::vector<int> atoms{root};
+    std::vector<bool> seen(g.n, false);
+    seen[root] = true;
+    for (size_t k = 0; k < atoms.size(); ++k)
+        for (int neighbour : g.neighbors[atoms[k]]) {
+            if (neighbour == pivot) {
+                if (atoms[k] == root) continue;
+                return {};
+            }
+            if (!seen[neighbour]) { seen[neighbour] = true; atoms.push_back(neighbour); }
+        }
+    return atoms;
+}
+
+/**
+ * A coordinate rounded to a grid of 2^-20 bond lengths.  The choices made
+ * after Phase 3 rest on rounded coordinates, so that builds which round
+ * differently (with or without fused multiply-add, say) seldom reach a
+ * different choice, and refinement's many small steps do not drift apart.
+ */
+inline double onGrid(double value) {
+    constexpr double kGrid = 1048576.0; // a power of two, so the scaling is exact
+    return std::round(value * kGrid) / kGrid;
+}
+
+inline void snapToGrid(std::vector<Point2D>& coords) {
+    for (auto& point : coords) point = {onGrid(point.x), onGrid(point.y)};
+}
+
+/// Mirror `atoms` in the line through `pivot` and `root`, onto the grid.
+inline void reflectInBondAxis(std::vector<Point2D>& coords, const std::vector<int>& atoms, int pivot, int root) {
+    const Point2D origin = coords[pivot];
+    const double axisX = coords[root].x - origin.x, axisY = coords[root].y - origin.y;
+    const double lengthSquared = axisX * axisX + axisY * axisY;
+    if (lengthSquared < 1e-20) return;
+    for (int atom : atoms) {
+        const double relativeX = coords[atom].x - origin.x, relativeY = coords[atom].y - origin.y;
+        const double projection = (relativeX * axisX + relativeY * axisY) / lengthSquared;
+        coords[atom] = {onGrid(origin.x + 2 * projection * axisX - relativeX),
+                        onGrid(origin.y + 2 * projection * axisY - relativeY)};
+    }
+}
+
+/**
+ * Draw every acyclic double bond with stored E/Z as that isomer.  Where the
+ * first ligands at its two ends lie on the wrong sides, the smaller side of
+ * the bond is mirrored in the bond's axis.  The mirror is an isometry of that
+ * side, so it keeps the drawn relation of every other double bond.
+ */
+inline void honourDoubleBondStereo(const MolGraph& g, std::vector<Point2D>& coords) {
+    auto firstLigand = [&](int end, int partner) {
+        for (int neighbour : g.neighbors[end])
+            if (neighbour != partner) return neighbour;
+        return -1;
+    };
+    for (int first = 0; first < g.n; ++first)
+        for (int second : g.neighbors[first]) {
+            if (second < first || g.bondOrder(first, second) != 2) continue;
+            const int stored = g.dbStereo(first, second);
+            const int firstReference = firstLigand(first, second), secondReference = firstLigand(second, first);
+            if (stored == 0 || firstReference < 0 || secondReference < 0) continue;
+            const double axisX = coords[second].x - coords[first].x, axisY = coords[second].y - coords[first].y;
+            const double firstSide = axisX * (coords[firstReference].y - coords[first].y)
+                                   - axisY * (coords[firstReference].x - coords[first].x);
+            const double secondSide = axisX * (coords[secondReference].y - coords[second].y)
+                                    - axisY * (coords[secondReference].x - coords[second].x);
+            // A ligand on the axis has no side, and no mirror gives it one.
+            if (std::abs(firstSide * secondSide) < 1e-10) continue;
+            if ((firstSide * secondSide > 0 ? 1 : 2) == stored) continue;
+            auto secondAtoms = branchFrom(g, second, first);
+            if (secondAtoms.empty()) continue;
+            auto firstAtoms = branchFrom(g, first, second);
+            if (firstAtoms.size() < secondAtoms.size()) reflectInBondAxis(coords, firstAtoms, second, first);
+            else reflectInBondAxis(coords, secondAtoms, first, second);
+        }
+}
+
+/**
+ * Reflect branches across acyclic single bonds while each reflection lowers
+ * the defects: crossings, then atoms hidden by others, then clashes.  The
+ * smaller side of the bond is mirrored in the bond's own axis, which is an
+ * isometry of that side: ring templates, bond lengths and bond angles all
+ * stay exact, and so does the drawn E/Z geometry of every double bond.  The
+ * loop ends because each accepted reflection strictly lowers the defects.
+ */
+inline void reflectClashingBranches(const MolGraph& g, std::vector<Point2D>& coords) {
+    auto defects = findDefects(g, coords);
+    if (defects.none()) return;
+
+    struct Branch { int pivot, root; std::vector<int> atoms; };
+    std::vector<Branch> branches;
+    for (int first = 0; first < g.n; ++first)
+        for (int second : g.neighbors[first]) {
+            if (second < first || g.bondOrder(first, second) != 1) continue;
+            auto secondSide = branchFrom(g, second, first);
+            if (secondSide.empty()) continue;
+            auto firstSide = branchFrom(g, first, second);
+            Branch branch = firstSide.size() < secondSide.size() ? Branch{second, first, std::move(firstSide)}
+                                                                 : Branch{first, second, std::move(secondSide)};
+            // A lone terminal atom lies on the axis, so reflecting it changes nothing.
+            if (branch.atoms.size() > 1) branches.push_back(std::move(branch));
+        }
+
+    auto reflect = [&](const Branch& branch) { reflectInBondAxis(coords, branch.atoms, branch.pivot, branch.root); };
+    for (bool improved = true; improved && !defects.none();) {
+        improved = false;
+        for (const auto& branch : branches) {
+            // A branch free of defects can only gain them by moving.
+            if (std::none_of(branch.atoms.begin(), branch.atoms.end(),
+                             [&](int atom) { return defects.involved[atom]; })) continue;
+            std::vector<Point2D> saved;
+            for (int atom : branch.atoms) saved.push_back(coords[atom]);
+            reflect(branch);
+            auto next = findDefects(g, coords);
+            if (next.fewerThan(defects)) {
+                defects = std::move(next);
+                improved = true;
+                if (defects.none()) break;
+            } else {
+                for (size_t k = 0; k < saved.size(); ++k) coords[branch.atoms[k]] = saved[k];
+            }
+        }
+    }
+}
+
+/// Two bonds closer than this to a straight line, 170 degrees, leave stereo unreadable.
+constexpr double kStraightAngle = M_PI * 17 / 18;
+
+/// The partner of `atom` in a double bond outside any ring with stored E/Z, or -1.
+inline int stereoPartner(const MolGraph& g, int atom) {
+    for (int neighbour : g.neighbors[atom])
+        if (g.bondOrder(atom, neighbour) == 2 && g.dbStereo(atom, neighbour) != 0
+                && !branchFrom(g, neighbour, atom).empty())
+            return neighbour;
+    return -1;
+}
+
+/**
+ * True when the drawn bonds at `atom` leave its stored stereo unreadable, each
+ * to within kStraightAngle: two bonds in a line at a tetrahedral centre drawn
+ * with three, whose hydrogen then has no side (IUPAC ST-1.1); all four bonds
+ * of a centre within a half-turn; or a substituent of a stereo double bond in
+ * line with that bond (ST-2).
+ */
+inline bool stereoUnreadable(const MolGraph& g, const std::vector<Point2D>& coords, int atom) {
+    auto direction = [&](int neighbour) {
+        return std::atan2(coords[neighbour].y - coords[atom].y, coords[neighbour].x - coords[atom].x);
+    };
+    auto inLine = [&](int first, int second) {
+        return std::abs(std::remainder(direction(first) - direction(second), 2 * M_PI)) >= kStraightAngle;
+    };
+    const auto& neighbours = g.neighbors[atom];
+    const bool centre = atom < static_cast<int>(g.tetraChirality.size()) && g.tetraChirality[atom] != 0;
+    if (centre && neighbours.size() == 3) {
+        if (inLine(neighbours[0], neighbours[1]) || inLine(neighbours[0], neighbours[2]) || inLine(neighbours[1], neighbours[2]))
+            return true;
+    } else if (centre && neighbours.size() > 3) {
+        std::vector<double> angles;
+        for (int neighbour : neighbours) angles.push_back(direction(neighbour));
+        std::sort(angles.begin(), angles.end());
+        double widest = angles.front() + 2 * M_PI - angles.back();
+        for (size_t k = 1; k < angles.size(); ++k) widest = std::max(widest, angles[k] - angles[k - 1]);
+        if (widest >= kStraightAngle) return true;
+    }
+    const int partner = stereoPartner(g, atom);
+    if (partner < 0) return false;
+    return std::any_of(neighbours.begin(), neighbours.end(),
+                       [&](int neighbour) { return neighbour != partner && inLine(neighbour, partner); });
+}
+
+/**
+ * Turn a branch about each atom whose stereo stereoUnreadable finds unreadable,
+ * so that its bond bisects the widest gap the other bonds leave, or stands at
+ * 120 degrees to a double bond that is the only other bond, or a third or two
+ * thirds of the way there.  The branch turns as a rigid body, so no other bond
+ * angle changes.  A turn is kept only when it makes the atom readable, keeps
+ * the stored E/Z of its double bond and adds no defects; of several, the one
+ * with the fewest defects is kept, and of those the furthest turn.
+ */
+inline void spreadStereoBonds(const MolGraph& g, std::vector<Point2D>& coords) {
+    auto direction = [&](int from, int to) {
+        return std::atan2(coords[to].y - coords[from].y, coords[to].x - coords[from].x);
+    };
+    auto firstLigand = [&](int end, int partner) {
+        for (int neighbour : g.neighbors[end])
+            if (neighbour != partner) return neighbour;
+        return -1;
+    };
+    // As honourDoubleBondStereo reads it; a ligand on the axis is left to its own end.
+    auto keepsStoredIsomer = [&](int end, int partner) {
+        if (partner < 0) return true;
+        const int endLigand = firstLigand(end, partner), partnerLigand = firstLigand(partner, end);
+        if (endLigand < 0 || partnerLigand < 0) return true;
+        const double axisX = coords[partner].x - coords[end].x, axisY = coords[partner].y - coords[end].y;
+        const double endSide = axisX * (coords[endLigand].y - coords[end].y) - axisY * (coords[endLigand].x - coords[end].x);
+        const double partnerSide = axisX * (coords[partnerLigand].y - coords[partner].y)
+                                 - axisY * (coords[partnerLigand].x - coords[partner].x);
+        if (std::abs(endSide * partnerSide) < 1e-10) return true;
+        return (endSide * partnerSide > 0 ? 1 : 2) == g.dbStereo(end, partner);
+    };
+    for (int atom = 0; atom < g.n; ++atom) {
+        if (!stereoUnreadable(g, coords, atom)) continue;
+        const int partner = stereoPartner(g, atom);
+        const auto defects = findDefects(g, coords);
+        std::vector<Point2D> best;
+        LayoutDefects bestDefects;
+        for (int moved : g.neighbors[atom]) {
+            if (moved == partner) continue;
+            const auto branch = branchFrom(g, moved, atom);
+            if (branch.empty()) continue;
+            std::vector<double> others;
+            for (int other : g.neighbors[atom])
+                if (other != moved) others.push_back(direction(atom, other));
+            std::sort(others.begin(), others.end());
+            std::vector<double> targets;
+            if (others.size() == 1) {
+                targets = {others.front() + 2 * M_PI / 3, others.front() - 2 * M_PI / 3};
+            } else {
+                double widest = others.front() + 2 * M_PI - others.back(), target = others.back() + 0.5 * widest;
+                for (size_t k = 1; k < others.size(); ++k)
+                    if (others[k] - others[k - 1] > widest) {
+                        widest = others[k] - others[k - 1];
+                        target = others[k - 1] + 0.5 * widest;
+                    }
+                targets = {target};
+            }
+            std::vector<double> turns;
+            for (double target : targets) {
+                const double full = std::remainder(target - direction(atom, moved), 2 * M_PI);
+                for (double fraction : {1.0, 2.0 / 3, 1.0 / 3}) turns.push_back(full * fraction);
+            }
+            for (double turn : turns) {
+                const std::vector<Point2D> saved = coords;
+                const double cosine = std::cos(turn), sine = std::sin(turn);
+                const Point2D pivot = coords[atom];
+                for (int member : branch) {
+                    const double dx = coords[member].x - pivot.x, dy = coords[member].y - pivot.y;
+                    coords[member] = {onGrid(pivot.x + cosine * dx - sine * dy), onGrid(pivot.y + sine * dx + cosine * dy)};
+                }
+                if (!stereoUnreadable(g, coords, atom) && keepsStoredIsomer(atom, partner)) {
+                    auto next = findDefects(g, coords);
+                    if (next.noneAdded(defects) && (best.empty() || next.fewerThan(bestDefects))) {
+                        best = coords;
+                        bestDefects = std::move(next);
+                    }
+                }
+                coords = saved;
+            }
+        }
+        if (!best.empty()) coords = std::move(best);
+    }
+}
+
+/**
+ * Relax a layout in which each rigid group moves as one body.  Bonds pull
+ * towards unit length and non-bonded atoms push apart; a free atom follows
+ * its net force, while a group shifts with the net force on its atoms and
+ * turns with their net torque, so its own geometry changes only by the
+ * rounding to the grid.
+ */
+inline void relaxAroundRigidGroups(const MolGraph& g, std::vector<Point2D>& coords,
+                                   const std::vector<int>& group, int iterations) {
+    constexpr double kRepulsion = 0.5, kMaxShift = 0.2, kCooling = 0.97;
+    const auto members = groupMembers(group);
+    double step = 0.1;
+    for (int iteration = 0; iteration < iterations; ++iteration, step *= kCooling) {
+        snapToGrid(coords);
+        std::vector<Point2D> force(g.n, {0, 0});
+        for (int first = 0; first < g.n; ++first)
+            for (int second = first + 1; second < g.n; ++second) {
+                if (group[first] >= 0 && group[first] == group[second]) continue;
+                const double dx = coords[second].x - coords[first].x;
+                const double dy = coords[second].y - coords[first].y;
+                const double distance = std::max(1e-6, std::hypot(dx, dy));
+                const double pull = g.bondOrder(first, second) ? distance - 1.0
+                                                               : -kRepulsion / (distance * distance);
+                force[first].x += pull * dx / distance; force[first].y += pull * dy / distance;
+                force[second].x -= pull * dx / distance; force[second].y -= pull * dy / distance;
+            }
+        auto clamp = [&](double dx, double dy) {
+            const double length = std::hypot(dx, dy);
+            return length > kMaxShift ? Point2D{dx * kMaxShift / length, dy * kMaxShift / length} : Point2D{dx, dy};
+        };
+        for (int atom = 0; atom < g.n; ++atom)
+            if (group[atom] < 0) {
+                const auto shift = clamp(step * force[atom].x, step * force[atom].y);
+                coords[atom].x += shift.x; coords[atom].y += shift.y;
+            }
+        for (const auto& atoms : members) {
+            if (atoms.empty()) continue;
+            Point2D centre{0, 0}, net{0, 0};
+            for (int atom : atoms) {
+                centre.x += coords[atom].x; centre.y += coords[atom].y;
+                net.x += force[atom].x; net.y += force[atom].y;
+            }
+            centre.x /= atoms.size(); centre.y /= atoms.size();
+            double torque = 0, inertia = 0;
+            for (int atom : atoms) {
+                const double rx = coords[atom].x - centre.x, ry = coords[atom].y - centre.y;
+                torque += rx * force[atom].y - ry * force[atom].x;
+                inertia += rx * rx + ry * ry;
+            }
+            const auto shift = clamp(step * net.x / atoms.size(), step * net.y / atoms.size());
+            const double turn = inertia > 0 ? std::clamp(step * torque / inertia, -0.1, 0.1) : 0.0;
+            const double cosine = std::cos(turn), sine = std::sin(turn);
+            for (int atom : atoms) {
+                const double rx = coords[atom].x - centre.x, ry = coords[atom].y - centre.y;
+                coords[atom] = {centre.x + shift.x + cosine * rx - sine * ry,
+                                centre.y + shift.y + sine * rx + cosine * ry};
+            }
+        }
+    }
+}
+
+/**
+ * Pull bonds back to unit length after refinement.  Each sweep first parts
+ * non-bonded atoms closer than kPartedDistance, so that a bond angle cannot
+ * fold shut while the bonds settle.  A rigid group moves as a whole, and each
+ * end of a pair gives way in proportion to the other's size.
+ */
+inline void restoreUnitBonds(const MolGraph& g, std::vector<Point2D>& coords,
+                             const std::vector<int>& group) {
+    const auto members = groupMembers(group);
+    auto size = [&](int atom) { return group[atom] < 0 ? 1.0 : static_cast<double>(members[group[atom]].size()); };
+    auto shift = [&](int atom, double dx, double dy) {
+        if (group[atom] < 0) { coords[atom].x += dx; coords[atom].y += dy; return; }
+        for (int member : members[group[atom]]) { coords[member].x += dx; coords[member].y += dy; }
+    };
+    auto settle = [&](int first, int second, double target) {
+        const double dx = coords[second].x - coords[first].x;
+        const double dy = coords[second].y - coords[first].y;
+        const double distance = std::hypot(dx, dy);
+        if (distance < 1e-10) return;
+        const double correction = (distance - target) / distance / (size(first) + size(second));
+        shift(first, dx * correction * size(second), dy * correction * size(second));
+        shift(second, -dx * correction * size(first), -dy * correction * size(first));
+    };
+    auto sameGroup = [&](int first, int second) { return group[first] >= 0 && group[first] == group[second]; };
+    for (int iteration = 0; iteration < 60; ++iteration) {
+        snapToGrid(coords);
+        for (int first = 0; first < g.n; ++first)
+            for (int second = first + 1; second < g.n; ++second) {
+                if (g.bondOrder(first, second) || sameGroup(first, second)) continue;
+                if (std::hypot(coords[second].x - coords[first].x, coords[second].y - coords[first].y)
+                        < kPartedDistance)
+                    settle(first, second, kPartedDistance);
+            }
+        for (int atom = 0; atom < g.n; ++atom)
+            for (int neighbour : g.neighbors[atom])
+                if (neighbour > atom && !sameGroup(atom, neighbour)) settle(atom, neighbour, 1.0);
+    }
+}
+
+} // namespace detail_layout
+
+
+// ==========================================================================
 // generateCoords2D — comprehensive structure diagram generation pipeline
 // ==========================================================================
 
 /**
  * Generate publication-quality 2D coordinates for a molecule.
  *
- * Multi-phase pipeline inspired by CoordGen and CDK SDG:
+ * Multi-phase pipeline:
  *
  * Phase 1: Template matching — try extended template library for known scaffolds.
  * Phase 2: Ring-first layout — place ring systems as regular polygons, fuse
  *          adjacent rings by shared edges.
  * Phase 3: Chain layout — place acyclic branches in zig-zag convention.
- * Phase 4: Force refinement — short force-directed pass for local optimisation.
- * Phase 5: Overlap resolution — push apart any remaining clashes.
- * Phase 6: Crossing reduction — simulated annealing ring flips.
- * Phase 7: Canonical orientation — align to 30-degree grid.
- * Phase 8: Bond length normalisation — scale to target bond length.
+ * Phase 4: Stored E/Z, then rigid clash removal — reflect branches across
+ *          acyclic single bonds.
+ * Phase 5: Refinement, only when crossings, clashes or uneven bonds remain —
+ *          exact ring systems move as rigid bodies, so they stay regular.
+ *          Afterwards, in every layout, branches at stereocentres and stereo
+ *          double bonds turn where two bonds would lie in a line, so that the
+ *          drawn stereo stays readable.
+ * Phase 6: Canonical orientation — principal axis horizontal, then bonds
+ *          turned onto the 30-degree grid as nearly as they will go.
+ * Phase 7: Bond length normalisation — scale to target bond length.
  *
  * @param g                The molecular graph.
  * @param targetBondLength Desired bond length in coordinate units (default 1.5).
@@ -1714,14 +2380,31 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
 
     auto systems = detail_layout::findRingSystems(g);
     std::vector<int> atomSystem(n, -1);
-    for (int systemIndex = 0; systemIndex < static_cast<int>(systems.size()); ++systemIndex)
+    // The two ring bonds on either side of each atom of every ring.
+    std::vector<std::vector<std::pair<int, int>>> ringAngles(n);
+    for (int systemIndex = 0; systemIndex < static_cast<int>(systems.size()); ++systemIndex) {
         for (int atom : systems[systemIndex].atoms) atomSystem[atom] = systemIndex;
+        for (const auto& ring : systems[systemIndex].rings)
+            for (size_t k = 0; k < ring.size(); ++k)
+                ringAngles[ring[k]].push_back({ring[(k + ring.size() - 1) % ring.size()], ring[(k + 1) % ring.size()]});
+    }
     // --- Phase 2: Ring-first layout ---
-    if (!placed[0]) { // not fully placed by template
+    // Each ring system is drawn in a frame of its own, so that an atom two
+    // systems share at a spiro centre keeps its true place in both.
+    std::vector<std::vector<std::pair<int, Point2D>>> frames(systems.size());
+    auto recordFrame = [&](int systemIndex) {
+        for (int atom : systems[systemIndex].atoms) frames[systemIndex].push_back({atom, coords[atom]});
+    };
+    if (placed[0]) {
+        for (int systemIndex = 0; systemIndex < static_cast<int>(systems.size()); ++systemIndex)
+            recordFrame(systemIndex);
+    } else { // not fully placed by template
 
         // Place ring systems
-        for (auto& sys : systems) {
+        for (int systemIndex = 0; systemIndex < static_cast<int>(systems.size()); ++systemIndex) {
+            auto& sys = systems[systemIndex];
             if (sys.rings.empty()) continue;
+            for (int atom : sys.atoms) placed[atom] = false;
 
             // Pick the largest ring as seed (prefer 6-membered, then largest)
             int seedIdx = 0;
@@ -1802,15 +2485,16 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
                     progress = true;
                 }
             }
+            recordFrame(systemIndex);
         }
     }
 
     // --- Phase 3: Attach ring systems and chains along the molecular graph. ---
-    const auto ringCoordinates = coords;
     std::fill(placed.begin(), placed.end(), false);
     std::deque<int> bfsQ;
-    auto attach = [&](int atom, Point2D position, double angle) {
-        const int systemIndex = atomSystem[atom];
+    // Places `atom` at `position` with the rest of its ring system, if it has
+    // one, turned so that the system's outer side at `atom` faces back along `angle`.
+    auto attach = [&](int atom, Point2D position, double angle, int systemIndex) {
         if (systemIndex < 0) {
             coords[atom] = position;
             placed[atom] = true;
@@ -1818,36 +2502,95 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
             return;
         }
         const auto& atoms = systems[systemIndex].atoms;
-        Point2D centre{0, 0};
-        for (int member : atoms) { centre.x += ringCoordinates[member].x; centre.y += ringCoordinates[member].y; }
-        centre.x /= atoms.size(); centre.y /= atoms.size();
-        const double rotation = angle + M_PI - std::atan2(ringCoordinates[atom].y - centre.y,
-                                                          ringCoordinates[atom].x - centre.x);
+        std::vector<Point2D> frame(n);
+        for (const auto& [member, point] : frames[systemIndex]) frame[member] = point;
+        std::vector<int> ringNeighbours;
+        for (int neighbour : g.neighbors[atom])
+            if (atoms.count(neighbour)) ringNeighbours.push_back(neighbour);
+        const double outward = detail_layout::clearestGapBisector(
+            frame, atom, ringNeighbours, std::vector<int>(atoms.begin(), atoms.end()), ringAngles[atom]);
+        const double rotation = angle + M_PI - outward;
         for (int member : atoms) {
-            const double dx = ringCoordinates[member].x - ringCoordinates[atom].x;
-            const double dy = ringCoordinates[member].y - ringCoordinates[atom].y;
+            const double dx = frame[member].x - frame[atom].x;
+            const double dy = frame[member].y - frame[atom].y;
             coords[member] = {position.x + dx * std::cos(rotation) - dy * std::sin(rotation),
                               position.y + dx * std::sin(rotation) + dy * std::cos(rotation)};
             placed[member] = true;
             bfsQ.push_back(member);
         }
     };
+    auto placedAtoms = [&]() {
+        std::vector<int> atoms;
+        for (int existing = 0; existing < n; ++existing)
+            if (placed[existing]) atoms.push_back(existing);
+        return atoms;
+    };
+    // Turns the ring system just attached at the spiro atom `pivot` by up to 30 degrees either
+    // way, in 5-degree steps, to where its atoms lie furthest from `others`, scored as in
+    // clearestGapBisector.
+    auto turnClear = [&](int pivot, int systemIndex, const std::vector<int>& others) {
+        const auto& members = systems[systemIndex].atoms;
+        std::vector<int> fixed;
+        for (int other : others)
+            if (!members.count(other)) fixed.push_back(other);
+        const std::vector<Point2D> start = coords;
+        auto crowding = [&](double turn) {
+            const double cosine = std::cos(turn), sine = std::sin(turn);
+            double total = 0;
+            for (int member : members) {
+                const double dx = start[member].x - start[pivot].x, dy = start[member].y - start[pivot].y;
+                coords[member] = {start[pivot].x + cosine * dx - sine * dy, start[pivot].y + sine * dx + cosine * dy};
+                for (int other : fixed) {
+                    const double ox = coords[member].x - coords[other].x, oy = coords[member].y - coords[other].y;
+                    total += 1.0 / std::max(0.01, ox * ox + oy * oy);
+                }
+            }
+            return total;
+        };
+        double bestTurn = 0, least = crowding(0);
+        for (int step = -6; step <= 6; ++step) {
+            const double crowd = crowding(step * M_PI / 36);
+            if (detail_layout::clearlyHigher(least, crowd)) { least = crowd; bestTurn = step * M_PI / 36; }
+        }
+        crowding(bestTurn);
+    };
     double componentRight = -3.0;
     for (int seed = 0; seed < n; ++seed) {
         if (placed[seed]) continue;
-        attach(seed, {componentRight + 3.0, 0}, 0);
+        attach(seed, {componentRight + 3.0, 0}, 0, atomSystem[seed]);
         while (!bfsQ.empty()) {
             const int atom = bfsQ.front(); bfsQ.pop_front();
             for (int neighbour : g.neighbors[atom]) {
                 if (placed[neighbour]) continue;
-                double bestAngle = 0, bestScore = -std::numeric_limits<double>::infinity();
-                double reference = 0;
+                std::vector<int> placedNeighbours;
                 for (int existing : g.neighbors[atom])
-                    if (placed[existing]) {
-                        reference = std::atan2(coords[existing].y - coords[atom].y,
-                                                coords[existing].x - coords[atom].x);
-                        break;
-                    }
+                    if (placed[existing]) placedNeighbours.push_back(existing);
+                const int system = atomSystem[neighbour];
+                if (system >= 0 && systems[system].atoms.count(atom)) {
+                    // A spiro centre: the second ring system opens into the clearest gap, then
+                    // turns within it to where it lies clearest.
+                    const auto others = placedAtoms();
+                    const double angle = detail_layout::clearestGapBisector(coords, atom, placedNeighbours,
+                                                                            others, ringAngles[atom]);
+                    attach(atom, coords[atom], angle, system);
+                    turnClear(atom, system, others);
+                    continue;
+                }
+                if (placedNeighbours.size() >= 3) {
+                    // With three bonds already drawn, 120-degree angles are out of reach:
+                    // the new bond bisects the clearest gap (an angular methyl, say).
+                    const double angle = detail_layout::clearestGapBisector(coords, atom, placedNeighbours,
+                                                                            placedAtoms(), ringAngles[atom],
+                                                                            g.neighbors[neighbour].size() == 1);
+                    attach(neighbour, {coords[atom].x + std::cos(angle), coords[atom].y + std::sin(angle)}, angle,
+                           system);
+                    continue;
+                }
+                double bestAngle = 0, bestScore = 0;
+                double reference = 0;
+                if (!placedNeighbours.empty())
+                    reference = std::atan2(coords[placedNeighbours.front()].y - coords[atom].y,
+                                           coords[placedNeighbours.front()].x - coords[atom].x);
                 for (int directionIndex = 0; directionIndex < 12; ++directionIndex) {
                     const double angle = reference + directionIndex * M_PI / 6.0;
                     const Point2D candidate{coords[atom].x + std::cos(angle), coords[atom].y + std::sin(angle)};
@@ -1865,44 +2608,44 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
                             const double separation = std::abs(std::remainder(angle - existingAngle, 2 * M_PI));
                             score -= 4.0 * std::abs(separation - 2 * M_PI / 3);
                         }
-                    if (score > bestScore) { bestScore = score; bestAngle = angle; }
+                    if (directionIndex == 0 || detail_layout::clearlyHigher(score, bestScore)) {
+                        bestScore = score;
+                        bestAngle = angle;
+                    }
                 }
-                attach(neighbour, {coords[atom].x + std::cos(bestAngle), coords[atom].y + std::sin(bestAngle)}, bestAngle);
+                attach(neighbour, {coords[atom].x + std::cos(bestAngle), coords[atom].y + std::sin(bestAngle)},
+                       bestAngle, system);
             }
         }
         for (int atom = 0; atom < n; ++atom)
             if (placed[atom]) componentRight = std::max(componentRight, coords[atom].x);
     }
 
-    // --- Phase 4: Short force-directed refinement (50 iterations) ---
-    forceDirectedLayout(g, coords, 50, 1.0);
+    // --- Phase 4: Stored E/Z, then rigid clash removal ---
+    detail_layout::snapToGrid(coords);
+    detail_layout::honourDoubleBondStereo(g, coords);
+    detail_layout::reflectClashingBranches(g, coords);
 
-    // --- Phase 5: Overlap resolution ---
-    resolveOverlaps(coords, 0.3, 50);
+    if (!detail_layout::isCleanLayout(g, coords)) {
+        // --- Phase 5: Refinement around rigid ring systems ---
+        const auto rigidGroup = detail_layout::rigidRingGroups(g, coords, systems);
+        detail_layout::relaxAroundRigidGroups(g, coords, rigidGroup, 100);
+        // A reflection that removes a crossing can bring two atoms together, so the bonds
+        // settle again, up to twice more, while an atom lies hidden.
+        for (int pass = 0; pass < 3; ++pass) {
+            detail_layout::restoreUnitBonds(g, coords, rigidGroup);
+            detail_layout::snapToGrid(coords);
+            detail_layout::honourDoubleBondStereo(g, coords);
+            detail_layout::reflectClashingBranches(g, coords);
+            if (detail_layout::findDefects(g, coords).hidden == 0) break;
+        }
+    }
+    detail_layout::spreadStereoBonds(g, coords);
 
-    // --- Phase 6: Crossing reduction ---
-    reduceCrossings(g, coords, 500);
-
-    // Restore bond lengths displaced by overlap and crossing refinement.
-    for (int iteration = 0; iteration < 30; ++iteration)
-        for (int atom = 0; atom < n; ++atom)
-            for (int neighbour : g.neighbors[atom]) {
-                if (neighbour <= atom) continue;
-                const double dx = coords[neighbour].x - coords[atom].x;
-                const double dy = coords[neighbour].y - coords[atom].y;
-                const double distance = std::hypot(dx, dy);
-                if (distance < 1e-10) continue;
-                const double correction = 0.5 * (distance - 1.0) / distance;
-                coords[atom].x += dx * correction;
-                coords[atom].y += dy * correction;
-                coords[neighbour].x -= dx * correction;
-                coords[neighbour].y -= dy * correction;
-            }
-
-    // --- Phase 7: Canonical orientation ---
+    // --- Phase 6: Canonical orientation ---
     transform::canonicalOrientation(g, coords);
 
-    // --- Phase 8: Bond length normalisation ---
+    // --- Phase 7: Bond length normalisation ---
     transform::normaliseBondLength(g, coords, targetBondLength);
     if (std::all_of(g.neighbors.begin(), g.neighbors.end(),
                     [](const auto& neighbours) { return neighbours.empty(); }))

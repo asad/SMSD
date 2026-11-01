@@ -6,10 +6,10 @@ clients and optional LangChain and LlamaIndex adapters. Exporting a definition
 or calling a tool does not make a model request, need an API key or contact a
 network service.
 
-Install SMSD 8.1.0 with the optional MCP SDK, then start the server:
+Install SMSD 8.2.0 with the optional MCP SDK, then start the server:
 
 ```sh
-python -m pip install 'smsd[mcp]==8.1.0'
+python -m pip install 'smsd[mcp]==8.2.0'
 smsd-mcp
 # Equivalent: python -m smsd.mcp_server
 ```
@@ -111,9 +111,10 @@ tautomers and 256 transformations. If that enumeration stops, the result reports
 `depict_mcs` accepts at most 256 atoms per input and returns at most 1 MiB of
 SVG, with dimensions bounded to 200–1,600 by 150–1,200. Its native SVG is
 checked for executable elements, external references and document entities.
-The drawing highlights mapped atoms and input bonds between them. For MCES,
-the returned `bond_mapping` is the selected-edge witness; the drawing can also
-show other input bonds between highlighted atoms. No match gives `svg: null`.
+The drawing highlights mapped atoms and each bond between them that the
+mapping carries onto a bond of the other molecule. For MCES, the returned
+`bond_mapping` is the selected-edge witness; the drawing can also highlight
+such bonds outside it. No match gives `svg: null`.
 A stopped search remains stopped when depicted. Each result is limited to
 2 MiB as JSON text, measured before the MCP SDK encodes it.
 

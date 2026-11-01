@@ -42,7 +42,7 @@ which smsd-mcp    # Windows: where.exe smsd-mcp
 ```
 
 The MCP server and the tool definitions need SMSD 8.1.0 or later and Python
-3.12 or later. The `[mcp]` extra adds the MCP SDK that `smsd-mcp` needs. The
+3.12 or later; the refusal messages that list allowed values need 8.2.0. The `[mcp]` extra adds the MCP SDK that `smsd-mcp` needs. The
 Python loops below need `smsd` without the extra, plus the client package that
 each section installs.
 

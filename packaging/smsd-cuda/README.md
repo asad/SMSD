@@ -4,7 +4,7 @@
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
+python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits

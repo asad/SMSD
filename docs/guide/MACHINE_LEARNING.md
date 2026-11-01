@@ -32,7 +32,7 @@ a [packed fingerprint index](PACKED_INDEX.md) is better suited than a feature
 matrix.
 
 Install the extras that the chosen adapters need, for example
-`python -m pip install "smsd[sklearn,pandas,arrow]==8.1.0"`;
+`python -m pip install "smsd[sklearn,pandas,arrow]==8.2.0"`;
 [Getting started](GETTING_STARTED.md#install) lists every extra. Importing
 `smsd.adapters` loads none of these packages; each function loads its own when
 it is called and raises `ImportError` naming the extra when the package is

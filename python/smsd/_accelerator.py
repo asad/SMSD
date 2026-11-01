@@ -2,12 +2,12 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Finds an installed screening accelerator, such as the smsd-cuda package, at run time.
+"""Finds an installed screening accelerator, smsd-cuda or smsd-metal, at run time.
 
-The smsd wheels screen on the CPU. When smsd-cuda is installed for this exact smsd version and
-finds a device, the first GPU query or TargetCorpus screen attaches it, and corpus screens then
-compute their label overlaps on the GPU with the same hits. Without it, or with SMSD_DISABLE_GPU
-set to a value other than 0, nothing changes.
+The smsd wheels screen on the CPU. When smsd-cuda (NVIDIA) or smsd-metal (Apple silicon) is
+installed for this exact smsd version and finds a device, the first GPU query or TargetCorpus
+screen attaches it, and corpus screens then compute their label overlaps on the GPU with the same
+hits. Without one, or with SMSD_DISABLE_GPU set to a value other than 0, nothing changes.
 """
 
 import importlib
@@ -18,7 +18,7 @@ import warnings
 from . import _smsd
 
 # The packages that may provide an accelerator, in order of preference.
-_PACKAGES = ("smsd_cuda",)
+_PACKAGES = ("smsd_cuda", "smsd_metal")
 
 _lock = threading.Lock()
 _searched = False
