@@ -913,14 +913,14 @@ search. Writing patterns by hand is covered in [SMARTS queries](SMARTS.md).
 
 ## Draw the result
 
-`smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)` draws
-both molecules with the common graph highlighted, without RDKit and without a
-new search. It takes the `SearchResult`, not a `Match`, and records the
+`smsd.highlight.mcs_svg(query, target, result, *, highlight="gold", opts=None,
+**kwargs)` draws both molecules with the common graph highlighted, without
+RDKit and without a new search. It takes the `SearchResult`, not a `Match`, and records the
 status, `optimal` and `complete` in the SVG, both as attributes of the root
 element and in its title, so a figure cannot hide a stopped search. Import it
 from `smsd.highlight`; `import smsd` alone does not provide it. Keyword
 arguments are the fields of `smsd.DepictOptions`, such as `width` and
-`height`.
+`height`, and `highlight="mint"` draws a mint halo in place of the gold.
 
 ```python
 import re
@@ -967,15 +967,16 @@ saved phenol_aniline.svg
 TypeError: result must be a SearchResult
 ```
 
-An MCES result can leave out a bond between two mapped atoms, which the pair
-drawing cannot show, so `mcs_svg` raises `ValueError` for it. Draw the
-selected graph from `to_graph` instead:
+An MCES result can leave out a bond between two mapped atoms whose partners
+are bonded too, as when the two bond orders differ. The pair drawing would
+highlight that bond, so `mcs_svg` raises `ValueError` for such a result. Draw
+the selected graph from `to_graph` instead:
 
 ```python
 import smsd
 from smsd.highlight import mcs_svg
 
-query, target = "C1CC1", "CC(C)C"  # cyclopropane, isobutane
+query, target = "C1=CC1", "C1CC1"  # cyclopropene, cyclopropane
 edges = smsd.MCS.find(query).with_objective(smsd.MCS.Objective.MCES)
 result = edges.match(target)
 try:
@@ -1001,8 +1002,9 @@ selected graph drawn: True
 from atoms of `mol1` to atoms of `mol2` highlighted, and
 `smsd.depict_mapping(mol, mapping)` highlights the keys of a mapping on one
 molecule, so invert an MCS mapping to highlight target atoms. Both return
-native SVG. `smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False,
-timeout_ms=10000, size=(600, 300))` returns an image drawn with RDKit. It runs
+native SVG on a gold halo, or a mint one with `highlight="mint"`.
+`smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
+size=(600, 300), highlight="gold")` returns an image drawn with RDKit. It runs
 its own MCIS search and shows no status, so prefer `mcs_svg` for any figure
 that should state whether the result is proved. Its `highlight_color` argument
 has no effect and is deprecated. The drawing options are listed under

@@ -21,11 +21,29 @@ DepictOptions = _smsd.DepictOptions
 
 _DEFAULT_HIGHLIGHT = (0.5, 0.8, 1.0)
 
+# The native halo colours by highlight name, as (red, green, blue, strength).
+_HALOS = _smsd._HALOS
 
-def _options(opts, overrides):
-    """Default options when none are given, with keyword overrides applied."""
+# The same names for the RDKit images: a gold, #F2CC66, and the brand mint, #4EE8C7, equally
+# light and each between its native halo and that halo's edge, so that the match stays clear at
+# grid size.  Opaque, so overlapping atom and bond highlights stay even.
+_RDKIT_HIGHLIGHTS = {"gold": (0.949, 0.800, 0.400, 1.0), "mint": (0.306, 0.910, 0.780, 1.0)}
+
+
+def _checked_highlight(highlight):
+    """``highlight``, checked to name one of the halo colours."""
+    if not isinstance(highlight, str) or highlight not in _HALOS:
+        allowed = " or ".join(repr(name) for name in _HALOS)
+        raise ValueError(f"highlight must be {allowed}, not {highlight!r}")
+    return highlight
+
+
+def _options(opts, overrides, halo=None):
+    """Default options when none are given, with the halo colour and keyword overrides applied."""
     if opts is None:
         opts = DepictOptions()
+    if halo is not None:
+        opts._match_fill = halo
     for k, v in overrides.items():
         setattr(opts, k, v)
     return opts
@@ -59,17 +77,20 @@ def depict_svg(mol_or_smiles, opts=None, **kwargs):
     return _smsd.depict(_ensure_mol(mol_or_smiles), opts)
 
 
-def depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs):
+def depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight="gold", **kwargs):
     """Render a molecule with MCS or substructure atoms highlighted and numbered.
+
+    Every bond between two mapped atoms is highlighted with them.
 
     Args:
         mol_or_smiles: MolGraph, SMILES string or RDKit Mol to render.
         mapping: Atom index to partner atom index, from an MCS or substructure result.
         opts: DepictOptions; the default settings when None.
+        highlight: Halo colour of the matched region, ``"gold"`` or ``"mint"``.
         **kwargs: Overrides applied to ``opts``, such as ``show_atom_indices=True``.
 
     Returns:
-        str: SVG text with the matched atoms highlighted in green.
+        str: SVG text with the matched region on the halo and each matched atom numbered.
 
     Example::
 
@@ -78,18 +99,21 @@ def depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs):
         >>> svg = smsd.depict_mapping("CCO", match.atom_mapping)
         >>> assert '<svg' in svg
     """
-    opts = _options(opts, kwargs)
+    opts = _options(opts, kwargs, _HALOS[_checked_highlight(highlight)])
     return _smsd.depict_with_mapping(_graph(mol_or_smiles), mapping, opts)
 
 
-def depict_pair(mol1, mol2, mapping, opts=None, **kwargs):
+def depict_pair(mol1, mol2, mapping, opts=None, *, highlight="gold", **kwargs):
     """Render two molecules side by side with an MCS mapping highlighted.
+
+    A bond is highlighted only when the mapping carries it onto a bond of the other molecule.
 
     Args:
         mol1: First molecule, as a MolGraph, SMILES string or RDKit Mol.
         mol2: Second molecule, in the same forms.
         mapping: Atoms of ``mol1`` to atoms of ``mol2``, from a Match.
         opts: DepictOptions; the default settings when None.
+        highlight: Halo colour of the matched regions, ``"gold"`` or ``"mint"``.
         **kwargs: Overrides applied to ``opts``, such as ``width=800`` or ``height=400``.
 
     Returns:
@@ -102,7 +126,7 @@ def depict_pair(mol1, mol2, mapping, opts=None, **kwargs):
         >>> svg = smsd.depict_pair("CCO", "CCN", match.atom_mapping)
         >>> assert '<svg' in svg
     """
-    opts = _options(opts, kwargs)
+    opts = _options(opts, kwargs, _HALOS[_checked_highlight(highlight)])
     return _smsd.depict_pair(_graph(mol1), _graph(mol2), mapping, opts)
 
 
@@ -132,12 +156,27 @@ def _molecule_for_depiction(graph):
     return Chem.MolFromMolBlock(write_mol_block(graph), removeHs=False)
 
 
-def _highlighted_pair(first, second, mapping, size, query_legend):
-    """Draw two graphs side by side, highlighting the mapped atoms of each.
+def _carried_bonds(rdmol1, rdmol2, mapping):
+    """Bond indices of each molecule that the mapping carries onto a bond of the other."""
+    bonds1, bonds2 = [], []
+    for bond in rdmol1.GetBonds():
+        begin, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        if begin not in mapping or end not in mapping:
+            continue
+        partner = rdmol2.GetBondBetweenAtoms(mapping[begin], mapping[end])
+        if partner is not None:
+            bonds1.append(bond.GetIdx())
+            bonds2.append(partner.GetIdx())
+    return bonds1, bonds2
+
+
+def _highlighted_pair(first, second, mapping, size, query_legend, highlight):
+    """Draw two graphs side by side, with mapped atoms and carried bonds in the named colour.
 
     ``query_legend`` may hold a ``{}`` field for the number of matched query atoms.
     """
     from rdkit.Chem import AllChem, Draw
+    from rdkit.Chem.Draw import rdMolDraw2D
 
     rdmol1 = _molecule_for_depiction(first)
     rdmol2 = _molecule_for_depiction(second)
@@ -150,23 +189,32 @@ def _highlighted_pair(first, second, mapping, size, query_legend):
     q_atoms = list(mapping.keys()) if mapping else []
     t_atoms = list(mapping.values()) if mapping else []
 
+    q_bonds, t_bonds = _carried_bonds(rdmol1, rdmol2, mapping or {})
+
+    draw_options = rdMolDraw2D.MolDrawOptions()
+    draw_options.highlightColour = _RDKIT_HIGHLIGHTS[highlight]
+    # Bond bands as wide as the atom discs, so the match reads as one halo.
+    draw_options.highlightBondWidthMultiplier = 14
     return Draw.MolsToGridImage(
         [rdmol1, rdmol2],
         molsPerRow=2,
         subImgSize=(size[0] // 2, size[1]),
         highlightAtomLists=[q_atoms, t_atoms],
+        highlightBondLists=[q_bonds, t_bonds],
         legends=[query_legend.format(len(q_atoms)), f"Target ({len(t_atoms)} matched)"],
+        drawOptions=draw_options,
     )
 
 
 def depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
-               size=(600, 300), highlight_color=_DEFAULT_HIGHLIGHT):
-    """Find the MCS and return an RDKit image with matched atoms highlighted.
+               size=(600, 300), highlight_color=_DEFAULT_HIGHLIGHT, highlight="gold"):
+    """Find the MCS and return an RDKit image with the matched atoms and bonds highlighted.
 
     Requires the optional RDKit drawing dependency. This convenience image does
     not carry proof flags; obtain a SearchResult and use smsd.highlight.mcs_svg
-    when proof status must travel with the image. ``highlight_color`` is deprecated
-    and has no effect; the drawing uses RDKit's default highlight colour.
+    when proof status must travel with the image. Matched atoms and bonds are
+    highlighted in gold, or in mint with ``highlight="mint"``, in shades similar to
+    the native drawings'. ``highlight_color`` is deprecated and has no effect.
 
     Example::
 
@@ -177,6 +225,7 @@ def depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
     if highlight_color != _DEFAULT_HIGHLIGHT:
         warnings.warn("the highlight_color argument of smsd.depict_mcs() has no effect and is deprecated",
                       DeprecationWarning, stacklevel=2)
+    _checked_highlight(highlight)
     _require_rdkit("depict_mcs", drawing=True)
     g1 = _ensure_mol(mol1)
     g2 = _ensure_mol(mol2)
@@ -186,18 +235,25 @@ def depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
     result = MCS.find(g1).with_options(options).with_timeout(timeout_ms).match(g2)
     mapping = result.best.atom_mapping if result.found else {}
 
-    return _highlighted_pair(g1, g2, mapping, size, "Query ({} matched)")
+    return _highlighted_pair(g1, g2, mapping, size, "Query ({} matched)", highlight)
 
 
 def depict_substructure(query, target, *, timeout_ms=10000,
-                        size=(600, 300)):
-    """Find a substructure and return an RDKit image with the matched atoms highlighted.
+                        size=(600, 300), highlight="mint"):
+    """Find a substructure and return an RDKit image with the matched atoms and bonds highlighted.
+
+    Requires the optional RDKit drawing dependency. Matched atoms and bonds are
+    highlighted in mint, or in gold with ``highlight="gold"``, in shades similar to
+    the native drawings'. This convenience image does not carry proof flags; obtain
+    a SearchResult and use smsd.highlight.substructure_svg when proof status must
+    travel with the image.
 
     Example::
 
         import smsd
         img = smsd.depict_substructure("c1ccccc1", "c1ccc(O)cc1")
     """
+    _checked_highlight(highlight)
     _require_rdkit("depict_substructure", drawing=True)
     gq = _ensure_mol(query)
     gt = _ensure_mol(target)
@@ -205,7 +261,7 @@ def depict_substructure(query, target, *, timeout_ms=10000,
     result = Substructure.find(gq).with_timeout(timeout_ms).match(gt)
     mapping = result.best.atom_mapping if result.found else {}
 
-    return _highlighted_pair(gq, gt, mapping, size, "Query")
+    return _highlighted_pair(gq, gt, mapping, size, "Query", highlight)
 
 
 def to_svg(mol_or_smiles, *, size=(300, 200)):

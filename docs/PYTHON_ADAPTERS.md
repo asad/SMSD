@@ -122,9 +122,10 @@ assert "<svg " in svg
 
 Use the same molecules and numbering as the search. The SVG title and
 `data-search-status`, `data-optimal` and `data-complete` attributes retain the
-result's proof status. The pair renderer highlights mapped atoms and bonds
-joining them. If an MCES result omits a bond between mapped atoms, the helper
-raises rather than highlighting that extra bond; render
+result's proof status. The pair renderer highlights mapped atoms and each bond
+between them that the mapping carries onto a bond of the other molecule. If an
+MCES result omits such a bond, the helper raises rather than highlighting that
+extra bond; render
 `smsd.depict_svg(result.best.to_graph(query))` to draw the selected common
 graph in that case.
 
@@ -290,18 +291,10 @@ MCS-to-SMARTS search, SVG highlighting, native fingerprint features, a small
 scikit-learn pipeline and a temporary packed corpus. Its example labels are
 illustrative, not a predictive-performance evaluation.
 
-Use a local kernel with SMSD 8.2.0, NumPy and scikit-learn already installed.
-The setup cell detects an actual Colab shell; ordinary local execution performs
-no upload or installation. Upload the notebook file to Colab and select a fresh
-Linux x86_64 runtime. There, the cell prompts for one user-uploaded SMSD 8.2.0
-core wheel. The distribution name, version, CPython ABI and compatible Linux
-x86_64 platform tags are checked
-before installation with `sys.executable -m pip --no-index --no-deps --force-reinstall`.
-The imported version is then checked. No CUDA package is needed.
-
-Download the matching trusted wheel beforehand from PyPI or the
-[GitHub releases page](https://github.com/asad/SMSD/releases); the notebook does
-not download packages.
-NumPy and scikit-learn must already be available; they are checked but are not
-installed by this cell. Run the upload setup before importing SMSD, and restart
-the Colab runtime before repeating it. A native wheel executes code when loaded.
+Open the notebook in Jupyter or Colab and run its setup cell first. It installs
+SMSD 8.2.0 or later into the current kernel when it is missing or older, then
+attempts to install NumPy and scikit-learn if they are missing, from binary
+wheels only. Installation needs internet access; no wheel upload is needed.
+Select Python 3.12 or later, and restart the kernel first if an older SMSD is
+already imported. Cells that need a missing optional package say so. No CUDA
+package is needed.

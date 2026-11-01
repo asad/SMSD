@@ -1037,6 +1037,10 @@ static void setDeprecatedAromaticityModel(smsd::ChemOptions& options, smsd::Arom
     options.aromaticityModel = model;
 }
 
+static std::tuple<int, int, int, double> colourTuple(const smsd::Color& colour) {
+    return {colour.r, colour.g, colour.b, colour.a};
+}
+
 // smsd::batch::fingerprintQuality under the keys of the Java analyzeFpQuality.
 static py::dict analyzeFpQuality(const std::vector<int>& fp, int fpSize = 2048) {
     const auto quality = smsd::batch::fingerprintQuality(fp, fpSize);
@@ -3856,11 +3860,11 @@ Example::
         .def_readwrite("show_map_numbers",   &smsd::DepictOptions::showMapNumbers,
             "Show atom-atom map numbers (default True).")
         .def_readwrite("highlight_radius",   &smsd::DepictOptions::highlightRadius,
-            "Atom highlight circle radius (0 = auto, 40% of bond_length).")
+            "Highlight halo radius (0 = auto, 32% of bond_length).")
         .def_readwrite("highlight_opacity",  &smsd::DepictOptions::highlightOpacity,
-            "Highlight fill opacity (default 0.30).")
+            "Has no effect; kept for compatibility (default 0.30).")
         .def_readwrite("match_width",        &smsd::DepictOptions::matchWidth,
-            "Highlighted bond width (0 = auto, 2.2x line_width).")
+            "Highlighted bond width (0 = auto, the same as line_width).")
         .def_readwrite("padding",            &smsd::DepictOptions::padding,
             "SVG padding in pixels (default 30).")
         .def_readwrite("width",              &smsd::DepictOptions::width,
@@ -3868,7 +3872,18 @@ Example::
         .def_readwrite("height",             &smsd::DepictOptions::height,
             "Fixed SVG height (0 = auto-fit to molecule).")
         .def_readwrite("font_family",        &smsd::DepictOptions::fontFamily,
-            "CSS font family (default 'Arial, Helvetica, sans-serif').");
+            "CSS font family (default 'Arial, Helvetica, sans-serif').")
+        // Private: set by the Python helpers from their highlight argument, one of _HALOS.
+        .def_property("_match_fill",
+            [](const smsd::DepictOptions& opts) { return colourTuple(opts.matchFill); },
+            [](smsd::DepictOptions& opts, const std::tuple<int, int, int, double>& colour) {
+                opts.matchFill = {std::get<0>(colour), std::get<1>(colour), std::get<2>(colour), std::get<3>(colour)};
+            });
+
+    py::dict halos;
+    halos["gold"] = colourTuple(smsd::palette::GOLD_HALO);
+    halos["mint"] = colourTuple(smsd::palette::MINT_HALO);
+    m.attr("_HALOS") = halos;
 
     m.def("depict",
           [](const smsd::MolGraph& g, const smsd::DepictOptions& opts) {

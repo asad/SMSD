@@ -423,7 +423,8 @@ def depict_mcs(query_smiles: str, target_smiles: str, objective: str = "mcis",
     """Return a native mapping-highlight SVG and the unchanged search proof/status.
 
     No SVG is returned when no match was found; a stopped match stays unproved.
-    Input bonds between highlighted atoms are drawn too; for MCES the JSON
+    The drawing highlights mapped atoms and each input bond between them that
+    the mapping carries onto a bond of the other molecule; for MCES the JSON
     bond_mapping, rather than the drawing, defines the selected common edges.
 
     Example::

@@ -393,9 +393,10 @@ form. Tautomer enumeration stops at 128 tautomers or 256 transformations; when
 it stops, the result reports `LIMIT_REACHED` and `complete: false`, and the
 choice is made from the tautomers found.
 
-The drawing highlights the mapped atoms and the input bonds between them. For
-an MCES search, the selected common bonds are those in `bond_mapping`; the
-drawing can also highlight other bonds between mapped atoms. A search with no
+The drawing highlights the mapped atoms and each bond between them that the
+mapping carries onto a bond of the other molecule. For an MCES search, the
+selected common bonds are those in `bond_mapping`; the drawing can also
+highlight such bonds outside it. A search with no
 match returns `svg: None`, and a stopped search keeps its stopped status when
 drawn. The SVG is checked before it is returned and contains no scripts,
 external references or document declarations.

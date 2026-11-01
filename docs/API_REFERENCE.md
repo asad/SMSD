@@ -117,10 +117,13 @@ assert '<svg' in svg and 'data-search-status=' in svg
 ```
 
 Native `depict_svg`, `depict_mapping` and `depict_pair` return SVG strings and
-use `DepictOptions`. The pair renderer highlights mapped atoms and input
-bonds between them. `smsd.highlight.mcs_svg` carries search flags in the SVG
+use `DepictOptions`. The pair renderer highlights mapped atoms and each bond
+between them that the mapping carries onto a bond of the other molecule.
+`smsd.highlight.mcs_svg` carries search flags in the SVG
 and rejects selected-edge witnesses that this renderer would over-highlight;
-render `best.to_graph(query)` separately in that case. The MCP depiction tool
+render `best.to_graph(query)` separately in that case.
+`smsd.highlight.substructure_svg` draws a substructure hit on the target with
+the same flags. The MCP depiction tool
 instead labels this highlighting scope and returns the selected bond mapping
 alongside the image.
 
@@ -568,10 +571,10 @@ Source: [_depiction.py](../python/smsd/_depiction.py).
 | Callable | Contract |
 | --- | --- |
 | `smsd.DepictOptions (class/enum)` | See the native graph/options table or the adapter contract above. |
-| `smsd.depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)` | Render a molecule with MCS or substructure atoms highlighted and numbered. |
-| `smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))` | Find the MCS and return an RDKit image with matched atoms highlighted; `highlight_color` is deprecated and has no effect. |
-| `smsd.depict_pair(mol1, mol2, mapping, opts=None, **kwargs)` | Render two molecules side by side with an MCS mapping highlighted. |
-| `smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))` | Find a substructure and return an RDKit image with the matched atoms highlighted. |
+| `smsd.depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight='gold', **kwargs)` | Render a molecule with MCS or substructure atoms highlighted and numbered. |
+| `smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0), highlight='gold')` | Find the MCS and return an RDKit image with the matched atoms and bonds highlighted; `highlight_color` is deprecated and has no effect. |
+| `smsd.depict_pair(mol1, mol2, mapping, opts=None, *, highlight='gold', **kwargs)` | Render two molecules side by side with an MCS mapping highlighted. |
+| `smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300), highlight='mint')` | Find a substructure and return an RDKit image with the matched atoms and bonds highlighted. |
 | `smsd.depict_svg(mol_or_smiles, opts=None, **kwargs)` | Render a molecule as an SVG string. |
 | `smsd.save_svg(svg_str, path)` | Write SVG text to a file as UTF-8. |
 | `smsd.to_svg(mol_or_smiles, *, size=(300, 200))` | Deprecated RDKit rendering of a molecule as SVG. |
@@ -582,7 +585,8 @@ Source: [highlight.py](../python/smsd/highlight.py).
 
 | Callable | Contract |
 | --- | --- |
-| `smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)` | Render the two molecules with the best result's atom correspondence. |
+| `smsd.highlight.mcs_svg(query, target, result, *, highlight='gold', opts=None, **kwargs)` | Render the two molecules with the best result's atom correspondence. |
+| `smsd.highlight.substructure_svg(query, target, result, *, highlight='mint', opts=None, **kwargs)` | Render the target with the best hit's atoms and the bonds the hit carries. |
 
 ### Packed corpus and streaming
 

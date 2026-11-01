@@ -715,6 +715,32 @@ could compute from incomplete rings.
   `depictWithMapping(graph, atomMapping, options)` highlights mapped atoms;
   `depictPair(query, target, mapping, options)` draws a mapped pair;
   `depictSMILES` and `depictMCS` take SMILES; `DepictOptions` sets the style.
+- Drawings follow journal practice: a near-black skeleton in ACS proportions,
+  regular-weight labels and aromatic rings with alternating double bonds;
+  `aromaticStyle = AromaticStyle::CIRCLE` draws circles, and a molecule
+  without a Kekulé structure keeps them. Double bonds outside rings follow the
+  stored E/Z. Inside rings of eight or more atoms a drawing may not yet,
+  though the coordinates `writeMolBlock` writes do.
+- A matched region sits on a gold halo, `palette::MATCH_FILL`, with a fine
+  edge in a deeper shade of the same hue. Set `matchFill` to
+  `palette::MINT_HALO` for the equally light mint used for substructure hits;
+  `palette::GOLD_HALO` is the default gold. `depictSVG` highlights exactly the
+  bonds in `highlightBonds`, or the bonds joining highlighted atoms when none
+  are given. `depictWithMapping` highlights every bond between matched atoms,
+  so for a match that leaves such a bond unmatched, as a chain query on a
+  ring does, pass the matched bonds to `depictSVG`. `depictPair` highlights a
+  bond only when the mapping carries it onto a bond of the other molecule.
+- In single-molecule drawings, `atomHighlightColors` and
+  `bondHighlightColors` set the halo colour of individual atoms and bonds: the
+  alpha sets how strongly the colour is mixed with the background, an opaque
+  colour is drawn at the strength of `matchFill`, and an alpha of 0 draws no
+  halo. `palette::HIGHLIGHT_1` to `HIGHLIGHT_6` (gold, sky, coral, deep teal,
+  bright teal and mint) stay distinct for colour-blind readers; for greyscale
+  print, use `HIGHLIGHT_1`, `HIGHLIGHT_4` and `HIGHLIGHT_5`, which differ in
+  lightness. `matchStroke` and `matchWidth` give matched bonds their own
+  colour or weight, such as deep teal, `{13, 51, 48, 1.0}`; `matchStroke`
+  defaults to the default bond colour, so set it as well when changing
+  `bondColor`.
 - `depictor.hpp` provides `compute2DCoords(graph, options)`, an overload
   keeping the atoms of a `CoordMap2D` fixed, and
   `generateDepictionMatching2DStructure`, which aligns a molecule to a

@@ -351,9 +351,13 @@ inline std::unordered_map<int64_t, std::pair<int, int>> tetrahedralWedges(
     for (int centre = 0; centre < graph.n; ++centre) {
         if (graph.tetraChirality[centre] == 0) continue;
         auto neighbors = graph.neighbors[centre];
+        // A wedge goes preferably to a neighbour that is no stereocentre, then on a bond outside
+        // any ring (IUPAC ST-1.2), then to the least connected neighbour.
         std::stable_sort(neighbors.begin(), neighbors.end(), [&](int first, int second) {
             if ((graph.tetraChirality[first] == 0) != (graph.tetraChirality[second] == 0))
                 return graph.tetraChirality[first] == 0;
+            if (graph.bondInRing(centre, first) != graph.bondInRing(centre, second))
+                return !graph.bondInRing(centre, first);
             return graph.neighbors[first].size() < graph.neighbors[second].size();
         });
         for (int neighbor : neighbors) {

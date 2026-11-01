@@ -2,8 +2,9 @@
 
 SMSD Pro 8.2.0 adds Apple GPU screening on Apple silicon Macs and describes
 GPU screening on Windows through WSL2. The local molecular tools now say what
-they accept when they refuse a call, and MCS searches on very large molecules
-now respect short time limits. From 8.2.0, the Java library and command-line
+they accept when they refuse a call, MCS searches on very large molecules now
+respect short time limits, and structure drawings take a quieter style with
+corrected 2D layouts. From 8.2.0, the Java library and command-line
 tool receive bug fixes only; new features are added to C++ and Python. The
 deprecated 8.x APIs remain available and supported throughout the 8.x line.
 The [changelog](../CHANGELOG.md) lists every change.
@@ -30,8 +31,45 @@ The [changelog](../CHANGELOG.md) lists every change.
 - C++ and Python MCS searches on very large molecules now respect short time
   limits: preparing the search no longer runs past a limit of a few
   milliseconds.
+- Structure drawings keep rings regular when substituents crowd them, as in
+  aspirin and steroids, no longer place one atom on top of another in
+  drug-sized molecules, show a double bond outside a ring as the E/Z isomer
+  the input specifies, avoid drawing a stereocentre with two bonds in a line,
+  fit large molecules onto fixed-size canvases without clipping, and show a
+  matched region as one continuous halo. Pair drawings highlight only the
+  bonds that the mapping matches. Inside rings of eight or more atoms,
+  drawings do not yet follow a stored E/Z; MOL files written by SMSD do.
+- A quieter drawing style for papers and slides: one even halo with a fine
+  edge of the same hue marks the matched region, labels are regular weight in
+  element colours that stay legible on it, map numbers stay on the canvas and
+  clear of bonds and labels wherever there is room, aromatic rings show
+  alternating double bonds, and pair drawings show stereo wedges. Isotopes
+  keep their mass numbers.
+- Drawings mark a match in gold or mint: substructure hits are mint by
+  default and every other drawing gold. In Python, `highlight="gold"` or
+  `highlight="mint"` chooses either wherever a match is drawn, including the
+  new `smsd.highlight.substructure_svg`, which keeps a hit's search status; in
+  C++, set `matchFill` to `palette::GOLD_HALO` or `palette::MINT_HALO`. The
+  RDKit images of `depict_mcs` are now gold and those of
+  `depict_substructure` mint.
+- The [example notebooks](guide/README.md#notebooks) install SMSD 8.2.0 or
+  later, with the optional packages they use, into the running kernel, so they
+  run in Colab without a wheel upload. The AI tools notebook sends no model
+  request until it is enabled.
 
 ## Upgrading from 8.1.0
+
+Generated 2D coordinates and SVG drawings differ from 8.1.0, including the
+coordinates and wedges written to MOL files for molecules with stereo; search
+results are unchanged. In C++, set `DepictOptions::aromaticStyle` to
+`AromaticStyle::CIRCLE` to keep aromatic circles; Python drawings have no such
+option and show alternating double bonds wherever a Kekulé structure exists.
+`depictSVG` now highlights only the bonds in a non-empty `highlightBonds`, and
+per-atom and per-bond highlight colours tint the halo rather than the bond
+lines. The `palette` colours have new values, and matched bonds now keep the
+bond colour and line width; set `matchStroke` and `matchWidth` for a coloured
+or heavier matched bond. The automatic highlight radius is 32% of the bond
+length, down from 40%.
 
 Refusal messages from `call_tool` and the MCP server are longer. Code that
 compares one with fixed text, such as `Unknown tool argument`, should test how

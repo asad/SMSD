@@ -910,15 +910,18 @@ accepts a molecule.
 ### Depiction
 
 - `depict_svg(mol_or_smiles, opts=None, **kwargs)`: SVG text.
-- `depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)`: SVG
-  highlighting and numbering mapped atoms, keyed by drawn-atom index.
-- `depict_pair(mol1, mol2, mapping, opts=None, **kwargs)`: a side-by-side SVG
-  of a mapping.
+- `depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight="gold", **kwargs)`:
+  SVG highlighting and numbering mapped atoms, keyed by drawn-atom index.
+- `depict_pair(mol1, mol2, mapping, opts=None, *, highlight="gold", **kwargs)`:
+  a side-by-side SVG of a mapping.
+- `smsd.highlight.mcs_svg(query, target, result, *, highlight="gold", opts=None, **kwargs)`
+  and `smsd.highlight.substructure_svg(query, target, result, *, highlight="mint", opts=None, **kwargs)`:
+  SVG of an MCS or substructure result that keeps its search status.
 - `save_svg(svg_str, path)`: write SVG text to a file.
-- `depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))`:
+- `depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0), highlight="gold")`:
   an RDKit image of the MCS; `highlight_color` is deprecated, ignored, and
   warns when changed.
-- `depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))`:
+- `depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300), highlight="mint")`:
   an RDKit image of a substructure match.
 - `to_svg(mol_or_smiles, *, size=(300, 200))`: deprecated RDKit SVG; use
   `depict_svg`.
@@ -927,9 +930,17 @@ The native SVG functions need no RDKit; keyword arguments set `DepictOptions`
 attributes, on `opts` when given. Defaults: `bond_length` and `padding` 30 px;
 `line_width`, `bold_width`, `font_size` and `match_width` 0 (automatic);
 `width` and `height` 0 (fitted to the molecule); `bond_spacing` and
-`highlight_radius` 0 (18% and 40% of `bond_length`); `highlight_opacity` 0.30;
-`subscript_scale` 0.70; `show_carbon_labels` and `show_atom_indices` `False`;
-`show_map_numbers` `True`; `font_family` `"Arial, Helvetica, sans-serif"`.
+`highlight_radius` 0 (18% and 32% of `bond_length`); `highlight_opacity` 0.30
+(no effect); `subscript_scale` 0.70; `show_carbon_labels` and
+`show_atom_indices` `False`; `show_map_numbers` `True`; `font_family`
+`"Arial, Helvetica, sans-serif"`. Matched atoms and bonds sit on a halo with
+a fine edge of the same hue, and each mapped atom carries a small grey-green
+map number. `highlight` sets the halo to `"gold"` or `"mint"`, and any other
+value raises `ValueError`; substructure hits default to mint and every other
+drawing to gold. `depict_mapping` highlights every bond between mapped atoms;
+`depict_pair` highlights a bond only when the mapping carries it onto a bond
+of the other molecule. `depict_mcs` and `depict_substructure` take the same
+`highlight` names and draw their RDKit images in similar shades.
 
 ## Further reading
 

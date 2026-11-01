@@ -7,8 +7,9 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Optional GPU screening on Apple silicon Macs with the new `smsd-metal`
 package, GPU screening on Windows through WSL2, clearer refusals from the
-local molecular tools and a time-limit correction for MCS searches on very
-large inputs. The 8.x APIs are unchanged. From 8.2.0, the Java library and
+local molecular tools, a time-limit correction for MCS searches on very
+large inputs, and a quieter drawing style with corrected 2D layouts. The 8.x
+APIs are unchanged. From 8.2.0, the Java library and
 command-line tool receive bug fixes only; new features are added to C++ and
 Python. Maven Central carries the Java artefacts at 8.0.3, and a source build
 gives the current library. The [release notes](docs/RELEASE_NOTES.md) list the
@@ -36,6 +37,13 @@ downloads and upgrade notes.
   models.
 - Release checks and PyPI publishing cover `smsd-metal` as they do
   `smsd-cuda`.
+- Drawings mark a match in gold or mint: substructure hits are mint by
+  default and every other drawing gold. `highlight="gold"` or
+  `highlight="mint"` chooses either in `depict_mapping`, `depict_pair`,
+  `depict_mcs`, `depict_substructure`, `smsd.highlight.mcs_svg` and the new
+  `smsd.highlight.substructure_svg`, which draws a substructure hit with its
+  search status. In C++, set `matchFill` to `palette::GOLD_HALO` or
+  `palette::MINT_HALO`.
 
 ### Changed
 
@@ -50,12 +58,50 @@ downloads and upgrade notes.
   table and reflects current provider interfaces and local runtimes.
 - `scripts/check_examples.py` removes API key variables before it runs any
   example.
+- The example notebooks install SMSD 8.2.0 or later into the running kernel,
+  with the optional packages their examples use, so they run in Colab without
+  a wheel upload. Drawings carry captions and accessible descriptions, tables
+  display as notebook tables, and the AI tools notebook sends no model request
+  until `RUN_LOCAL_MODEL` or `RUN_HOSTED_APIS` is set to `True`.
+- Structure drawings adopt a quieter style: the matched region sits on one even
+  halo with a fine edge of the same hue, labels are set in regular weight in
+  element colours that stay legible on the halo, map numbers are smaller and
+  placed on the canvas, clear of bonds and labels wherever there is room, and
+  aromatic rings are drawn with alternating double bonds (in C++,
+  `AromaticStyle::CIRCLE` restores circles, and a molecule with no Kekulé
+  structure keeps them). Pair drawings show stereo wedges, `depictSVG`
+  highlights exactly the bonds in a non-empty `highlightBonds`, and in C++
+  per-atom and per-bond highlight colours tint only the halo. In C++, the
+  `palette` highlight colours are new: `MATCH_FILL` and `HIGHLIGHT_1` are gold,
+  and `HIGHLIGHT_2` to `HIGHLIGHT_6` are sky, coral, deep teal, bright teal
+  and mint; `MATCH_STROKE` is the bond colour and `MAPNUM` a grey-green.
+  `depict_mcs` and `depict_substructure` highlight the matched atoms and the
+  bonds the match carries, by default in a similar gold and mint respectively.
 
 ### Fixed
 
 - An MCS search with a short time limit on very large inputs now stops within
   the limit, where it could previously finish preparing the search first.
 - Two native allocation-failure tests build cleanly without OpenMP.
+- Structure drawings keep rings as regular polygons when substituents crowd
+  them, as in aspirin and steroids, and angular methyl groups no longer fold
+  onto ring bonds. Atoms no longer sit on top of one another in drawings of
+  drug-sized molecules, both ring systems at a spiro atom stay regular, a
+  double bond outside a ring is drawn as the E/Z isomer the input specifies,
+  a stereocentre is not drawn with two bonds in a line where a substituent can
+  be moved clear, and each molecule is turned so that its bonds lie as near as
+  possible to multiples of 30 degrees. Inside rings of eight or more atoms,
+  drawings do not yet follow a stored E/Z; the coordinates written to MOL files
+  do. Generated 2D coordinates change as a result; search results do not.
+- Drawings keep an isotope's mass number, set before its symbol as in ¹³C.
+  Stereo wedges, in drawings and MOL files alike, go on a bond outside the
+  rings where one is free.
+- SVG drawings on a fixed canvas are centred on it and, when the molecule is
+  larger than the canvas, scaled down uniformly to fit, where they were
+  previously clipped. A matched region is drawn as one continuous halo along
+  the matched bonds, behind the bond lines and atom labels, and `depictPair`
+  and `depict_pair` highlight only the bonds that the mapping carries onto
+  bonds of the other molecule.
 
 ## [8.1.0] - 2026-10-31
 

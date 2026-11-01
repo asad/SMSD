@@ -1,0 +1,301 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
+name: Windows conda packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Exact release commit or existing validated tag
+        required: true
+        type: string
+
+# Each job states the token permissions it needs.
+permissions: {}
+
+# A second request for the same release waits for the first instead of cancelling it.
+concurrency:
+  group: conda-windows-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  win-64:
+    name: CPU smsd conda packages for win-64
+    runs-on: windows-2022
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      # conda-build records its paths, so every build path lies under C:\b
+      # and none under a runner user directory or the workspace.
+      CONDA_PKGS_DIRS: C:\b\pkgs
+    steps:
+      - name: Preserve source file bytes
+        shell: pwsh
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          # Full history, so the release commit can be checked against master.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Validate the release ref
+        env:
+          RELEASE_REF: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, re, subprocess
+          ref = os.environ['RELEASE_REF']
+          if not re.fullmatch(r'(?:v\d+\.\d+\.\d+|[0-9a-fA-F]{40})', ref):
+              raise SystemExit('Expected a stable release tag or exact 40-character commit SHA')
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          resolved = subprocess.check_output(['git', 'rev-parse', ref + '^{commit}'], text=True).strip()
+          if resolved != commit:
+              raise SystemExit('Checkout does not match the requested release ref')
+          # Any commit in the fork network can be checked out by SHA; only master is built.
+          ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', commit, 'refs/remotes/origin/master'])
+          if ancestry.returncode == 1:
+              raise SystemExit('The release commit is not on master')
+          if ancestry.returncode != 0:
+              raise SystemExit('Could not compare the release commit with master')
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              environment.write('SMSD_COMMIT=' + commit + '\n')
+          PY
+      - name: Download, check and configure the frozen source archive
+        shell: bash
+        run: |
+          mkdir -p /c/b/src /c/b/logs
+          archive="C:/b/src/$SMSD_COMMIT.tar.gz"
+          url="https://github.com/asad/SMSD/archive/$SMSD_COMMIT.tar.gz"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 \
+            --output "$archive" "$url"
+          python - "$archive" "$SMSD_COMMIT" <<'PY'
+          import hashlib, subprocess, sys, tarfile
+          from pathlib import PurePosixPath
+          archive, commit = sys.argv[1:]
+          blobs = {}
+          for entry in subprocess.check_output(['git', 'ls-tree', '-r', '-z', '--full-tree', commit]).split(b'\0'):
+              if entry:
+                  metadata, name = entry.split(b'\t', 1)
+                  mode, kind, identity = metadata.split()
+                  if kind != b'blob' or mode not in (b'100644', b'100755'):
+                      raise SystemExit('Unexpected tree entry: ' + name.decode('utf-8'))
+                  blobs[name.decode('utf-8')] = identity.decode('ascii')
+          files = {}
+          with tarfile.open(archive, 'r:gz') as source:
+              for member in source:
+                  parts = PurePosixPath(member.name).parts
+                  if not parts or parts[0] != 'SMSD-' + commit or '..' in parts:
+                      raise SystemExit('Unexpected archive path: ' + member.name)
+                  if member.isdir():
+                      continue
+                  if not member.isfile():
+                      raise SystemExit('Unexpected archive member: ' + member.name)
+                  content = source.extractfile(member).read()
+                  header = b'blob ' + str(len(content)).encode('ascii') + b'\0'
+                  files[PurePosixPath(*parts[1:]).as_posix()] = hashlib.sha1(header + content).hexdigest()
+              if source.pax_headers.get('comment') != commit:
+                  raise SystemExit('The archive names another commit')
+          differing = sorted(set(files) ^ set(blobs) | {name for name in files.keys() & blobs.keys()
+                                                        if files[name] != blobs[name]})
+          if differing:
+              raise SystemExit('Archive differs from the release commit: ' + ', '.join(differing[:20]))
+          print(f'The archive holds the {len(files)} files of commit {commit}')
+          PY
+          python packaging/conda/configure_source.py \
+            --archive "$archive" \
+            --url "$url" \
+            --commit "$SMSD_COMMIT" \
+            --output C:/b/smsd-conda-variants.yaml
+          cat C:/b/smsd-conda-variants.yaml
+      - name: Install the pinned Miniforge and conda-build under C:\b
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $url = 'https://github.com/conda-forge/miniforge/releases/download/26.7.2-0/Miniforge3-Windows-x86_64.exe'
+          $sha = '71cf9519087be74fa53021219ff292beb2fc05fa49e0bb6eb0e0b6b14fccbaab'
+          $installer = 'C:\b\Miniforge3-Windows-x86_64.exe'
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $sha) {
+            throw 'Miniforge installer checksum differs'
+          }
+          $setup = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList `
+            '/InstallationType=JustMe', '/RegisterPython=0', '/AddToPath=0', '/S', '/D=C:\b\mf'
+          if ($setup.ExitCode -ne 0) { throw 'Miniforge installation failed' }
+          Remove-Item $installer
+          (& C:\b\mf\Scripts\conda.exe shell.powershell hook) | Out-String | Invoke-Expression
+          conda activate base
+          cmd /c "C:\b\mf\Scripts\conda.exe install -y -n base -c conda-forge --override-channels conda-build==26.9.1 > C:\b\logs\setup.log 2>&1"
+          if ($LASTEXITCODE -ne 0) { Get-Content C:\b\logs\setup.log -Tail 80; throw 'conda-build installation failed' }
+          cmd /c "C:\b\mf\Scripts\conda.exe list -n base > C:\b\logs\base-environment.txt 2>&1"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list the base environment' }
+          Select-String -Path C:\b\logs\base-environment.txt -Pattern '^(conda|conda-build|python) '
+      - name: Build and test smsd for CPython 3.12, 3.13, 3.14 and 3.15
+        shell: pwsh
+        run: |
+          (& C:\b\mf\Scripts\conda.exe shell.powershell hook) | Out-String | Invoke-Expression
+          conda activate base
+          # Only the files of the CPU recipe are copied, so its sub-recipe is never built.
+          New-Item -ItemType Directory -Path C:\b\recipe, C:\b\tmp -Force | Out-Null
+          Get-ChildItem packaging\conda -File | Copy-Item -Destination C:\b\recipe
+          if (Get-ChildItem C:\b\recipe -Directory) { throw 'The CPU recipe directory must hold no sub-recipe' }
+          $env:TEMP = 'C:\b\tmp'
+          $env:TMP = 'C:\b\tmp'
+          # Keep the runner's own Python installations out of the build environments.
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'hostedtoolcache' }) -join ';'
+          Set-Location C:\b
+          foreach ($python in '3.12', '3.13', '3.14', '3.15') {
+            $log = "C:\b\logs\build-$python.log"
+            cmd /c "C:\b\mf\Scripts\conda.exe build C:\b\recipe -m C:\b\smsd-conda-variants.yaml --python $python --croot C:\b\croot --output-folder C:\b\channel -c conda-forge --override-channels > $log 2>&1"
+            $status = $LASTEXITCODE
+            Get-Content $log -Tail 40
+            if ($status -ne 0) { throw "conda build failed for CPython $python" }
+            if (!(Select-String -Path $log -SimpleMatch 'TEST END:' -Quiet)) { throw "The recipe tests did not run for CPython $python" }
+            cmd /c "C:\b\mf\Scripts\conda.exe build purge --croot C:\b\croot > C:\b\logs\purge-$python.log 2>&1"
+            if ($LASTEXITCODE -ne 0) { throw "Could not remove the build directories after CPython $python" }
+          }
+      - name: Check, scan and checksum the packages
+        env:
+          SMSD_CONDA_ROOT: C:/b
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, io, json, os, re, shutil, tarfile, zipfile
+          from pathlib import Path
+          try:
+              from compression import zstd
+              def unpack(data):
+                  return zstd.decompress(data)
+          except ImportError:
+              import zstandard
+              def unpack(data):
+                  with zstandard.ZstdDecompressor().stream_reader(io.BytesIO(data)) as reader:
+                      return reader.read()
+
+          def spellings(path):
+              """A Windows path with backslashes, with slashes, and with backslashes escaped as in JSON."""
+              return {path, path.replace('\\', '/'), path.replace('\\', '\\\\')}
+
+          def needles(markers):
+              """Each marker as UTF-8 text and as the UTF-16 strings stored in binaries."""
+              return [(marker, marker.encode(encoding)) for marker in sorted(markers) for encoding in ('utf-8', 'utf-16-le')]
+
+          def holds(data, searched):
+              lowered = data.lower()
+              return sorted({marker for marker, needle in searched if needle in lowered})
+
+          # Runner user, workspace, temporary and tool paths, as Windows tools and Git Bash write them.
+          # The fixed forms cover the usual runner layout; the runner's own variables add this run's paths.
+          runner = spellings('c:\\users\\') | spellings('d:\\a\\') | {'/c/users/', '/d/a/', 'runneradmin', 'hostedtoolcache'}
+          for variable in ('USERPROFILE', 'GITHUB_WORKSPACE', 'RUNNER_TEMP', 'RUNNER_TOOL_CACHE'):
+              value = re.sub(r'^/([a-z])/', r'\1:/', os.environ.get(variable, '').lower()).replace('/', '\\').rstrip('\\')
+              if value:
+                  if not re.fullmatch(r'[a-z]:(?:\\[^\\]+)+', value):
+                      raise SystemExit(variable + ' does not name a folder below a drive root')
+                  runner |= spellings(value)
+          RUNNER = needles(runner)
+          # conda rewrites a build path only in files that info/paths.json lists with a prefix_placeholder.
+          # Anywhere else in the installed files, a path under C:\b names a folder any local user can create.
+          BUILD_ROOT = needles(spellings('c:\\b\\'))
+
+          def contents(path):
+              with zipfile.ZipFile(path) as package:
+                  stem = path.name.removesuffix('.conda')
+                  parts = ['info-' + stem + '.tar.zst', 'pkg-' + stem + '.tar.zst']
+                  if sorted(package.namelist()) != sorted(['metadata.json', *parts]):
+                      raise SystemExit('Unexpected package layout: ' + path.name)
+                  yield 'metadata.json', package.read('metadata.json'), False
+                  for part, installed in zip(parts, (False, True)):
+                      with tarfile.open(fileobj=io.BytesIO(unpack(package.read(part))), mode='r:') as archive:
+                          for member in archive:
+                              if member.isfile():
+                                  data = archive.extractfile(member).read()
+                              elif member.issym() or member.islnk():
+                                  data = member.linkname.encode('utf-8')
+                              else:
+                                  data = b''
+                              yield member.name, data, installed
+
+          root = Path(os.environ['SMSD_CONDA_ROOT'])
+          commit = os.environ['SMSD_COMMIT']
+          variants = json.loads((root / 'smsd-conda-variants.yaml').read_text(encoding='utf-8'))
+          if variants['smsd_source_commit'] != [commit]:
+              raise SystemExit('The variant inputs name another source commit')
+          version = variants['smsd_version'][0]
+          channel = root / 'channel'
+          name = re.compile('smsd-' + re.escape(version) + r'-(py31[2-5])h[0-9a-f]{7}_0\.conda')
+          built = {}
+          for path in sorted(path for pattern in ('*.conda', '*.tar.bz2') for path in channel.rglob(pattern)):
+              found = name.fullmatch(path.name)
+              if path.parent != channel / 'win-64' or found is None or found[1] in built:
+                  raise SystemExit('Unexpected package: ' + path.relative_to(channel).as_posix())
+              built[found[1]] = path
+          if sorted(built) != ['py312', 'py313', 'py314', 'py315']:
+              raise SystemExit('Expected one smsd package for each of CPython 3.12-3.15, found ' + ', '.join(sorted(built)))
+
+          # pip's record of the folder it installed from is read, never run. Compiled
+          # bytecode records its source path only for tracebacks.
+          pip_record = 'Lib/site-packages/smsd-' + version + '.dist-info/direct_url.json'
+          problems = []
+          for tag, path in sorted(built.items()):
+              metadata, build_paths, count = {}, {}, 0
+              for member, data, installed in contents(path):
+                  count += 1
+                  for marker in holds(member.encode('utf-8') + b'\n' + data, RUNNER):
+                      problems.append(f'{path.name}: {member} holds {marker!r}')
+                  if installed and not member.endswith('.pyc') and member != pip_record:
+                      build_paths[member] = holds(data, BUILD_ROOT)
+                  if member in ('info/index.json', 'info/about.json', 'info/paths.json'):
+                      metadata[member] = json.loads(data)
+              if 'info/paths.json' not in metadata:
+                  problems.append(path.name + ': info/paths.json is missing')
+              relocated = {entry['_path'] for entry in metadata.get('info/paths.json', {}).get('paths', [])
+                           if entry.get('prefix_placeholder')}
+              for member, found_paths in sorted(build_paths.items()):
+                  if found_paths and member not in relocated:
+                      problems.append(f'{path.name}: {member} holds the build path {found_paths[0]!r} outside a relocated file')
+              index, about = metadata.get('info/index.json', {}), metadata.get('info/about.json', {})
+              python = 'python >=3.' + tag[3:] + ',<3.' + str(int(tag[3:]) + 1) + '.0a0'
+              if (index.get('name'), index.get('version'), index.get('subdir'), index.get('build_number')) != ('smsd', version, 'win-64', 0):
+                  problems.append(path.name + ': unexpected package identity')
+              if python not in index.get('depends', []):
+                  problems.append(path.name + ': expected the dependency ' + python)
+              if about.get('extra', {}).get('source_commit') != commit:
+                  problems.append(path.name + ': the recorded source commit differs')
+              print(f'{path.name}: scanned {count} files')
+          if problems:
+              raise SystemExit('Package check failed:\n' + '\n'.join(problems))
+
+          output = Path('conda-win-64')
+          (output / 'win-64').mkdir(parents=True)
+          sums = []
+          for tag, path in sorted(built.items()):
+              shutil.copyfile(path, output / 'win-64' / path.name)
+              sums.append(hashlib.sha256(path.read_bytes()).hexdigest() + '  win-64/' + path.name)
+          (output / 'SHA256SUMS').write_text('\n'.join(sums) + '\n', encoding='utf-8', newline='\n')
+          shutil.copyfile(root / 'smsd-conda-variants.yaml', output / 'smsd-conda-variants.yaml')
+          print('\n'.join(sums))
+          PY
+      - name: Keep the build logs
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path conda-win-64\logs -Force | Out-Null
+          if (Test-Path C:\b\logs) { Copy-Item C:\b\logs\* conda-win-64\logs }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: conda-win-64
+          path: conda-win-64/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ failure() }}
+        with:
+          name: conda-win-64-diagnostics
+          path: conda-win-64/logs/
+          if-no-files-found: ignore

@@ -134,15 +134,22 @@ gives the command.
 | [Fingerprints and similarity](../../python/examples/fingerprints_similarity.ipynb) | Every fingerprint family, the binary and count coefficients, configurable fingerprints and a similarity ranking of benzodiazepines |
 | [Screening a library end to end](../../python/examples/library_screening.ipynb) | Five screens of one library, clustering of the packed index and saving the hits to an SD file |
 | [CPU and GPU screening](../../python/examples/cpu_gpu_screening.ipynb) | The screening backend, automatic and requested GPU use, packed-index backends, fallback and a CPU and GPU comparison, with every cell able to run without a GPU |
-| [Chemistry tools for AI assistants](../../python/examples/ai_tools.ipynb) | The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which is skipped when no model server is running |
+| [Chemistry tools for AI assistants](../../python/examples/ai_tools.ipynb) | The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which runs only when enabled and a model server answers |
 | [MCS to a small library search](../../python/examples/feature_search.ipynb) | A common graph turned into a SMARTS query, a library search, SVG highlighting, NumPy features, packed-index neighbours, Butina clustering and MaxMin selection |
 
-Open a notebook in Jupyter with a kernel that has SMSD 8.2.0 installed. The
-notebooks are saved without outputs, perform no downloads, remove any files
-they write and report when an optional package is missing.
-To run one in Colab, copy the setup cell of
-[feature_search.ipynb](../../python/examples/feature_search.ipynb) to the top
-of the notebook and run it first; it installs an uploaded SMSD wheel.
+Open a notebook in Jupyter or Colab and run its setup cell first. Each notebook
+installs SMSD 8.2.0 or later into the current kernel when it is missing or older,
+then attempts to install the optional packages used by its examples. Installation
+needs internet access; no wheel upload or copied setup cell is needed. Select
+Python 3.12 or later. If an older SMSD is already imported, restart the kernel
+before setup. A missing optional package is reported by the affected cells.
+
+Drawings scale to the notebook width and carry a caption and alternative text,
+with plain SVG for front ends that do not show HTML.
+Tables display as notebook tables when pandas is available. Local and hosted
+model requests in the tools notebook are off by default: set `RUN_LOCAL_MODEL`
+or `RUN_HOSTED_APIS` to `True` in its setup cell to enable only the section you
+intend to run. The examples remove the temporary files they write.
 
 ## Reference pages
 

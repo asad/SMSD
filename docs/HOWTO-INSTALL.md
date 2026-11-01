@@ -35,10 +35,33 @@ See [Python adapters and MCP](PYTHON_ADAPTERS.md),
 SMSD source build to avoid incompatible bundled runtimes. Portable SMARTS
 rejects unsupported matching constraints instead of silently dropping them.
 
+The `bioinception` conda channel carries `smsd` for `linux-64`,
+`linux-aarch64` and `osx-arm64`, and `smsd-cuda` for `linux-64`; `win-64`
+packages are to follow. `conda search -c bioinception --override-channels smsd`
+lists the versions available for your platform. Install from that channel, with dependencies from
+conda-forge:
+
+```bash
+conda install -c bioinception -c conda-forge smsd
+```
+
+For NVIDIA GPU screening on Linux x86_64 with a compatible driver, install
+`smsd` and `smsd-cuda` together from the same channels; the two packages must
+be the same version. Until the channel carries Windows packages, conda users
+on Windows can install the PyPI wheel, which covers Windows x86_64, into a
+conda environment with CPython 3.12–3.15:
+
+```powershell
+conda create -n smsd -c conda-forge python=3.12
+conda activate smsd
+python -m pip install smsd
+```
+
+SMSD has no required dependencies, so pip adds only SMSD to the environment.
 The [conda guide](../packaging/conda/README.md) describes the recipes that
 build `smsd` and, on Linux x86_64, `smsd-cuda` for NVIDIA GPU screening. It
-also covers the conda, mamba and Pixi install routes. The conda `smsd` package
-is currently built without OpenMP; the PyPI wheels use OpenMP for batch work.
+also covers the conda, mamba and Pixi install routes. The conda `smsd` package is currently built without OpenMP;
+the PyPI wheels use OpenMP for batch work.
 
 <a id="platform-requirements"></a>
 

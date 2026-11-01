@@ -25,6 +25,12 @@ WIDER_ACCESS = {
     ("python-publish.yml", "publish-metal"): {"id-token: write", "contents: read"},
     ("release.yml", "docker-cli"): {"contents: read", "actions: read"},  # checked SDK and wheel artifacts from an explicit build run
 }
+# Workflows that read the repository token, all to fetch release inputs or build artefacts.
+SECRET_USERS = {"installers.yml", "python-publish.yml", "release.yml"}
+# Steps that publish or upload outside the run; only the Python release workflow may hold them.
+PUBLISHING = (r"gh-action-pypi-publish", r"\btwine upload\b", r"\banaconda\b.*\bupload\b",
+              r"\bgh release (?:upload|create|edit|delete)\b", r"\bdocker push\b", r"\bmvn\b.*\bdeploy\b",
+              r"id-token: write", r"(?m)^    environment:")
 
 
 def jobs(text):
@@ -62,7 +68,7 @@ class WorkflowTest(unittest.TestCase):
             self.assertNotIn("password:", job)
 
     def test_every_workflow_runs_only_on_request(self):
-        self.assertEqual(len(WORKFLOWS), 5)
+        self.assertEqual(len(WORKFLOWS), 6)
         for workflow in WORKFLOWS:
             text = workflow.read_text(encoding="utf-8")
             triggers = re.search(r"^on:\n((?:  .*\n|\n)+?)^\S", text, re.M).group(1)
@@ -92,6 +98,34 @@ class WorkflowTest(unittest.TestCase):
                     for requirement in line.split("pip install", 1)[1].split():
                         if not requirement.startswith("-") and not requirement.startswith(('.', '".')):
                             self.assertRegex(requirement, r"==\d", workflow.name + ": " + line.strip())
+
+    def test_workflows_install_only_pinned_conda_packages(self):
+        for workflow in WORKFLOWS:
+            for line in workflow.read_text(encoding="utf-8").splitlines():
+                command = re.search(r"\bconda(?:\.exe)? (?:install|create) (.*?)(?: >|\"|$)", line)
+                if command is None:
+                    continue
+                tokens, packages = iter(command.group(1).split()), []
+                for token in tokens:
+                    if token in ("-n", "--name", "-p", "--prefix", "-c", "--channel"):
+                        next(tokens)
+                    elif not token.startswith("-"):
+                        packages.append(token)
+                self.assertTrue(packages, workflow.name + ": " + line.strip())
+                for package in packages:
+                    self.assertRegex(package, r"^[\w.-]+==\d+(\.\d+)*$", workflow.name + ": " + line.strip())
+
+    def test_only_release_input_workflows_read_secrets(self):
+        for workflow in WORKFLOWS:
+            if workflow.name not in SECRET_USERS:
+                self.assertNotRegex(workflow.read_text(encoding="utf-8"), r"secrets\.|github\.token", workflow.name)
+
+    def test_only_the_python_release_workflow_can_publish(self):
+        for workflow in WORKFLOWS:
+            if workflow.name != "python-publish.yml":
+                text = workflow.read_text(encoding="utf-8")
+                for marker in PUBLISHING:
+                    self.assertNotRegex(text, marker, workflow.name)
 
     def test_checkouts_do_not_keep_credentials(self):
         for workflow in WORKFLOWS:
