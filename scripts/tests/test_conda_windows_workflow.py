@@ -68,7 +68,8 @@ class WorkflowLimitsTest(unittest.TestCase):
         self.assertEqual(re.findall(r"^  ([A-Za-z0-9_-]+):\n", WORKFLOW.split("\njobs:\n", 1)[1], re.M), ["win-64"])
         self.assertEqual(re.findall(r"runs-on: (\S+)", WORKFLOW), ["windows-2022"])
         self.assertLessEqual(int(re.search(r"timeout-minutes: (\d+)", WORKFLOW)[1]), 90)
-        self.assertIn("ref: ${{ inputs.release_tag }}", WORKFLOW)
+        # The recipe is that of the dispatched branch, never of the release ref.
+        self.assertNotIn("ref: ${{ inputs.release_tag }}", WORKFLOW)
 
     def test_a_second_request_for_a_release_waits_for_the_first(self):
         self.assertIn("\nconcurrency:\n  group: conda-windows-${{ inputs.release_tag }}\n"
@@ -134,11 +135,11 @@ class ReleaseRefTest(unittest.TestCase):
 
     ANCESTRY = ["git", "merge-base", "--is-ancestor", SHA, "refs/remotes/origin/master"]
 
-    def run_check(self, ref, head=SHA, resolved=SHA, ancestry=0):
+    def run_check(self, ref, resolved=SHA, tagged=SHA, ancestry=0):
         with tempfile.TemporaryDirectory() as directory:
             environment = Path(directory) / "github-env"
             with mock.patch.dict(os.environ, {"RELEASE_REF": ref, "GITHUB_ENV": str(environment)}), \
-                    mock.patch.object(subprocess, "check_output", side_effect=[head + "\n", resolved + "\n"]) as git, \
+                    mock.patch.object(subprocess, "check_output", side_effect=[resolved + "\n", tagged + "\n"]) as git, \
                     mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], ancestry)) as run:
                 try:
                     exec(self.CODE, {})
@@ -146,11 +147,17 @@ class ReleaseRefTest(unittest.TestCase):
                     self.calls, self.runs = git.call_args_list, run.call_args_list
             return environment.read_text()
 
-    def test_a_tag_or_full_sha_names_the_checked_out_commit(self):
-        for ref in ("v8.2.0", SHA):
-            with self.subTest(ref=ref):
-                self.assertEqual(self.run_check(ref), "SMSD_COMMIT=" + SHA + "\n")
-                self.assertEqual([call.args[0] for call in self.runs], [self.ANCESTRY])
+    def test_a_release_tag_names_its_commit_whether_or_not_master_holds_it(self):
+        self.assertEqual(self.run_check("v8.2.0"), "SMSD_COMMIT=" + SHA + "\n")
+        self.assertEqual([call.args[0] for call in self.calls],
+                         [["git", "rev-parse", "--verify", "v8.2.0^{commit}"],
+                          ["git", "rev-parse", "--verify", "refs/tags/v8.2.0^{commit}"]])
+        self.assertEqual(self.runs, [])
+
+    def test_a_full_sha_must_be_on_master(self):
+        self.assertEqual(self.run_check(SHA), "SMSD_COMMIT=" + SHA + "\n")
+        self.assertEqual([call.args[0] for call in self.calls], [["git", "rev-parse", "--verify", SHA + "^{commit}"]])
+        self.assertEqual([call.args[0] for call in self.runs], [self.ANCESTRY])
 
     def test_branches_short_and_pre_release_refs_are_refused_before_git_runs(self):
         for ref in ("master", "v8.2", "v8.2.0-rc1", SHA[:12], "v8.2.0\nX"):
@@ -159,9 +166,9 @@ class ReleaseRefTest(unittest.TestCase):
             self.assertEqual(self.calls, [])
             self.assertEqual(self.runs, [])
 
-    def test_a_ref_resolving_elsewhere_is_refused(self):
-        with self.assertRaisesRegex(SystemExit, "does not match the requested release ref"):
-            self.run_check("v8.2.0", resolved="0" * 40)
+    def test_a_version_name_that_is_not_a_tag_here_is_refused(self):
+        with self.assertRaisesRegex(SystemExit, "not a release tag of this repository"):
+            self.run_check("v8.2.0", tagged="0" * 40)
         self.assertEqual(self.runs, [])
 
     def test_only_commits_on_master_are_built(self):

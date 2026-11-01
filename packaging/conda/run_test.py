@@ -14,6 +14,8 @@ from smsd.clustering import butina, maxmin
 from smsd.corpus import FingerprintCorpus
 
 assert smsd.__version__ == version("smsd")
+backend = smsd.gpu_device_info()
+assert "OpenMP" in backend and "no OpenMP" not in backend, backend
 options = smsd.MCS.Options()
 options.timeout_ms = 1000
 options.node_limit = 100000

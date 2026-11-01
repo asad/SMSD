@@ -19,10 +19,15 @@ if project["project"]["version"] != version or native is None or native[1] != ve
     raise RuntimeError("Conda, Python and native source versions must match")
 os.environ["CMAKE_GENERATOR"] = "Ninja"
 os.environ["CMAKE_BUILD_PARALLEL_LEVEL"] = "1"
+# The Visual Studio activation names a platform and toolset, which Ninja refuses.
+for name in ("CMAKE_GENERATOR_PLATFORM", "CMAKE_GENERATOR_TOOLSET"):
+    os.environ.pop(name, None)
+# OpenMP comes from the environment: libgomp, llvm-openmp or the Visual C++ runtime.
+openmp = ["--config-settings=cmake.define.OpenMP_ROOT=" + os.environ["PREFIX"]] if sys.platform == "darwin" else []
 subprocess.run([sys.executable, "-m", "pip", "install", ".", "--no-deps", "--no-build-isolation",
                 "--no-index", "--no-cache-dir", "-vv",
                 "--config-settings=build.tool-args=-j1",
                 "--config-settings=cmake.define.SMSD_BUILD_TESTS=OFF",
-                "--config-settings=cmake.define.SMSD_BUILD_OPENMP=OFF",
+                "--config-settings=cmake.define.SMSD_BUILD_OPENMP=ON",
                 "--config-settings=cmake.define.SMSD_BUILD_CUDA=OFF",
-                "--config-settings=cmake.define.SMSD_BUILD_METAL=OFF"], cwd=root, check=True)
+                "--config-settings=cmake.define.SMSD_BUILD_METAL=OFF", *openmp], cwd=root, check=True)

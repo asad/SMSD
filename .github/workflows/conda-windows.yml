@@ -35,10 +35,10 @@ jobs:
       - name: Preserve source file bytes
         shell: pwsh
         run: git config --global core.autocrlf false
+      # The recipe comes from the dispatched branch; the source comes from the release ref.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.release_tag }}
-          # Full history, so the release commit can be checked against master.
+          # Full history and tags, so the release commit can be found and checked.
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -54,16 +54,20 @@ jobs:
           ref = os.environ['RELEASE_REF']
           if not re.fullmatch(r'(?:v\d+\.\d+\.\d+|[0-9a-fA-F]{40})', ref):
               raise SystemExit('Expected a stable release tag or exact 40-character commit SHA')
-          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          resolved = subprocess.check_output(['git', 'rev-parse', ref + '^{commit}'], text=True).strip()
-          if resolved != commit:
-              raise SystemExit('Checkout does not match the requested release ref')
-          # Any commit in the fork network can be checked out by SHA; only master is built.
-          ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', commit, 'refs/remotes/origin/master'])
-          if ancestry.returncode == 1:
-              raise SystemExit('The release commit is not on master')
-          if ancestry.returncode != 0:
-              raise SystemExit('Could not compare the release commit with master')
+          commit = subprocess.check_output(['git', 'rev-parse', '--verify', ref + '^{commit}'], text=True).strip()
+          if ref.startswith('v'):
+              # A release tag of this repository names its commit even after master is rewritten.
+              tagged = subprocess.check_output(['git', 'rev-parse', '--verify', 'refs/tags/' + ref + '^{commit}'],
+                                               text=True).strip()
+              if tagged != commit:
+                  raise SystemExit('The release ref is not a release tag of this repository')
+          else:
+              # Any commit in the fork network can be named by SHA; only master is built.
+              ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', commit, 'refs/remotes/origin/master'])
+              if ancestry.returncode == 1:
+                  raise SystemExit('The release commit is not on master')
+              if ancestry.returncode != 0:
+                  raise SystemExit('Could not compare the release commit with master')
           with open(os.environ['GITHUB_ENV'], 'a') as environment:
               environment.write('SMSD_COMMIT=' + commit + '\n')
           PY

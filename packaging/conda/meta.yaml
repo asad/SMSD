@@ -24,6 +24,7 @@ requirements:
     - pip
     - scikit-build-core >=0.5,<2
     - pybind11 >=2.12,<4
+    - llvm-openmp  # [osx]
   run:
     - {{ pin_compatible('python', max_pin='x.x') }}
 
