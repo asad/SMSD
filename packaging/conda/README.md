@@ -139,8 +139,8 @@ consumes the same conda outputs.
 ## Install from the channel
 
 The `bioinception` channel carries `smsd` for `linux-64`, `linux-aarch64` and
-`osx-arm64`, `smsd-cuda` for `linux-64` and `smsd-metal` for `osx-arm64`;
-`win-64` packages are to follow.
+`osx-arm64` and `win-64`, `smsd-cuda` for `linux-64` and `smsd-metal` for
+`osx-arm64`.
 `conda search -c bioinception --override-channels smsd` lists the versions
 available for your platform. Install SMSD from that channel and its dependencies from conda-forge:
 
@@ -168,18 +168,11 @@ a local channel as shown above.
 
 ### Windows
 
-Until `win-64` packages are on the channel, install the PyPI wheel, which
-covers Windows x86-64, into a conda environment with CPython 3.12–3.15:
+Windows x86-64 installs from the channel with the same command:
 
 ```powershell
-conda create -n smsd -c conda-forge python=3.12
-conda activate smsd
-python -m pip install smsd
+conda install -c bioinception -c conda-forge smsd
 ```
-
-SMSD has no required dependencies, so pip adds only SMSD and leaves the
-packages that conda manages unchanged. Install optional packages such as NumPy
-or RDKit with conda before SMSD.
 
 The `win-64` packages are built on a GitHub-hosted Windows runner by the
 manually started `conda-windows` workflow
