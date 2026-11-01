@@ -1912,21 +1912,16 @@ Python or Java runtime.</p>
 SMSD source build to avoid incompatible bundled runtimes. Portable SMARTS
 rejects unsupported matching constraints instead of silently dropping them.</p>
 <p>The <code>bioinception</code> conda channel carries <code>smsd</code> for <code>linux-64</code>,
-<code>linux-aarch64</code> and <code>osx-arm64</code>, <code>smsd-cuda</code> for <code>linux-64</code> and <code>smsd-metal</code>
-for <code>osx-arm64</code>; <code>win-64</code> packages are to follow. <code>conda search -c bioinception --override-channels smsd</code>
+<code>linux-aarch64</code>, <code>osx-arm64</code> and <code>win-64</code>, <code>smsd-cuda</code> for <code>linux-64</code> and
+<code>smsd-metal</code> for <code>osx-arm64</code>. <code>conda search -c bioinception --override-channels smsd</code>
 lists the versions available for your platform. Install from that channel, with dependencies from
 conda-forge:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioinception<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>smsd
 </code></pre></div>
 <p>For NVIDIA GPU screening on Linux x86_64 with a compatible driver, install
 <code>smsd</code> and <code>smsd-cuda</code> together from the same channels; the two packages must
-be the same version. Until the channel carries Windows packages, conda users
-on Windows can install the PyPI wheel, which covers Windows x86_64, into a
-conda environment with CPython 3.12–3.15:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">conda</span> <span class="n">create</span> <span class="n">-n</span> <span class="n">smsd</span> <span class="n">-c</span> <span class="n">conda-forge</span> <span class="n">python</span><span class="p">=</span><span class="n">3</span><span class="p">.</span><span class="n">12</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">conda</span> <span class="n">activate</span> <span class="n">smsd</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">smsd</span>
-</code></pre></div>
+be the same version. On an Apple silicon Mac with macOS 14 or later, add
+<code>smsd-metal</code> the same way for Apple GPU screening.</p>
 <p>SMSD has no required dependencies, so pip adds only SMSD to the environment.
 The <a href="https://github.com/asad/SMSD/blob/master/packaging/conda/README.md">conda guide</a> describes the recipes that
 build <code>smsd</code>, <code>smsd-cuda</code> for NVIDIA GPU screening on Linux x86_64 and
@@ -2013,11 +2008,11 @@ gives the settings for other devices and the explicit routes.</p>
 <p>Each GitHub release includes a <code>SHA256SUMS</code> file. Download it into the same
 directory as the release files, then check each file you use.</p>
 <p>macOS or Linux:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>grep<span class="w"> </span><span class="s1">' smsd-cpp-8.2.0-headers.tar.gz$'</span><span class="w"> </span>SHA256SUMS<span class="w"> </span><span class="p">|</span><span class="w"> </span>shasum<span class="w"> </span>-a<span class="w"> </span><span class="m">256</span><span class="w"> </span>-c
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>grep<span class="w"> </span><span class="s1">' smsd-cpp-8.2.0-headers.tar.gz$'</span><span class="w"> </span>SHA256SUMS<span class="w"> </span><span class="p">|</span><span class="w"> </span>shasum<span class="w"> </span>-a<span class="w"> </span><span class="m">256</span><span class="w"> </span>-c
 </code></pre></div>
 <p>Windows PowerShell (prints <code>True</code> when the checksum matches):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">$entry</span> <span class="p">=</span> <span class="nb">Select-String</span> <span class="n">-Path</span> <span class="n">SHA256SUMS</span> <span class="n">-SimpleMatch</span> <span class="s1">' smsd-cpp-8.2.0-headers.tar.gz'</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">(</span><span class="nb">Get-FileHash</span> <span class="p">.\</span><span class="n">smsd-cpp</span><span class="p">-</span><span class="n">8</span><span class="p">.</span><span class="n">2</span><span class="p">.</span><span class="n">0-headers</span><span class="p">.</span><span class="n">tar</span><span class="p">.</span><span class="n">gz</span> <span class="n">-Algorithm</span> <span class="n">SHA256</span><span class="p">).</span><span class="n">Hash</span> <span class="o">-eq</span> <span class="nv">$entry</span><span class="p">.</span><span class="n">Line</span><span class="p">.</span><span class="n">Split</span><span class="p">(</span><span class="s1">' '</span><span class="p">)[</span><span class="n">0</span><span class="p">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">$entry</span> <span class="p">=</span> <span class="nb">Select-String</span> <span class="n">-Path</span> <span class="n">SHA256SUMS</span> <span class="n">-SimpleMatch</span> <span class="s1">' smsd-cpp-8.2.0-headers.tar.gz'</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="p">(</span><span class="nb">Get-FileHash</span> <span class="p">.\</span><span class="n">smsd-cpp</span><span class="p">-</span><span class="n">8</span><span class="p">.</span><span class="n">2</span><span class="p">.</span><span class="n">0-headers</span><span class="p">.</span><span class="n">tar</span><span class="p">.</span><span class="n">gz</span> <span class="n">-Algorithm</span> <span class="n">SHA256</span><span class="p">).</span><span class="n">Hash</span> <span class="o">-eq</span> <span class="nv">$entry</span><span class="p">.</span><span class="n">Line</span><span class="p">.</span><span class="n">Split</span><span class="p">(</span><span class="s1">' '</span><span class="p">)[</span><span class="n">0</span><span class="p">]</span>
 </code></pre></div>
 <p>Replace the file name to check another download.</p>
 <p><a id="java-cli-installers"></a></p>
@@ -2027,10 +2022,10 @@ directory as the release files, then check each file you use.</p>
 <code>com.bioinceptionlabs:smsd-cli:8.2.0</code> with the classifier
 <code>jar-with-dependencies</code>. It contains the SMSD library, CDK 2.13 and the other
 CLI dependencies, and runs on Java 8 or later:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>curl<span class="w"> </span>-fLO<span class="w"> </span>https://repo1.maven.org/maven2/com/bioinceptionlabs/smsd-cli/8.2.0/smsd-cli-8.2.0-jar-with-dependencies.jar
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--version
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"CCN"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCCNC"</span><span class="w"> </span>-m<span class="w"> </span>--json<span class="w"> </span>-
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-fLO<span class="w"> </span>https://repo1.maven.org/maven2/com/bioinceptionlabs/smsd-cli/8.2.0/smsd-cli-8.2.0-jar-with-dependencies.jar
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--version
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"CCN"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCCNC"</span><span class="w"> </span>-m<span class="w"> </span>--json<span class="w"> </span>-
 </code></pre></div>
 <p>The last command runs a substructure search and writes every mapping as JSON
 to standard output. The <a href="#docker">CPU Docker images</a> also carry the 8.2.0 tool,
@@ -2038,8 +2033,8 @@ and a <a href="#java-source-build">Java source build</a> produces it.</p>
 <h2 id="java-source-build">Java source build<a class="headerlink" href="#java-source-build" title="Permanent link">&para;</a></h2>
 <p>Use a JDK (Java 25 LTS preferred) and Maven 3.9 or later. From the repository
 root:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>clean<span class="w"> </span>package
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--version
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>clean<span class="w"> </span>package
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--version
 </code></pre></div>
 <p>The build runs the default tests, writes the library JAR to <code>java/core/target</code>,
 and writes the CLI JARs and the portable launchers to <code>java/cli/target</code>.
@@ -2049,12 +2044,12 @@ use them, set version 8.2.0 in the Maven or Gradle dependencies of the
 <a href="https://github.com/asad/SMSD/blob/master/java/README.md#installation">Java module README</a>; Gradle also needs
 <code>mavenLocal()</code> in its repositories.</p>
 <p>To run the slow tests as well:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>-Dslow.tests.exclude<span class="o">=</span>nothing<span class="w"> </span>clean<span class="w"> </span>verify
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>-Dslow.tests.exclude<span class="o">=</span>nothing<span class="w"> </span>clean<span class="w"> </span>verify
 </code></pre></div>
 <p>The code is compiled for Java 8 (<code>--release 8</code>). To run the tests on a Java 8
 runtime, set <code>SMSD_JAVA8_HOME</code> to a Java 8 JDK:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>-Dslow.tests.exclude<span class="o">=</span>nothing<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="s2">"-Djvm=</span><span class="nv">$SMSD_JAVA8_HOME</span><span class="s2">/bin/java"</span><span class="w"> </span><span class="nb">test</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>-Dslow.tests.exclude<span class="o">=</span>nothing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="s2">"-Djvm=</span><span class="nv">$SMSD_JAVA8_HOME</span><span class="s2">/bin/java"</span><span class="w"> </span><span class="nb">test</span>
 </code></pre></div>
 <p>See the <a href="../JAVA/">Java guide</a> for the API and CLI reference.</p>
 <h2 id="c-source-build">C++ source build<a class="headerlink" href="#c-source-build" title="Permanent link">&para;</a></h2>
@@ -2063,9 +2058,9 @@ runtime, set <code>SMSD_JAVA8_HOME</code> to a Java 8 JDK:</p>
 <code>ctest --test-dir</code> needs CMake 3.20 or later. On Windows, use Developer
 PowerShell for Visual Studio with the Desktop development with C++ workload.
 From the repository root:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>cmake --build build/cpu --config Debug --parallel 4
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>ctest --test-dir build/cpu --build-config Debug --output-on-failure
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>cmake --build build/cpu --config Debug --parallel 4
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>ctest --test-dir build/cpu --build-config Debug --output-on-failure
 </code></pre></div>
 <p>Batch operations use OpenMP when CMake finds it; on macOS, install <code>libomp</code>
 (for example with Homebrew) and add its prefix to <code>CMAKE_PREFIX_PATH</code>.
@@ -2076,22 +2071,22 @@ install the package and use it from CMake; the <a href="../CPP/">C++ guide</a> i
 reference.</p>
 <h2 id="python">Python<a class="headerlink" href="#python" title="Permanent link">&para;</a></h2>
 <p>Install the release wheel for your platform from PyPI or the GitHub release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"</span>
 </code></pre></div>
 <p>Wheels are built for standard CPython 3.12–3.15 (<code>cp312</code> through <code>cp315</code>),
 not the free-threaded builds. Other interpreters and platforms need a source
 build, with Python 3.12 or later, a C++17 compiler, CMake and the Python
 development headers.</p>
 <p>Linux or macOS, from the repository root:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span>build
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>build<span class="w"> </span>--wheel
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span>build
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>build<span class="w"> </span>--wheel
 </code></pre></div>
 <p>Windows, from Developer PowerShell:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">py</span> <span class="p">-</span><span class="n">3</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">-</span><span class="n">-upgrade</span> <span class="n">pip</span> <span class="n">build</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="n">-m</span> <span class="n">build</span> <span class="p">-</span><span class="n">-wheel</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">py</span> <span class="p">-</span><span class="n">3</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">-</span><span class="n">-upgrade</span> <span class="n">pip</span> <span class="n">build</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">python</span><span class="p">.</span><span class="n">exe</span> <span class="n">-m</span> <span class="n">build</span> <span class="p">-</span><span class="n">-wheel</span>
 </code></pre></div>
 <p>Source builds leave Metal and CUDA out by default. Python screening and search
 do not run on them, so <code>-Ccmake.define.SMSD_BUILD_METAL=ON</code> or
@@ -2102,13 +2097,13 @@ GPU screening from the separate <code>smsd-metal</code> package.
 The wheel is written to <code>dist/</code>; install it with the same environment's Python.
 For development, install the checkout in editable mode with the test
 dependencies, then run the tests:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; assert smsd.Substructure.find('CC').match('CCC').found"</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>python/tests<span class="w"> </span>-q
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; assert smsd.Substructure.find('CC').match('CCC').found"</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>python/tests<span class="w"> </span>-q
 </code></pre></div>
 <p>The standard wheels use CPU/OpenMP. For optional NVIDIA CUDA screening on a
 supported Linux system, install the matching package:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
 </code></pre></div>
 <p>The CUDA runtime is installed as a package dependency; the host still needs a
 compatible NVIDIA driver. On an Apple silicon Mac, install
@@ -2121,18 +2116,18 @@ RDKit depiction (<code>python -m pip install "smsd[rdkit]==8.2.0"</code>). See t
 <p>The CPU images include the 8.2.0 Java CLI and the Python package. The default
 command is the Java CLI; use <code>--entrypoint python</code> for Python. After loading
 the image archive from the release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"c1ccccc1"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"c1ccc(O)cc1"</span><span class="w"> </span>--json<span class="w"> </span>-
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; assert smsd.Substructure.find('CC').match('CCC').found"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"c1ccccc1"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"c1ccc(O)cc1"</span><span class="w"> </span>--json<span class="w"> </span>-
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; assert smsd.Substructure.find('CC').match('CCC').found"</span>
 </code></pre></div>
 <p>On an arm64 host, load <code>smsd-8.2.0-cpu-linux-arm64.tar.xz</code> and use
 <code>smsd:8.2.0-cpu-arm64</code>. The GPU image includes the Python
 package, matching <code>smsd-cuda</code> and CUDA runtime, with Python as its entry point:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
 </code></pre></div>
 <p>It needs the NVIDIA Container Toolkit and a compatible host driver; on Windows
 it runs under WSL2, as described in
@@ -2143,11 +2138,11 @@ Backend availability does not prove that a screening call used the GPU.</p>
 and their checksums. Given a completed release directory with its source and
 wheel manifests, prepare a fresh context and use the <code>source_commit</code> recorded
 in <code>SOURCE_MANIFEST.json</code> as the revision:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>python<span class="w"> </span>scripts/prepare_docker_context.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--release-dir<span class="w"> </span>release<span class="w"> </span>--output<span class="w"> </span>docker-context<span class="w"> </span>--architecture<span class="w"> </span>amd64
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>docker<span class="w"> </span>buildx<span class="w"> </span>build<span class="w"> </span>--load<span class="w"> </span>--platform<span class="w"> </span>linux/amd64<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">SMSD_REVISION</span><span class="o">=</span>SOURCE_COMMIT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span>-f<span class="w"> </span>docker-context/Dockerfile<span class="w"> </span>-t<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>docker-context
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>python<span class="w"> </span>scripts/prepare_docker_context.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--release-dir<span class="w"> </span>release<span class="w"> </span>--output<span class="w"> </span>docker-context<span class="w"> </span>--architecture<span class="w"> </span>amd64
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>docker<span class="w"> </span>buildx<span class="w"> </span>build<span class="w"> </span>--load<span class="w"> </span>--platform<span class="w"> </span>linux/amd64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">SMSD_REVISION</span><span class="o">=</span>SOURCE_COMMIT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span>-f<span class="w"> </span>docker-context/Dockerfile<span class="w"> </span>-t<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>docker-context
 </code></pre></div>
 <p>Replace <code>SOURCE_COMMIT</code> with that recorded value. For arm64, use a separate
 context with <code>--architecture arm64</code>, platform <code>linux/arm64</code> and tag
@@ -2163,14 +2158,14 @@ The CPU images hold <code>LICENSE</code>, <code>NOTICE</code> and the CLI depend
 licence files in <code>/usr/share/doc/smsd</code>; every image retains the notices of its
 bundled runtimes.</p>
 <p>To save a built image as a release archive:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>python<span class="w"> </span>scripts/archive_docker_image.py<span class="w"> </span>--image<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--revision<span class="w"> </span>SOURCE_COMMIT<span class="w"> </span>--architecture<span class="w"> </span>amd64<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--output<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>python<span class="w"> </span>scripts/archive_docker_image.py<span class="w"> </span>--image<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--revision<span class="w"> </span>SOURCE_COMMIT<span class="w"> </span>--architecture<span class="w"> </span>amd64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>--output<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
 </code></pre></div>
 <p>If the Docker engine has no xz decompressor, decompress on the host before
 loading:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>xz<span class="w"> </span>--decompress<span class="w"> </span>--stdout<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>load
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>xz<span class="w"> </span>--decompress<span class="w"> </span>--stdout<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>load
 </code></pre></div>
 <p>For a CPU image, use <code>--image smsd:8.2.0-cpu-amd64</code> and output
 <code>smsd-8.2.0-cpu-linux-amd64.tar.xz</code>; replace both architecture values with
@@ -2182,9 +2177,9 @@ stderr log and a JSON record with <code>accepted=false</code>.</p>
 <h2 id="check-the-documented-examples">Check the documented examples<a class="headerlink" href="#check-the-documented-examples" title="Permanent link">&para;</a></h2>
 <p>After a source build, this runs every Python, Java and C++ code block in the
 main guides; examples that need RDKit are skipped when it is absent:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>python<span class="w"> </span>scripts/check_examples.py<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--report<span class="w"> </span>build/example-check.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>python<span class="w"> </span>scripts/check_examples.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--report<span class="w"> </span>build/example-check.json
 </code></pre></div>
 <p>Add <code>--languages python</code> (or <code>java</code>, <code>cpp</code>) to check one language.</p>
 
