@@ -1,0 +1,53 @@
+{% set version = smsd_version %}
+{% set wheel = "smsd_metal-" ~ version ~ "-py3-none-macosx_14_0_arm64.whl" %}
+
+package:
+  name: smsd-metal
+  version: {{ version }}
+
+# The released wheel is the one proved on the Apple GPU; the source archive supplies the licences.
+source:
+  - url: {{ smsd_source_url | string | tojson }}
+    sha256: "{{ smsd_source_sha256 }}"
+  - url: https://github.com/asad/SMSD/releases/download/v{{ version }}/{{ wheel }}
+    sha256: "{{ smsd_metal_wheel_sha256 }}"
+    folder: wheel
+
+build:
+  number: 0
+  skip: true  # [py<312 or not (osx and arm64)]
+  script: '"{{ PYTHON }}" -m pip install "{{ SRC_DIR }}/wheel/{{ wheel }}" --no-deps --no-index --no-cache-dir -vv'
+
+requirements:
+  host:
+    - python
+    - pip
+  run:
+    - python
+    - smsd =={{ version }}
+    - __osx >=14
+
+test:
+  imports:
+    - smsd_metal
+  files:
+    - run_test.py
+  requires:
+    - pip
+  commands:
+    - python -m pip check
+    - python run_test.py
+
+about:
+  home: https://github.com/asad/SMSD
+  license: Apache-2.0
+  license_file:
+    - packaging/smsd-metal/LICENSE
+    - packaging/smsd-metal/NOTICE
+  summary: Apple GPU screening accelerator for the exact matching SMSD version
+  description: |
+    Apple silicon GPU accelerator for prepared fingerprint screens, with the same
+    hits and scores as the CPU. Requires macOS 14 or later and the same version of
+    smsd.
+  doc_url: https://asad.github.io/SMSD/guide/CPU_GPU/
+  dev_url: https://github.com/asad/SMSD
