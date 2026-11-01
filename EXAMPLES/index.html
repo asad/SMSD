@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Examples - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/EXAMPLES/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Examples - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2155,6 +2229,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2280,7 +2356,7 @@ same indices.</p>
 <p>This threshold applies to atom-count Tanimoto, not bond Tanimoto or weighted MCS scores.
 <code>MCS.match_many</code> itself searches every supplied target without a similarity threshold.</p>
 <p>With <code>smsd-cuda</code> and an NVIDIA GPU,
-<a href="../python/examples/gpu_screening.py"><code>gpu_screening.py</code></a> runs packed and
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/gpu_screening.py"><code>gpu_screening.py</code></a> runs packed and
 corpus screens on the device and checks every result against the CPU; without
 them it runs on the CPU.</p>
 <h2 id="svg-drawing">SVG drawing<a class="headerlink" href="#svg-drawing" title="Permanent link">&para;</a></h2>
@@ -2462,22 +2538,22 @@ colon is an aromatic bond, so text replacement can alter the structure.
 on your machine. Each search result reports its <code>status</code> and whether it is
 <code>optimal</code> and <code>complete</code>. See <a href="../AI_ASSISTANTS/">Connecting AI assistants</a> for
 set-up steps and worked examples.
-<a href="../python/examples/agent_workflow.py"><code>agent_workflow.py</code></a> chains screening,
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/agent_workflow.py"><code>agent_workflow.py</code></a> chains screening,
 MCS and depiction through <code>call_tool</code> without a model, and
-<a href="../python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> checks the MCP
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> checks the MCP
 server from Python.</p>
 <h2 id="further-reading">Further reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
 <p>See the <a href="../guide/">user guide</a>, the <a href="../PYTHON/">Python guide</a>, the
 <a href="../HOWTO-INSTALL/">installation guide</a>, the <a href="../CPP/">C++ guide</a> and the
 <a href="../JAVA/">Java guide</a>. Five notebooks work through the guide's topics:
-<a href="../python/examples/substructure_search.ipynb">substructure and SMARTS search</a>,
-<a href="../python/examples/mcs_search.ipynb">maximum common substructure</a>,
-<a href="../python/examples/fingerprints_similarity.ipynb">fingerprints and similarity</a>,
-<a href="../python/examples/library_screening.ipynb">library screening</a> and
-<a href="../python/examples/cpu_gpu_screening.ipynb">CPU and GPU screening</a>.</p>
+<a href="../notebooks/substructure_search/">substructure and SMARTS search</a>,
+<a href="../notebooks/mcs_search/">maximum common substructure</a>,
+<a href="../notebooks/fingerprints_similarity/">fingerprints and similarity</a>,
+<a href="../notebooks/library_screening/">library screening</a> and
+<a href="../notebooks/cpu_gpu_screening/">CPU and GPU screening</a>.</p>
 <p>A C++ program that screens packed fingerprints on a Metal GPU, with the CPU
 screen as the fallback, is the
-<a href="../cpp/examples/metal_fingerprint_screen.cpp">Metal screening example</a>.</p>
+<a href="https://github.com/asad/SMSD/blob/master/cpp/examples/metal_fingerprint_screen.cpp">Metal screening example</a>.</p>
 
 
 
@@ -2491,6 +2567,7 @@ screen as the fallback, is the
 
 
                 
+
               </article>
             </div>
           
@@ -2555,7 +2632,7 @@ screen as the fallback, is the
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

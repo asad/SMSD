@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Packed corpora - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/PACKED_CORPORA/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Packed corpora - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1667,6 +1741,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1789,39 +1865,21 @@ retry the operation on the CPU. These packed operations do not use the native
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="n">clusters</span> <span class="o">=</span> <span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span>
 <a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="n">selected</span> <span class="o">=</span> <span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span>
 </code></pre></div>
-<p>CUDA computes exact integer intersections. <code>screen_many</code> applies integer cutoff
-tables on device, chosen to reproduce the CPU's binary64 threshold comparison;
-the host forms the returned Tanimoto scores from integer counts. <code>top_k_pairs</code>
-performs threshold selection and per-tile top-k on device, then merges those
-lists on the CPU with the same descending score and ascending target-index tie
-break. Pair searches and clustering use the same exact scores. GPU acceleration
-does not make those algorithms approximate.</p>
-<p>Butina centre selection, count updates and assignment bookkeeping remain on the
-CPU. MaxMin's minimum-distance updates and next-row choice also remain on the
-CPU. Both have deterministic lower-index tie breaks. The <code>cuda_calls</code> property
-is a cumulative count of completed packed CUDA calls, including clustering
-passes. A positive increase is evidence that this adapter completed CUDA work;
-it is not a count of queries, hits or GPU kernels, and does not establish a
-speedup or the fraction of an application executed on the GPU.</p>
+<p>CUDA returns exactly the CPU results: the same hits, scores, order and ties, so
+pair searches, Butina and MaxMin give the same answers on either backend.
+Clustering decisions are deterministic, with ties going to the lower index.
+<code>cuda_calls</code> counts completed packed CUDA calls, including clustering passes; an
+increase shows that the device did work for this corpus.</p>
 <h2 id="ordering-work-and-memory">Ordering, work and memory<a class="headerlink" href="#ordering-work-and-memory" title="Permanent link">&para;</a></h2>
 <p><code>screen_many</code> accepts at most 32 packed queries and consumes at most one extra
 query input to detect an excess before reading targets. It yields target-chunk
 order, then query index and target index. This is not a global query-major or
 similarity ranking. <code>similarities</code> yields target input order for one query.</p>
-<p>CUDA tiles contain at most 1,048,576 query/target pairs. A conservative 64 MiB
-host-work estimate also limits each tile, so the effective target chunk can be
-smaller than the requested <code>chunk_size</code>. CPU packed comparison temporaries are
-similarly bounded to approximately 64 MiB; <code>chunk_size</code> can lower the bound.
-These are array/work estimates, not hard caps on process memory. Mapped pages,
-query storage, Python objects and application results are additional costs.
-Molecule construction and parsing memory are also input-dependent.</p>
-<p>The native resident workspace separately retains at most 256 MiB of device
-scratch. That cap is not a total GPU-memory limit: resident target fingerprints,
-other temporary allocations, CUDA runtime resources and host pinned staging are
-separate. The packed adapter creates and releases a target resident handle for
-each tile; an open memory-mapped file does not imply that the entire corpus is
-resident on the GPU or that targets persist on device between calls. The native
-<code>TargetCorpus</code> API has its own retained-library lifetime.</p>
+<p>Work runs in bounded tiles, so comparison temporaries stay at about 64 MiB of
+host memory; a smaller <code>chunk_size</code> lowers this. Mapped pages, queries and the
+results you keep are extra. Packed CUDA calls do not keep targets on the device
+between calls; for repeated queries over one library, use <code>TargetCorpus</code>, whose
+fingerprints stay on the device.</p>
 <p><code>top_k_pairs</code> yields directed neighbours, ordered by descending similarity and
 then target index, with at most <code>k</code> heap entries in the global merge.
 <code>threshold_pairs</code> yields each undirected pair once in index order. Both exclude
@@ -1837,8 +1895,7 @@ minimum Tanimoto distances and uses a deterministic starting row; comparison
 work is O(n * selected_count).</p>
 <p>The format has a 24-byte little-endian header and <code>ceil(fp_size / 8)</code> bytes per
 row. The supported width is 1 to 16,777,216 bits. A 2048-bit corpus requires
-256 bytes per row plus the header. The format and bounded tiles do not establish
-validation at a particular corpus size or any throughput result.</p>
+256 bytes per row plus the header.</p>
 <p>Keep an open corpus file unchanged, and close it with a context manager.
 Concurrent reads copy their mapped rows under a shared lifetime lock. <code>close()</code>
 waits for an active copy before unmapping; repeated closes are harmless.
@@ -1921,6 +1978,7 @@ a GPU kernel ran.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -1985,7 +2043,7 @@ a GPU kernel ran.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

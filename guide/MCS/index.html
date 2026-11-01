@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Maximum common substructure - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/MCS/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Maximum common substructure - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -959,6 +977,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1122,6 +1168,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1975,6 +2049,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2798,14 +2874,14 @@ they raise <code>ValueError</code> rather than being dropped.</p>
 <p>The pattern carries neither the induced rule of MCIS nor the proof of the
 search. Writing patterns by hand is covered in <a href="../SMARTS/">SMARTS queries</a>.</p>
 <h2 id="draw-the-result">Draw the result<a class="headerlink" href="#draw-the-result" title="Permanent link">&para;</a></h2>
-<p><code>smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)</code> draws
-both molecules with the common graph highlighted, without RDKit and without a
-new search. It takes the <code>SearchResult</code>, not a <code>Match</code>, and records the
+<p><code>smsd.highlight.mcs_svg(query, target, result, *, highlight="gold", opts=None,
+**kwargs)</code> draws both molecules with the common graph highlighted, without
+RDKit and without a new search. It takes the <code>SearchResult</code>, not a <code>Match</code>, and records the
 status, <code>optimal</code> and <code>complete</code> in the SVG, both as attributes of the root
 element and in its title, so a figure cannot hide a stopped search. Import it
 from <code>smsd.highlight</code>; <code>import smsd</code> alone does not provide it. Keyword
 arguments are the fields of <code>smsd.DepictOptions</code>, such as <code>width</code> and
-<code>height</code>.</p>
+<code>height</code>, and <code>highlight="mint"</code> draws a mint halo in place of the gold.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
@@ -2846,13 +2922,14 @@ arguments are the fields of <code>smsd.DepictOptions</code>, such as <code>width
 <a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>saved phenol_aniline.svg
 <a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>TypeError: result must be a SearchResult
 </code></pre></div>
-<p>An MCES result can leave out a bond between two mapped atoms, which the pair
-drawing cannot show, so <code>mcs_svg</code> raises <code>ValueError</code> for it. Draw the
-selected graph from <code>to_graph</code> instead:</p>
+<p>An MCES result can leave out a bond between two mapped atoms whose partners
+are bonded too, as when the two bond orders differ. The pair drawing would
+highlight that bond, so <code>mcs_svg</code> raises <code>ValueError</code> for such a result. Draw
+the selected graph from <code>to_graph</code> instead:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.highlight</span><span class="w"> </span><span class="kn">import</span> <span class="n">mcs_svg</span>
 <a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
-<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"C1CC1"</span><span class="p">,</span> <span class="s2">"CC(C)C"</span>  <span class="c1"># cyclopropane, isobutane</span>
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"C1=CC1"</span><span class="p">,</span> <span class="s2">"C1CC1"</span>  <span class="c1"># cyclopropene, cyclopropane</span>
 <a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="n">edges</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_objective</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Objective</span><span class="o">.</span><span class="n">MCES</span><span class="p">)</span>
 <a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">edges</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
 <a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="k">try</span><span class="p">:</span>
@@ -2874,8 +2951,9 @@ selected graph from <code>to_graph</code> instead:</p>
 from atoms of <code>mol1</code> to atoms of <code>mol2</code> highlighted, and
 <code>smsd.depict_mapping(mol, mapping)</code> highlights the keys of a mapping on one
 molecule, so invert an MCS mapping to highlight target atoms. Both return
-native SVG. <code>smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False,
-timeout_ms=10000, size=(600, 300))</code> returns an image drawn with RDKit. It runs
+native SVG on a gold halo, or a mint one with <code>highlight="mint"</code>.
+<code>smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
+size=(600, 300), highlight="gold")</code> returns an image drawn with RDKit. It runs
 its own MCIS search and shows no status, so prefer <code>mcs_svg</code> for any figure
 that should state whether the result is proved. Its <code>highlight_color</code> argument
 has no effect and is deprecated. The drawing options are listed under
@@ -3130,7 +3208,7 @@ outside it.</p>
   <a href="../OTHER_LANGUAGES/">C++ and Java</a></li>
 <li>The <a href="../../PYTHON/">Python reference</a>, the <a href="../../CPP/">C++ guide</a>, the
   <a href="../../JAVA/">Java guide</a> and the <a href="../../EXAMPLES/">examples</a></li>
-<li>The notebook <a href="../../python/examples/mcs_search.ipynb">mcs_search.ipynb</a></li>
+<li>The notebook <a href="../../notebooks/mcs_search/">mcs_search.ipynb</a></li>
 </ul>
 
 
@@ -3145,6 +3223,7 @@ outside it.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -3209,7 +3288,7 @@ outside it.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

@@ -57,6 +57,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -266,7 +284,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="notebooks/substructure_search/" class="md-tabs__link">
+        <a href="notebooks/" class="md-tabs__link">
           
   
   
@@ -421,6 +439,17 @@
     <span class="md-ellipsis">
       
         Start in a minute
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-in-820" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New in 8.2.0
       
     </span>
   </a>
@@ -829,6 +858,34 @@
   
   
     <li class="md-nav__item">
+      <a href="guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -992,6 +1049,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1659,6 +1744,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#new-in-820" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New in 8.2.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-it-on-real-molecules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1726,6 +1822,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
   
 
@@ -1751,55 +1849,84 @@ you can rely on.</p>
 </div>
 <div class="smsd-facts">
 <div><strong>3 languages</strong><span>C++17 headers, Java 8 or later, Python 3.12–3.15</span></div>
-<div><strong>One engine</strong><span>The same results in every language of a release</span></div>
-<div><strong>CPU or GPU</strong><span>Optional NVIDIA screening with the same hits</span></div>
+<div><strong>One API</strong><span>The same prepared searches and proof flags in C++, Java and Python</span></div>
+<div><strong>CPU or GPU</strong><span>Optional NVIDIA and Apple GPU screening with the same hits</span></div>
 <div><strong>Apache 2.0</strong><span>Open source, citable by DOI</span></div>
 </div>
 <h2 id="start-in-a-minute">Start in a minute<a class="headerlink" href="#start-in-a-minute" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:4"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">pip with NVIDIA GPU</label><label for="__tabbed_1_3">Docker</label><label for="__tabbed_1_4">Java (Maven)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">NVIDIA GPU (Linux)</label><label for="__tabbed_1_3">Apple GPU (macOS)</label><label for="__tabbed_1_4">Docker</label><label for="__tabbed_1_5">Java (Maven)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.1.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.1.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.1.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>load<span class="w"> </span>-i<span class="w"> </span>smsd-8.1.0-cpu-linux-amd64.tar.xz
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.1.0-cpu-amd64<span class="w"> </span>--help
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.0"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">&lt;dependency&gt;</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.bioinceptionlabs<span class="nt">&lt;/groupId&gt;</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>smsd<span class="nt">&lt;/artifactId&gt;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.0.3<span class="nt">&lt;/version&gt;</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">&lt;/dependency&gt;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># smsd-8.2.0-cpu-linux-amd64.tar.xz is on the GitHub release page</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>--help
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">&lt;dependency&gt;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.bioinceptionlabs<span class="nt">&lt;/groupId&gt;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>smsd<span class="nt">&lt;/artifactId&gt;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&lt;version&gt;</span>8.0.3<span class="nt">&lt;/version&gt;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Is benzoic acid inside aspirin?</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">hit</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>                               <span class="c1"># True</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># What do two molecules share, and is that proved maximal?</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">)</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">mcs</span><span class="o">.</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">mcs</span><span class="o">.</span><span class="n">optimal</span><span class="p">)</span>  <span class="c1"># 10 True</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># How similar are they?</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">a</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">b</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="nb">print</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># 0.185</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Is benzoic acid inside aspirin?</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">hit</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>                               <span class="c1"># True</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># What do two molecules share, and is that proved maximal?</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">)</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">mcs</span><span class="o">.</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">mcs</span><span class="o">.</span><span class="n">optimal</span><span class="p">)</span>  <span class="c1"># 10 True</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># How similar are they?</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">a</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">b</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># 0.185</span>
 </code></pre></div>
+<p>Python wheels cover CPython 3.12–3.15 on Linux, Windows and Apple silicon
+Macs. The Java library on Maven Central is 8.0.3; the
+<a href="HOWTO-INSTALL/">installation guide</a> covers every platform, conda and
+source builds.</p>
+<h2 id="new-in-820">New in 8.2.0<a class="headerlink" href="#new-in-820" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="guide/CPU_GPU/">Apple GPU screening</a>.</strong> With <code>smsd-metal</code>, prepared
+  ECFP4 screens run on the GPU of Apple silicon Macs and return the hits and
+  scores of the CPU.</li>
+<li><strong><a href="guide/MCS/#draw-the-result">Drawings fit for papers and slides</a>.</strong>
+  Rings stay regular, atoms no longer overlap in drug-sized molecules, double
+  bonds outside rings show their stored E/Z isomer, and the match sits on one
+  even halo: gold for MCS, mint for substructure hits.</li>
+<li><strong><a href="guide/AI_TOOLS/#read-a-tool-result">Clearer tool refusals</a>.</strong> A refused
+  tool call names the argument and, where useful, what it accepts.</li>
+<li><strong>Time limits that hold on very large molecules.</strong> In C++ and Python, an
+  MCS time limit now also bounds the preparation of the search, so even a
+  limit of a few milliseconds holds.</li>
+<li><strong><a href="guide/GPU_ON_WINDOWS/">GPU screening on Windows</a>.</strong> NVIDIA screening
+  through WSL2, with the Linux CUDA package or the GPU Docker image.</li>
+</ul>
+<p>Completed searches return the same results as in 8.1.0, and the 8.x APIs are
+unchanged. The <a href="RELEASE_NOTES/">release notes</a> list what to check when
+upgrading.</p>
 <h2 id="see-it-on-real-molecules">See it on real molecules<a class="headerlink" href="#see-it-on-real-molecules" title="Permanent link">&para;</a></h2>
 <div class="smsd-mols">
 <figure><img src="assets/img/mcs-query.svg" alt="Sildenafil with its maximum common substructure highlighted"><figcaption>Sildenafil: the 28-atom maximum common substructure, proved optimal</figcaption></figure>
-<figure><img src="assets/img/mcs-target.svg" alt="Vardenafil with the same common substructure highlighted"><figcaption>Vardenafil: the same 28 atoms, mapped one to one</figcaption></figure>
+<figure><img src="assets/img/mcs-target.svg" alt="Vardenafil with the same common substructure highlighted"><figcaption>Vardenafil: the same 28 atoms, each numbered as its sildenafil partner</figcaption></figure>
 <figure><img src="assets/img/substructure.svg" alt="Aspirin with benzoic acid highlighted"><figcaption>Aspirin: the benzoic acid substructure</figcaption></figure>
 </div>
 
@@ -1854,9 +1981,19 @@ you can rely on.</p>
 <td><a href="guide/CLUSTERING/">Clustering and diversity</a></td>
 </tr>
 <tr>
-<td>Use an NVIDIA GPU</td>
-<td><code>smsd-cuda</code></td>
+<td>Draw a match for a paper or a slide</td>
+<td><code>from smsd.highlight import mcs_svg, substructure_svg</code></td>
+<td><a href="guide/MCS/#draw-the-result">Draw the result</a></td>
+</tr>
+<tr>
+<td>Use an NVIDIA or Apple GPU</td>
+<td><code>smsd-cuda</code>, <code>smsd-metal</code></td>
 <td><a href="guide/CPU_GPU/">CPU and GPU screening</a></td>
+</tr>
+<tr>
+<td>Use an NVIDIA GPU from Windows</td>
+<td>WSL2 with <code>smsd-cuda</code> or the GPU image</td>
+<td><a href="guide/GPU_ON_WINDOWS/">GPU screening on Windows</a></td>
 </tr>
 <tr>
 <td>Work from a shell or a container</td>
@@ -1916,7 +2053,8 @@ you can rely on.</p>
 <li>
 <p><span class="twemoji lg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 7h2.5v10H3V8.5H2M22 7v9h-8v1H7v-1H6V7m4 2H8v3h2m3-3h-2v3h2m7-3h-5v5h5z"/></svg></span> <strong>CPU and GPU</strong></p>
 <hr />
-<p>When the GPU helps, how to request it, and how results stay identical.</p>
+<p>NVIDIA and Apple GPUs: when they help, how to request them, and how
+results stay identical.</p>
 <p><a href="guide/CPU_GPU/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> CPU and GPU guide</a></p>
 </li>
 <li>
@@ -1941,23 +2079,62 @@ or tool calling.</p>
 </ul>
 </div>
 <h2 id="notebooks">Notebooks<a class="headerlink" href="#notebooks" title="Permanent link">&para;</a></h2>
-<p>Each notebook runs as written and opens in Google Colab with one click.</p>
+<p>Each notebook runs as written in Jupyter or Colab: its setup cell installs
+SMSD 8.2.0 or later into the running kernel when needed. The pages below show
+the output of a run with SMSD 8.2.0, drawings included.</p>
 <div class="grid cards">
 <ul>
-<li><a href="notebooks/substructure_search/">Substructure search</a></li>
-<li><a href="notebooks/mcs_search/">Maximum common substructure</a></li>
-<li><a href="notebooks/fingerprints_similarity/">Fingerprints and similarity</a></li>
-<li><a href="notebooks/library_screening/">Library screening</a></li>
-<li><a href="notebooks/cpu_gpu_screening/">CPU and GPU screening</a></li>
-<li><a href="notebooks/feature_search/">Feature search</a></li>
-<li><a href="notebooks/ai_tools/">AI tools with local and hosted models</a></li>
+<li><a href="notebooks/substructure_search/">Substructure and SMARTS search</a></li>
+<li><a href="notebooks/mcs_search/">Maximum common substructure in practice</a></li>
+<li><a href="notebooks/fingerprints_similarity/">Fingerprints and similarity in practice</a></li>
+<li><a href="notebooks/library_screening/">Screening a library end to end</a></li>
+<li><a href="notebooks/cpu_gpu_screening/">CPU and GPU screening in practice</a></li>
+<li><a href="notebooks/feature_search/">From an MCS to a library search</a></li>
+<li><a href="notebooks/ai_tools/">SMSD Pro tools for AI models</a></li>
 </ul>
 </div>
 <h2 id="cite-smsd-pro">Cite SMSD Pro<a class="headerlink" href="#cite-smsd-pro" title="Permanent link">&para;</a></h2>
-<p>Rahman, S. A. SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common
-Substructure Search. <em>ChemRxiv</em> (2026).
-<a href="https://doi.org/10.26434/chemrxiv.15001534/v1">doi:10.26434/chemrxiv.15001534/v1</a>.
-The software DOI and further references are in
+<p>If SMSD Pro supports your work, please cite the paper and the software
+release you used.</p>
+<p><strong>Paper.</strong> Rahman, S. A. (2026). SMSD Pro: Coverage-Driven, Tautomer-Aware
+Maximum Common Substructure Search. <em>ChemRxiv</em>.
+<a href="https://doi.org/10.26434/chemrxiv.15001534/v1">doi:10.26434/chemrxiv.15001534/v1</a></p>
+<p><strong>Software.</strong> Rahman, S. A. SMSD Pro: Small Molecule Subgraph Detector
+[Computer software]. Zenodo.
+<a href="https://doi.org/10.5281/zenodo.23639199">doi:10.5281/zenodo.23639199</a>.
+This DOI covers every release; Zenodo also gives each version its own DOI.</p>
+<p><strong>Original toolkit.</strong> Rahman, S. A., Bashton, M., Holliday, G. L.,
+Schrader, R. &amp; Thornton, J. M. (2009). Small Molecule Subgraph Detector
+(SMSD) toolkit. <em>Journal of Cheminformatics</em>, 1, 12.
+<a href="https://doi.org/10.1186/1758-2946-1-12">doi:10.1186/1758-2946-1-12</a></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2026smsdpro</span><span class="p">,</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search}</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{ChemRxiv}</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2026}</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.26434/chemrxiv.15001534/v1}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">rahman_smsd_pro</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="na">author</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad}</span><span class="p">,</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="na">title</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{{SMSD Pro}: Small Molecule Subgraph Detector}</span><span class="p">,</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="na">publisher</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Zenodo}</span><span class="p">,</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span><span class="na">doi</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{10.5281/zenodo.23639199}</span><span class="p">,</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="na">url</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{https://github.com/asad/SMSD}</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="p">}</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">rahman2009smsd</span><span class="p">,</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Rahman, Syed Asad and Bashton, Matthew and Holliday, Gemma L. and</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="s">             Schrader, Rainer and Thornton, Janet M.}</span><span class="p">,</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{Small Molecule Subgraph Detector ({SMSD}) toolkit}</span><span class="p">,</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Journal of Cheminformatics}</span><span class="p">,</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">  </span><span class="na">volume</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{1}</span><span class="p">,</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span><span class="na">pages</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{12}</span><span class="p">,</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2009}</span><span class="p">,</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span><span class="na">doi</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{10.1186/1758-2946-1-12}</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="p">}</span>
+</code></pre></div>
+<p>GitHub's <em>Cite this repository</em> button reads the same details from
 <a href="https://github.com/asad/SMSD/blob/master/CITATION.cff">CITATION.cff</a>.</p>
 
 
@@ -1977,6 +2154,7 @@ The software DOI and further references are in
 
 
                 
+
               </article>
             </div>
           
@@ -2027,7 +2205,7 @@ The software DOI and further references are in
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

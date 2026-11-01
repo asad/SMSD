@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Overview - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Overview - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -860,6 +878,34 @@
   
   
     <li class="md-nav__item">
+      <a href="GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1023,6 +1069,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1777,6 +1851,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1786,7 +1862,7 @@
 
 <h1 id="smsd-pro-user-guide">SMSD Pro user guide<a class="headerlink" href="#smsd-pro-user-guide" title="Permanent link">&para;</a></h1>
 <p>This guide shows how to search, compare and screen molecules with SMSD Pro
-8.1.0. Most chapters work in Python; the last two cover the command-line tool,
+8.2.0. Most chapters work in Python; the last two cover the command-line tool,
 the Docker images and the C++ and Java libraries. Every Python example is a
 complete program that runs on a CPU-only machine, and the output shown below
 each one comes from running it on such a machine.</p>
@@ -1840,7 +1916,11 @@ task and shows the calls that carry it out. The
 </tr>
 <tr>
 <td><a href="CPU_GPU/">CPU and GPU screening</a></td>
-<td>What runs where, checking the backend, installing the CUDA package, requesting or refusing the GPU, fallback and errors, and comparing the two devices</td>
+<td>What runs where, checking the backend, installing the CUDA and Metal packages, requesting or refusing the GPU, fallback and errors, and comparing the devices</td>
+</tr>
+<tr>
+<td><a href="GPU_ON_WINDOWS/">GPU screening on Windows</a></td>
+<td>NVIDIA GPU screening on Windows through WSL2, with the Linux CUDA package or the GPU Docker image</td>
 </tr>
 <tr>
 <td><a href="MACHINE_LEARNING/">Machine learning and data frames</a></td>
@@ -1875,7 +1955,9 @@ narrow a library, and the exact searches decide which molecules match.
 file that is built once and searched in later sessions,
 <a href="CLUSTERING/">Clustering and diversity</a> groups such an index into series or
 picks a diverse subset, and <a href="CPU_GPU/">CPU and GPU screening</a> explains which
-screening steps can run on an NVIDIA GPU.
+screening steps can run on an NVIDIA or Apple GPU;
+<a href="GPU_ON_WINDOWS/">GPU screening on Windows</a> sets up the NVIDIA route on
+Windows.
 <a href="MACHINE_LEARNING/">Machine learning and data frames</a> hands fingerprints to
 data-frame and model-training libraries, and
 <a href="AI_TOOLS/">Chemistry tools for AI assistants</a> offers bounded molecular
@@ -1916,7 +1998,7 @@ nothing about what it did not find.
 <a href="GETTING_STARTED/#reading-a-result">Getting started</a> describes the other
 fields and shows a stopped search.</p>
 <h2 id="running-the-examples">Running the examples<a class="headerlink" href="#running-the-examples" title="Permanent link">&para;</a></h2>
-<p>Install SMSD Pro 8.1.0 as shown in
+<p>Install SMSD Pro 8.2.0 as shown in
 <a href="GETTING_STARTED/#install">Getting started</a>. Each Python block is a complete
 program: copy it into a file and run it with <code>python</code>. The values each program
 prints are also checked with <code>assert</code> statements. Programs that write files
@@ -1950,41 +2032,47 @@ gives the command.</p>
 </thead>
 <tbody>
 <tr>
-<td><a href="../../python/examples/substructure_search.ipynb">Substructure and SMARTS search</a></td>
+<td><a href="../notebooks/substructure_search/">Substructure and SMARTS search</a></td>
 <td>Molecule queries and SMARTS patterns on a small library of drugs and benzodiazepines: hydrogen counts, functional groups, enumeration, chemistry options, limits, corpus decisions and drawing a hit</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/mcs_search.ipynb">Maximum common substructure</a></td>
+<td><a href="../notebooks/mcs_search/">Maximum common substructure</a></td>
 <td>The two objectives, stopped searches, all mappings, chemistry rules, MCS similarity, SMARTS export and the common graph of a short series</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/fingerprints_similarity.ipynb">Fingerprints and similarity</a></td>
+<td><a href="../notebooks/fingerprints_similarity/">Fingerprints and similarity</a></td>
 <td>Every fingerprint family, the binary and count coefficients, configurable fingerprints and a similarity ranking of benzodiazepines</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/library_screening.ipynb">Screening a library end to end</a></td>
+<td><a href="../notebooks/library_screening/">Screening a library end to end</a></td>
 <td>Five screens of one library, clustering of the packed index and saving the hits to an SD file</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/cpu_gpu_screening.ipynb">CPU and GPU screening</a></td>
+<td><a href="../notebooks/cpu_gpu_screening/">CPU and GPU screening</a></td>
 <td>The screening backend, automatic and requested GPU use, packed-index backends, fallback and a CPU and GPU comparison, with every cell able to run without a GPU</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/ai_tools.ipynb">Chemistry tools for AI assistants</a></td>
-<td>The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which is skipped when no model server is running</td>
+<td><a href="../notebooks/ai_tools/">Chemistry tools for AI assistants</a></td>
+<td>The molecular tools called from Python with no model, their tool definitions and an assistant tool loop with a locally served model, which runs only when enabled and a model server answers</td>
 </tr>
 <tr>
-<td><a href="../../python/examples/feature_search.ipynb">MCS to a small library search</a></td>
+<td><a href="../notebooks/feature_search/">MCS to a small library search</a></td>
 <td>A common graph turned into a SMARTS query, a library search, SVG highlighting, NumPy features, packed-index neighbours, Butina clustering and MaxMin selection</td>
 </tr>
 </tbody>
 </table>
-<p>Open a notebook in Jupyter with a kernel that has SMSD 8.1.0 or later
-installed. The notebooks are saved without outputs, perform no downloads,
-remove any files they write and report when an optional package is missing.
-To run one in Colab, copy the setup cell of
-<a href="../../python/examples/feature_search.ipynb">feature_search.ipynb</a> to the top
-of the notebook and run it first; it installs an uploaded SMSD wheel.</p>
+<p>Open a notebook in Jupyter or Colab and run its setup cell first. Each notebook
+installs SMSD 8.2.0 or later into the current kernel when it is missing or older,
+then attempts to install the optional packages used by its examples. Installation
+needs internet access; no wheel upload or copied setup cell is needed. Select
+Python 3.12 or later. If an older SMSD is already imported, restart the kernel
+before setup. A missing optional package is reported by the affected cells.</p>
+<p>Drawings scale to the notebook width and carry a caption and alternative text,
+with plain SVG for front ends that do not show HTML.
+Tables display as notebook tables when pandas is available. Local and hosted
+model requests in the tools notebook are off by default: set <code>RUN_LOCAL_MODEL</code>
+or <code>RUN_HOSTED_APIS</code> to <code>True</code> in its setup cell to enable only the section you
+intend to run. The examples remove the temporary files they write.</p>
 <h2 id="reference-pages">Reference pages<a class="headerlink" href="#reference-pages" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../PYTHON/">Python guide</a>: every function, class and option of the <code>smsd</code>
@@ -2015,6 +2103,7 @@ of the notebook and run it first; it installs an uploaded SMSD wheel.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2079,7 +2168,7 @@ of the notebook and run it first; it installs an uploaded SMSD wheel.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

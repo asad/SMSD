@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Fingerprints and similarity - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/FINGERPRINTS/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Fingerprints and similarity - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -937,6 +955,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1100,6 +1146,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1931,6 +2005,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1948,7 +2024,7 @@ be stored, compared and turned into arrays without any further package.</p>
 fingerprints, configurable specifications, substructure keys, batch
 generation, the similarity coefficients, encodings and NumPy arrays. The
 Options section lists every signature with its defaults. Each Python block is a
-complete program: run it as it stands with SMSD 8.1.0 and it prints the output
+complete program: run it as it stands with SMSD 8.2.0 and it prints the output
 shown below it. The block under NumPy arrays also needs NumPy.</p>
 <p>Compare fingerprints only when they were made with the same family, radius or
 path length, size and switches. Nothing in a fingerprint records how it was
@@ -2743,7 +2819,7 @@ outside the width.</p>
 natively: one row per molecule, <code>uint8</code> for bits and <code>int64</code> for counts. Like
 <code>fingerprints</code>, it defaults to <code>kind="mcs"</code>, so pass the kind or the options.
 A Tanimoto matrix then follows from one matrix product. These functions need
-NumPy (<code>python -m pip install "smsd[numpy]==8.1.0"</code>).</p>
+NumPy (<code>python -m pip install "smsd[numpy]==8.2.0"</code>).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span>
@@ -3187,7 +3263,7 @@ an independent copy. The class methods are <code>ecfp(radius=2, size=2048)</code
 <li>The <a href="../../CPP/#configurable-fingerprints">C++ guide</a> and the
   <a href="../../JAVA/#configurable-fingerprints">Java guide</a>.</li>
 <li>The fingerprints and similarity
-  <a href="../../python/examples/fingerprints_similarity.ipynb">notebook</a>, which runs
+  <a href="../../notebooks/fingerprints_similarity/">notebook</a>, which runs
   the same steps on a small set of drugs.</li>
 </ul>
 
@@ -3203,6 +3279,7 @@ an independent copy. The class methods are <code>ecfp(radius=2, size=2048)</code
 
 
                 
+
               </article>
             </div>
           
@@ -3267,7 +3344,7 @@ an independent copy. The class methods are <code>ecfp(radius=2, size=2048)</code
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

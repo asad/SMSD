@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="AI assistants and models - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/AI_ASSISTANTS/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AI assistants and models - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2033,6 +2107,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2090,7 +2166,7 @@ prompts, structures and results never leave your site.</p>
 <p>In each case SMSD runs the tools locally; only the model's side of the
 conversation differs. gpt-oss (20b and 120b) is released under the Apache 2.0
 licence, and the 20b model runs on a single workstation. The notebook
-<a href="../python/examples/ai_tools.ipynb"><code>python/examples/ai_tools.ipynb</code></a> runs the
+<a href="../notebooks/ai_tools/"><code>python/examples/ai_tools.ipynb</code></a> runs the
 tools first without a model, then with a local model, and runs the hosted
 examples only when their keys are set.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
@@ -2098,7 +2174,7 @@ examples only when their keys are set.</p>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>which<span class="w"> </span>smsd-mcp<span class="w">    </span><span class="c1"># Windows: where.exe smsd-mcp</span>
 </code></pre></div>
 <p>The MCP server and the tool definitions need SMSD 8.1.0 or later and Python
-3.12 or later. The <code>[mcp]</code> extra adds the MCP SDK that <code>smsd-mcp</code> needs. The
+3.12 or later; the refusal messages that list allowed values need 8.2.0. The <code>[mcp]</code> extra adds the MCP SDK that <code>smsd-mcp</code> needs. The
 Python loops below need <code>smsd</code> without the extra, plus the client package that
 each section installs.</p>
 <p><code>smsd-mcp</code> (or <code>python -m smsd.mcp_server</code>) starts the server over standard
@@ -2107,7 +2183,7 @@ diagnostics to standard error. Assistants start it themselves when they need
 the tools. Use the path that <code>which</code> or <code>where.exe</code> prints wherever a client
 needs an absolute path.</p>
 <p>To check the server without an assistant, run
-<a href="../python/examples/mcp_stdio_client.py"><code>python/examples/mcp_stdio_client.py</code></a>;
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/mcp_stdio_client.py"><code>python/examples/mcp_stdio_client.py</code></a>;
 it lists the tools and runs one search over standard input and output.</p>
 <h2 id="connect-the-mcp-server">Connect the MCP server<a class="headerlink" href="#connect-the-mcp-server" title="Permanent link">&para;</a></h2>
 <p>Clients are listed in alphabetical order. Each block follows the syntax in that
@@ -2218,7 +2294,7 @@ locally and returns its JSON-compatible result. It rejects unknown tools,
 unknown or missing arguments, wrong JSON types and out-of-range values with a
 <code>ValueError</code>; the loops below return that message to the model so that it can
 correct the call.
-<a href="../python/examples/agent_workflow.py"><code>python/examples/agent_workflow.py</code></a> runs
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/agent_workflow.py"><code>python/examples/agent_workflow.py</code></a> runs
 the same tools in a fixed sequence (screening, MCS and depiction) without a
 model.</p>
 <table>
@@ -2671,7 +2747,7 @@ links follow the order of this page:</p>
   100,000, at most 1,000,000). These budgets cover the search, not the whole
   call. Standardisation has no time budget. Use process or container limits for
   a hard deadline.
-  The <a href="../packaging/mcp/README.md">container recipe</a> runs the server with no
+  The <a href="https://github.com/asad/SMSD/blob/master/packaging/mcp/README.md">container recipe</a> runs the server with no
   network access.</li>
 <li><code>smsd-mcp</code> and <code>call_tool</code> check every argument themselves, so a client that
   drops schema keywords cannot widen these limits.</li>
@@ -2701,6 +2777,7 @@ links follow the order of this page:</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2765,7 +2842,7 @@ links follow the order of this page:</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Screening a library - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/SCREENING/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Screening a library - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -943,6 +961,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1106,6 +1152,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1943,6 +2017,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1986,7 +2062,7 @@ trisubstituted benzenes, so each program runs as it stands, with no data files.<
 <td>ECFP radius 2, 2048 bits, fixed</td>
 <td><code>prewarm()</code> after every addition</td>
 <td>No</td>
-<td>With <code>smsd-cuda</code>, automatic on a Tesla T4 for 100,000 targets or more, or on any supported device from <code>SMSD_CUDA_MIN_TARGETS</code> targets; see the <a href="../CPU_GPU/#automatic-use-in-prepared-screens">device rule</a></td>
+<td>With <code>smsd-cuda</code> or <code>smsd-metal</code>, automatic on a Tesla T4 or an Apple M5 for 100,000 targets or more, or on any supported device from <code>SMSD_CUDA_MIN_TARGETS</code> or <code>SMSD_METAL_MIN_TARGETS</code> targets; see the <a href="../CPU_GPU/#automatic-use-in-prepared-screens">device rule</a></td>
 </tr>
 <tr>
 <td>Screen a large file once</td>
@@ -2519,7 +2595,7 @@ because a lower-case <code>c</code> in SMARTS is an aromatic carbon.</p>
 <p>SMARTS queries, and searches with a node limit, a cancellation token or an
 immediate time limit, search every target without ruling any out first. ECFP
 similarity bits cannot rule out a substructure, so do not filter a substructure
-screen by fingerprint similarity. With <code>smsd-cuda</code> installed,
+screen by fingerprint similarity. With <code>smsd-cuda</code> or <code>smsd-metal</code> installed,
 <code>gpu_prefilter=True</code> asks the GPU to rule targets out; the decisions are the
 same, and the step falls back to the CPU on any failure (see
 <a href="../CPU_GPU/#request-the-gpu-for-a-corpus-pre-screen">Request the GPU for a corpus pre-screen</a>).</p>
@@ -2827,7 +2903,7 @@ with both scores as fields:</p>
 <p>Clobazam passes the fingerprint screen but has neither the core nor an MCS
 similarity of 0.8; oxazepam and lorazepam have the core and a high MCS
 similarity, but their fingerprints fall below 0.5. The
-<a href="../../python/examples/library_screening.ipynb">library screening notebook</a>
+<a href="../../notebooks/library_screening/">library screening notebook</a>
 runs the same steps cell by cell, with a packed index and clustering.</p>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <h3 id="targetcorpus">TargetCorpus<a class="headerlink" href="#targetcorpus" title="Permanent link">&para;</a></h3>
@@ -3076,7 +3152,7 @@ order.</p>
   and <a href="../../PYTHON/#explicit-corpus-prefilters">explicit corpus prefilters</a> in
   the reference pages.</li>
 <li><a href="../../EXAMPLES/#screening">Screening examples</a> and the
-  <a href="../../python/examples/library_screening.ipynb">library screening notebook</a>.</li>
+  <a href="../../notebooks/library_screening/">library screening notebook</a>.</li>
 </ul>
 
 
@@ -3091,6 +3167,7 @@ order.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -3155,7 +3232,7 @@ order.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

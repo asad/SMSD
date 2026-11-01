@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="CPU and GPU screening - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/notebooks/cpu_gpu_screening/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CPU and GPU screening - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../substructure_search/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -888,6 +934,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1066,6 +1140,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#time-cpu-and-gpu-work" class="md-nav__link">
@@ -1611,6 +1696,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#time-cpu-and-gpu-work" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1645,6 +1741,12 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+    
+    <a href="/SMSD/notebooks/cpu_gpu_screening/cpu_gpu_screening.ipynb" title="Download the notebook" class="md-content__button md-icon" download><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></a>
+    <a href="https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/cpu_gpu_screening.ipynb" title="Open in Colab" class="md-content__button md-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16.941 4.976a7.03 7.03 0 0 0-4.93 2.064 7.033 7.033 0 0 0-.124 9.807l2.395-2.395a3.646 3.646 0 0 1 5.15-5.148l2.397-2.399a7.03 7.03 0 0 0-4.888-1.93m-9.871.01a7.03 7.03 0 0 0-4.888 1.931l2.391 2.391a3.643 3.643 0 0 1 5.023.127l1.734-2.973-.1-.08a7.03 7.03 0 0 0-4.16-1.396m15.01 2.172-2.39 2.39a3.646 3.646 0 0 1-5.15 5.15l-2.406 2.407a7.036 7.036 0 0 0 9.945-9.947m-20.148.01a7.033 7.033 0 0 0-.002 9.681l2.397-2.397a3.643 3.643 0 0 1-.004-4.892zm7.664 7.423a3.635 3.635 0 0 1-5.017.113L2.182 17.1a7.03 7.03 0 0 0 9.007.546l.137-.112z"/></svg></a>
+  
+  
                   
 
 
@@ -1871,19 +1973,34 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </style>
 <div class="jupyter-wrapper">
 <div class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=56d9a85a">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=purpose">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p><a href="https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/cpu_gpu_screening.ipynb"><img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg"/></a></p>
+<h1 id="cpu-and-gpu-screening">CPU and GPU screening<a class="anchor-link" href="#cpu-and-gpu-screening">¶</a></h1><p>This notebook shows where SMSD 8.2.0 work runs. Graph matching, which covers
+every substructure, SMARTS and MCS search, always runs on the CPU. A GPU can
+take over screening steps: an NVIDIA GPU of compute capability 7.5 or later
+through the optional <code>smsd-cuda</code> package, or the GPU of an Apple silicon Mac
+through <code>smsd-metal</code>. Both run prepared ECFP4 screens and corpus pre-screens;
+packed fingerprint scans use CUDA. Hits, scores and decisions are identical to
+the CPU results. Every cell also runs on a machine without a GPU: the GPU steps
+check for a usable device first. NumPy is optional and needed only for the
+packed-index steps, which report when it is missing.</p>
+<h2 id="setup">Setup<a class="anchor-link" href="#setup">¶</a></h2><p>Run the next cell first in Colab or local Jupyter. It installs SMSD Pro and
+the notebook's missing table or numerical dependencies into the current
+kernel, using that kernel's Python. An already installed SMSD 8.2.0 or later
+is kept. Installation needs internet access; the chemistry examples use inline
+inputs. No wheel upload or copied setup cell is needed.</p>
+<p>If an older SMSD is already imported, restart the kernel before running
+setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>.</p>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=492cb5bb">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=install-dependencies">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1901,47 +2018,112 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># In Google Colab, install SMSD Pro first; elsewhere this cell does nothing.</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span><span class="o">,</span><span class="w"> </span><span class="nn">subprocess</span><span class="o">,</span><span class="w"> </span><span class="nn">sys</span>
-<span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"smsd"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"-q"</span><span class="p">,</span> <span class="s2">"smsd==8.1.0"</span><span class="p">,</span> <span class="s2">"rdkit&lt;2027"</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Run this cell first in Colab or a local Jupyter kernel.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.metadata</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Select a Python 3.12 or later kernel for SMSD Pro wheels"</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">_smsd_version</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="s2">"smsd"</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
+    <span class="n">_smsd_version</span> <span class="o">=</span> <span class="s2">"0.0.0"</span>
+<span class="n">_smsd_parts</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_smsd_version</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[:</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">part</span><span class="o">.</span><span class="n">isdigit</span><span class="p">())</span>
+<span class="n">_requirements</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"smsd"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">_smsd_parts</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s2">"smsd"</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Restart the kernel, then run this setup cell before importing SMSD"</span><span class="p">)</span>
+    <span class="n">_requirements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"smsd&gt;=8.2.0,&lt;9"</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">_requirements</span><span class="p">:</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--only-binary=:all:"</span><span class="p">,</span>
+         <span class="o">*</span><span class="n">_requirements</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
+<span class="n">_optional_packages</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'numpy'</span><span class="p">:</span> <span class="s1">'numpy&gt;=1.24,&lt;3'</span><span class="p">}</span>
+<span class="n">_optional_requirements</span> <span class="o">=</span> <span class="p">[</span><span class="n">_package</span> <span class="k">for</span> <span class="n">_module</span><span class="p">,</span> <span class="n">_package</span> <span class="ow">in</span> <span class="n">_optional_packages</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                          <span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">_module</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+<span class="k">if</span> <span class="n">_optional_requirements</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--only-binary=:all:"</span><span class="p">,</span>
+             <span class="o">*</span><span class="n">_optional_requirements</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Some optional packages have no compatible wheel or could not be downloaded. "</span>
+              <span class="s2">"The affected cells will report what is missing; SMSD remains available."</span><span class="p">)</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Using SMSD"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-1"># In Google Colab, install SMSD Pro first; elsewhere this cell does nothing.
-import importlib.util, subprocess, sys
-if importlib.util.find_spec("smsd") is None:
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "smsd==8.1.0", "rdkit&lt;2027"], check=True)</div>
+<div class="clipboard-copy-txt" id="cell-1"># Run this cell first in Colab or a local Jupyter kernel.
+import importlib
+import importlib.metadata
+import importlib.util
+import subprocess
+import sys
+
+if sys.version_info &lt; (3, 12):
+    raise RuntimeError("Select a Python 3.12 or later kernel for SMSD Pro wheels")
+
+try:
+    _smsd_version = importlib.metadata.version("smsd")
+except importlib.metadata.PackageNotFoundError:
+    _smsd_version = "0.0.0"
+_smsd_parts = tuple(int(part) for part in _smsd_version.split(".")[:3]
+                    if part.isdigit())
+_requirements = []
+if importlib.util.find_spec("smsd") is None or _smsd_parts &lt; (8, 2, 0):
+    if "smsd" in sys.modules:
+        raise RuntimeError("Restart the kernel, then run this setup cell before importing SMSD")
+    _requirements.append("smsd&gt;=8.2.0,&lt;9")
+if _requirements:
+    subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
+         *_requirements], check=True,
+    )
+    importlib.invalidate_caches()
+_optional_packages = {'numpy': 'numpy&gt;=1.24,&lt;3'}
+_optional_requirements = [_package for _module, _package in _optional_packages.items()
+                          if importlib.util.find_spec(_module) is None]
+if _optional_requirements:
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
+             *_optional_requirements], check=True,
+        )
+    except subprocess.CalledProcessError:
+        print("Some optional packages have no compatible wheel or could not be downloaded. "
+              "The affected cells will report what is missing; SMSD remains available.")
+    importlib.invalidate_caches()
+import smsd
+print("Using SMSD", smsd.__version__)
 </div>
 </div>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=purpose">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="cpu-and-gpu-screening">CPU and GPU screening<a class="anchor-link" href="#cpu-and-gpu-screening">¶</a></h1><p>This notebook shows where SMSD 8.1.0 work runs. Graph matching, which covers
-every substructure, SMARTS and MCS search, always runs on the CPU. With the
-optional <code>smsd-cuda</code> package and an NVIDIA GPU of compute capability 7.5 or
-later, prepared ECFP4 screens, corpus pre-screens and packed fingerprint scans
-can run on the GPU, and their hits, scores and decisions are identical to the
-CPU results. Every cell also runs on a machine without a GPU: the GPU steps
-check for a usable device first. NumPy is optional and needed only for the
-packed-index steps, which report when it is missing.</p>
-<p>The notebook performs no downloads and writes files only to temporary
-directories. In local Jupyter, select a kernel with SMSD 8.1.0 or later
-installed. For Colab, copy the setup cell of
-<a href="feature_search.ipynb">feature_search.ipynb</a> to the top of this notebook and
-run it first; it installs an uploaded SMSD core wheel. No cell needs the CUDA
-package.</p>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Using SMSD 8.2.0
+</pre>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=setup">
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=notebook-display">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1950,6 +2132,52 @@ package.</p>
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
+<div>
+<span class="notice" hidden="">Copied!</span>
+<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
+<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+</clipboard-copy>
+</div>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Notebook tables, with a plain-text fallback.</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">show_table</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">display</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">display</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+</pre></div>
+<div class="clipboard-copy-txt" id="cell-2"># Notebook tables, with a plain-text fallback.
+
+
+def show_table(frame):
+    try:
+        from IPython.display import display
+    except ImportError:
+        print(frame.to_string())
+    else:
+        display(frame)
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=setup">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="CodeMirror cm-s-jupyter">
+<div class="zeroclipboard-container">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1971,8 +2199,8 @@ package.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span><span class="p">,</span> <span class="n">stream_screen_smiles</span>
 
 <span class="n">_release</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(\d+)\.(\d+)\.(\d+)"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
-<span class="k">if</span> <span class="n">_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_release</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"This notebook needs SMSD 8.1.0 or later; found </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_release</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"This notebook needs SMSD 8.2.0 or later; found </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"SMSD"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -2016,7 +2244,7 @@ package.</p>
 <span class="n">ready</span><span class="p">,</span> <span class="n">reason</span> <span class="o">=</span> <span class="n">cuda_status</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"CUDA screening:"</span><span class="p">,</span> <span class="s2">"ready"</span> <span class="k">if</span> <span class="n">ready</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"unavailable (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-2">import os
+<div class="clipboard-copy-txt" id="cell-3">import os
 import re
 import time
 from contextlib import contextmanager
@@ -2028,8 +2256,8 @@ from smsd.clustering import butina, maxmin
 from smsd.corpus import FingerprintCorpus, stream_screen_smiles
 
 _release = re.match(r"(\d+)\.(\d+)\.(\d+)", smsd.__version__)
-if _release is None or tuple(int(part) for part in _release.groups()) &lt; (8, 1, 0):
-    raise RuntimeError(f"This notebook needs SMSD 8.1.0 or later; found {smsd.__version__}")
+if _release is None or tuple(int(part) for part in _release.groups()) &lt; (8, 2, 0):
+    raise RuntimeError(f"This notebook needs SMSD 8.2.0 or later; found {smsd.__version__}")
 print("SMSD", smsd.__version__)
 
 try:
@@ -2083,7 +2311,7 @@ print("CUDA screening:", "ready" if ready else f"unavailable ({reason})")</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>SMSD 8.1.0
+<pre>SMSD 8.2.0
 CUDA screening: unavailable (smsd-cuda is not installed)
 </pre>
 </div>
@@ -2093,67 +2321,6 @@ CUDA screening: unavailable (smsd-cuda is not installed)
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
 <div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=backend-status">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Both calls report what is available, not which device a later call uses.</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"GPU available:"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_is_available</span><span class="p">())</span>
-
-<span class="c1"># The backend string starts with 'CPU:' on a CPU-only machine and names the OpenMP</span>
-<span class="c1"># threading. With smsd-cuda attached it starts with 'GPU:', followed by the device</span>
-<span class="c1"># name, compute capability and memory. SMSD_DISABLE_GPU appends '[GPU disabled]'.</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Backend:"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">())</span>
-
-<span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
-    <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">preload</span><span class="p">()</span>  <span class="c1"># initialise the device and load its kernels before any timing</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Device:"</span><span class="p">,</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">device_info</span><span class="p">())</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-3"># Both calls report what is available, not which device a later call uses.
-print("GPU available:", smsd.gpu_is_available())
-
-# The backend string starts with 'CPU:' on a CPU-only machine and names the OpenMP
-# threading. With smsd-cuda attached it starts with 'GPU:', followed by the device
-# name, compute capability and memory. SMSD_DISABLE_GPU appends '[GPU disabled]'.
-print("Backend:", smsd.gpu_device_info())
-
-if ready:
-    smsd_cuda.preload()  # initialise the device and load its kernels before any timing
-    print("Device:", smsd_cuda.device_info())</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>GPU available: False
-Backend: CPU: OpenMP 5.1, 2 threads
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=automatic-screen">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -2171,6 +2338,67 @@ Backend: CPU: OpenMP 5.1, 2 threads
 </div>
 </clipboard-copy>
 </div>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Both calls report what is available, not which device a later call uses.</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"GPU available:"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_is_available</span><span class="p">())</span>
+
+<span class="c1"># The backend string starts with 'CPU:' on a CPU-only machine and names the OpenMP</span>
+<span class="c1"># threading. With smsd-cuda or smsd-metal attached it starts with 'GPU:' and names the</span>
+<span class="c1"># device. SMSD_DISABLE_GPU appends '[GPU disabled]'.</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Backend:"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">())</span>
+
+<span class="k">if</span> <span class="n">ready</span><span class="p">:</span>
+    <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">preload</span><span class="p">()</span>  <span class="c1"># initialise the device and load its kernels before any timing</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Device:"</span><span class="p">,</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">device_info</span><span class="p">())</span>
+</pre></div>
+<div class="clipboard-copy-txt" id="cell-4"># Both calls report what is available, not which device a later call uses.
+print("GPU available:", smsd.gpu_is_available())
+
+# The backend string starts with 'CPU:' on a CPU-only machine and names the OpenMP
+# threading. With smsd-cuda or smsd-metal attached it starts with 'GPU:' and names the
+# device. SMSD_DISABLE_GPU appends '[GPU disabled]'.
+print("Backend:", smsd.gpu_device_info())
+
+if ready:
+    smsd_cuda.preload()  # initialise the device and load its kernels before any timing
+    print("Device:", smsd_cuda.device_info())</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>GPU available: False
+Backend: CPU: OpenMP 5.1, 10 threads
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=automatic-screen">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="CodeMirror cm-s-jupyter">
+<div class="zeroclipboard-container">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
+<div>
+<span class="notice" hidden="">Copied!</span>
+<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
+<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+</clipboard-copy>
+</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># A generated library: 5 rings x 8 groups x chains of 0 to 49 carbons = 2,000 molecules.</span>
 <span class="n">rings</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="s2">"c1ccncc1"</span><span class="p">,</span> <span class="s2">"C1CCCCC1"</span><span class="p">,</span> <span class="s2">"c1ccoc1"</span><span class="p">,</span> <span class="s2">"c1ccsc1"</span><span class="p">]</span>
 <span class="n">groups</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"O"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"C#N"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">]</span>
@@ -2179,8 +2407,8 @@ Backend: CPU: OpenMP 5.1, 2 threads
 <span class="n">queries</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"c1ccccc1O"</span><span class="p">,</span> <span class="s2">"c1ccncc1Cl"</span><span class="p">,</span> <span class="s2">"C1CCCCC1C(=O)O"</span><span class="p">]</span>
 
 <span class="c1"># Prepared ECFP4 screens choose their device for each call. By default the GPU is used</span>
-<span class="c1"># only on a Tesla T4 for 100,000 targets or more, so this 2,000-target corpus stays on</span>
-<span class="c1"># the CPU unless SMSD_CUDA_MIN_TARGETS lowers that size.</span>
+<span class="c1"># only on a Tesla T4 or an Apple M5 for 100,000 targets or more, so this 2,000-target</span>
+<span class="c1"># corpus stays on the CPU unless SMSD_CUDA_MIN_TARGETS or SMSD_METAL_MIN_TARGETS lowers that size.</span>
 <span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">library</span><span class="p">)</span>
 <span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">()</span>
 <span class="n">hits</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
@@ -2197,7 +2425,7 @@ Backend: CPU: OpenMP 5.1, 2 threads
         <span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">==</span> <span class="n">hits</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"The hits with the GPU allowed equal the CPU hits"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4"># A generated library: 5 rings x 8 groups x chains of 0 to 49 carbons = 2,000 molecules.
+<div class="clipboard-copy-txt" id="cell-5"># A generated library: 5 rings x 8 groups x chains of 0 to 49 carbons = 2,000 molecules.
 rings = ["c1ccccc1", "c1ccncc1", "C1CCCCC1", "c1ccoc1", "c1ccsc1"]
 groups = ["O", "N", "Cl", "C(=O)O", "OC", "C#N", "F", "CC"]
 library = [ring + group + "C" * length
@@ -2205,8 +2433,8 @@ library = [ring + group + "C" * length
 queries = ["c1ccccc1O", "c1ccncc1Cl", "C1CCCCC1C(=O)O"]
 
 # Prepared ECFP4 screens choose their device for each call. By default the GPU is used
-# only on a Tesla T4 for 100,000 targets or more, so this 2,000-target corpus stays on
-# the CPU unless SMSD_CUDA_MIN_TARGETS lowers that size.
+# only on a Tesla T4 or an Apple M5 for 100,000 targets or more, so this 2,000-target
+# corpus stays on the CPU unless SMSD_CUDA_MIN_TARGETS or SMSD_METAL_MIN_TARGETS lowers that size.
 corpus = smsd.TargetCorpus.from_smiles(library)
 corpus.prewarm()
 hits = corpus.screen_many(queries, 0.4)
@@ -2253,10 +2481,10 @@ if ready:
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2316,7 +2544,7 @@ if ready:
     <span class="n">names</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">target_index</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">on_cpu</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">threshold_reached</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Substructure and MCS decisions are identical with gpu_prefilter=True"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">benzodiazepines = {
+<div class="clipboard-copy-txt" id="cell-6">benzodiazepines = {
     "diazepam": "CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21",
     "nordazepam": "O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1",
     "temazepam": "CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21",
@@ -2392,10 +2620,10 @@ Substructure and MCS decisions are identical with gpu_prefilter=True
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2432,7 +2660,7 @@ Substructure and MCS decisions are identical with gpu_prefilter=True
                 <span class="k">assert</span> <span class="n">on_gpu</span> <span class="o">==</span> <span class="n">on_cpu</span> <span class="ow">and</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">&gt;</span> <span class="n">before</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s2">"backend='cuda' hits equal the CPU hits; CUDA calls:"</span><span class="p">,</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6">if numpy is None:
+<div class="clipboard-copy-txt" id="cell-7">if numpy is None:
     print("NumPy is not installed; skipping the packed-index backends.")
 else:
     options = smsd.FingerprintOptions.ecfp(radius=2, size=2048)
@@ -2487,10 +2715,10 @@ CUDA calls after the cpu and auto scans: 0
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2534,7 +2762,7 @@ CUDA calls after the cpu and auto scans: 0
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"backend='cuda' should refuse 70,001 bits"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7">if numpy is None:
+<div class="clipboard-copy-txt" id="cell-8">if numpy is None:
     print("NumPy is not installed; skipping the packed-index errors.")
 else:
     with TemporaryDirectory() as directory:
@@ -2594,10 +2822,10 @@ cuda, 70,001 bits: CUDA packed screening supports at most 65536 bits
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2623,7 +2851,7 @@ cuda, 70,001 bits: CUDA packed screening supports at most 65536 bits
                 <span class="k">assert</span> <span class="n">small</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">==</span> <span class="mi">0</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Backend after restoring the variable:"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">gpu_device_info</span><span class="p">())</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8"># SMSD_DISABLE_GPU is read at each call, so it can be set and removed while running.
+<div class="clipboard-copy-txt" id="cell-9"># SMSD_DISABLE_GPU is read at each call, so it can be set and removed while running.
 with environment("SMSD_DISABLE_GPU", "1"):
     print("GPU available:", smsd.gpu_is_available())
     print("Backend:", smsd.gpu_device_info())
@@ -2650,9 +2878,9 @@ print("Backend after restoring the variable:", smsd.gpu_device_info())</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>GPU available: False
-Backend: CPU: OpenMP 5.1, 2 threads  [GPU disabled]
+Backend: CPU: OpenMP 5.1, 10 threads  [GPU disabled]
 auto with the GPU disabled: [(0, 1.0), (1, 0.5)] | CUDA calls: 0
-Backend after restoring the variable: CPU: OpenMP 5.1, 2 threads
+Backend after restoring the variable: CPU: OpenMP 5.1, 10 threads
 </pre>
 </div>
 </div>
@@ -2687,10 +2915,10 @@ Without a usable device, only the CPU lines appear.</p>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2736,7 +2964,7 @@ Without a usable device, only the CPU lines appear.</p>
                 <span class="k">assert</span> <span class="n">gpu_rows</span> <span class="o">==</span> <span class="n">cpu_rows</span> <span class="ow">and</span> <span class="n">packed</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">&gt;</span> <span class="n">before</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">"Packed hits:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">cpu_rows</span><span class="p">))</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9">def timed(label, work, repeats=3):
+<div class="clipboard-copy-txt" id="cell-10">def timed(label, work, repeats=3):
     """Run once to warm up, then print the best of several timed runs."""
     result = work()
     best = float("inf")
@@ -2784,7 +3012,7 @@ else:
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>prepared screen, CPU             0.0002 s
 Hits per query: [2, 9, 2]
-packed scan, CPU                 0.0005 s
+packed scan, CPU                 0.0003 s
 Packed hits: 12
 </pre>
 </div>
@@ -2802,10 +3030,12 @@ Packed hits: 12
 <h2 id="summary">Summary<a class="anchor-link" href="#summary">¶</a></h2><p>Every route that ran gave the same hits, scores and decisions as the CPU. With
 a usable device, the packed scans also proved device use through
 <code>cuda_calls</code>; prepared screens and pre-screens keep no public record of the
-device they used. The
-<a href="../../docs/guide/CPU_GPU.md">CPU and GPU screening chapter</a> covers
+device they used. On a Mac with <code>smsd-metal</code>, prepared screens and pre-screens
+use the Apple GPU in the same way: call <code>smsd_metal.preload()</code> first and set
+<code>SMSD_METAL_MIN_TARGETS</code> in place of <code>SMSD_CUDA_MIN_TARGETS</code>. The
+<a href="https://asad.github.io/SMSD/guide/CPU_GPU/">CPU and GPU screening chapter</a> covers
 installation, the fallback rules and the environment variables, and
-<a href="gpu_screening.py">gpu_screening.py</a> shows the same pattern as a script.</p>
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/gpu_screening.py">gpu_screening.py</a> shows the same pattern as a script.</p>
 </div>
 </div>
 </div>
@@ -2830,6 +3060,7 @@ installation, the fallback rules and the environment variables, and
 
 
                 
+
               </article>
             </div>
           
@@ -2894,7 +3125,7 @@ installation, the fallback rules and the environment variables, and
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

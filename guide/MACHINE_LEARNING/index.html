@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://asad.github.io/SMSD/guide/MACHINE_LEARNING/">
       
       
-        <link rel="prev" href="../CPU_GPU/">
+        <link rel="prev" href="../GPU_ON_WINDOWS/">
       
       
         <link rel="next" href="../AI_TOOLS/">
@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Machine learning and data frames - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/MACHINE_LEARNING/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Machine learning and data frames - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -722,6 +740,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1117,6 +1163,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1965,6 +2039,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2056,7 +2132,7 @@ process or file format without a copy. For library-scale similarity searching,
 a <a href="../PACKED_INDEX/">packed fingerprint index</a> is better suited than a feature
 matrix.</p>
 <p>Install the extras that the chosen adapters need, for example
-<code>python -m pip install "smsd[sklearn,pandas,arrow]==8.1.0"</code>;
+<code>python -m pip install "smsd[sklearn,pandas,arrow]==8.2.0"</code>;
 <a href="../GETTING_STARTED/#install">Getting started</a> lists every extra. Importing
 <code>smsd.adapters</code> loads none of these packages; each function loads its own when
 it is called and raises <code>ImportError</code> naming the extra when the package is
@@ -2820,7 +2896,7 @@ gives a similarity of 1 between two empty fingerprints.</p>
 <li><a href="../SCREENING/">Screening a library</a> and
   <a href="../PACKED_INDEX/">Packed fingerprint index</a>, for libraries too large for a
   feature matrix.</li>
-<li>The <a href="../../python/examples/feature_search.ipynb">feature-search notebook</a>,
+<li>The <a href="../../notebooks/feature_search/">feature-search notebook</a>,
   which builds a small scikit-learn pipeline beside an MCS search and a packed
   index.</li>
 </ul>
@@ -2837,6 +2913,7 @@ gives a similarity of 1 between two empty fingerprints.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2861,7 +2938,7 @@ gives a similarity of 1 between two empty fingerprints.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../CPU_GPU/" class="md-footer__link md-footer__link--prev" aria-label="Previous: CPU and GPU screening">
+          <a href="../GPU_ON_WINDOWS/" class="md-footer__link md-footer__link--prev" aria-label="Previous: GPU screening on Windows">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2871,7 +2948,7 @@ gives a similarity of 1 between two empty fingerprints.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                CPU and GPU screening
+                GPU screening on Windows
               </div>
             </div>
           </a>
@@ -2901,7 +2978,7 @@ gives a similarity of 1 between two empty fingerprints.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Algorithms - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/ALGORITHMS/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Algorithms - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1711,6 +1785,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1801,10 +1877,9 @@ perform the MCS search.</p>
 <h2 id="size-limits">Size limits<a class="headerlink" href="#size-limits" title="Permanent link">&para;</a></h2>
 <p>An MCES search declines a pair, with <code>LimitReached</code> and no match, when query
 atoms × target atoms exceed 2³⁰, as for two molecules of more than 32,768
-atoms each; when the two molecules are too large in bonds, as for two
-molecules of more than 16,384 bonds each; or, rarely, when a molecule has an
-atom with 512 or more bonds and the two molecules share many kinds of bond.
-MCIS searches are never declined. The three
+atoms each, or when the two molecules are too large in bonds, as for two
+molecules of more than 16,384 bonds each. In rare cases a pair in which an atom
+has 512 or more bonds is also declined. MCIS searches are never declined. The three
 libraries share these limits.</p>
 <h2 id="stereochemistry">Stereochemistry<a class="headerlink" href="#stereochemistry" title="Permanent link">&para;</a></h2>
 <p>With chirality or double-bond stereochemistry enabled, a mapped centre or
@@ -1903,6 +1978,7 @@ atoms and five of the six bonds, where MCIS keeps five atoms.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -1967,7 +2043,7 @@ atoms and five of the six bonds, where MCIS keeps five atoms.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

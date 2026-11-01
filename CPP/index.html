@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="C++ - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/CPP/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="C++ - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2043,6 +2117,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2053,10 +2129,10 @@
 <h1 id="smsd-pro-c-guide">SMSD Pro C++ guide<a class="headerlink" href="#smsd-pro-c-guide" title="Permanent link">&para;</a></h1>
 <p>A header-only C++17 library in namespace <code>smsd</code> for substructure search,
 maximum common substructure (MCS) search and related chemistry. Atom indices
-are zero-based. Each example is a complete program; build it as in the <a href="../cpp/README.md#quick-start">C++
+are zero-based. Each example is a complete program; build it as in the <a href="https://github.com/asad/SMSD/blob/master/cpp/README.md#quick-start">C++
 quick start</a>. See also the <a href="../HOWTO-INSTALL/#supported-platforms">installation
 guide</a>, the <a href="../JAVA/">Java</a> and <a href="../PYTHON/">Python</a> guides
-and the <a href="../CHANGELOG.md">changelog</a>.</p>
+and the <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a>.</p>
 <h2 id="smarts-export-in-810">SMARTS export in 8.1.0<a class="headerlink" href="#smarts-export-in-810" title="Permanent link">&para;</a></h2>
 <p><code>MCS::matchWithSmarts(target)</code> returns
 <code>MCS::SmartsResult</code>, whose <code>result</code> retains the ordinary search status and whose
@@ -2238,8 +2314,7 @@ match, and <code>optimal</code> and <code>complete</code> both <code>false</code
   of more than 32,768 atoms each;</li>
 <li>the two molecules are too large in bonds, as for two molecules of more than
   16,384 bonds each;</li>
-<li>rarely, a molecule has an atom with 512 or more bonds and the two molecules
-  share many kinds of bond.</li>
+<li>in rare cases, a molecule has an atom with 512 or more bonds.</li>
 </ul>
 <p>MCIS searches are never declined; the time and node limits bound them. Java
 and Python use the same limits.</p>
@@ -2627,7 +2702,7 @@ caller must then run its CPU screen. Provider errors are recorded by
 The separate float-valued <code>metal::batchSimilarityScreen</code> and graph-kernel
 APIs are outside this integer fingerprint contract. MCS and substructure
 search remain on the CPU.</p>
-<p>The <a href="../cpp/examples/metal_fingerprint_screen.cpp">Metal screening example</a>
+<p>The <a href="https://github.com/asad/SMSD/blob/master/cpp/examples/metal_fingerprint_screen.cpp">Metal screening example</a>
 screens a few molecules this way, falls back to the CPU screen when the provider
 declines or fails, and reports which path ran; configure with
 <code>-DSMSD_BUILD_EXAMPLES=ON</code> to build it. Without <code>smsd_metal</code> it builds and runs
@@ -2725,6 +2800,32 @@ could compute from incomplete rings.</p>
   <code>depictWithMapping(graph, atomMapping, options)</code> highlights mapped atoms;
   <code>depictPair(query, target, mapping, options)</code> draws a mapped pair;
   <code>depictSMILES</code> and <code>depictMCS</code> take SMILES; <code>DepictOptions</code> sets the style.</li>
+<li>Drawings follow journal practice: a near-black skeleton in ACS proportions,
+  regular-weight labels and aromatic rings with alternating double bonds;
+  <code>aromaticStyle = AromaticStyle::CIRCLE</code> draws circles, and a molecule
+  without a Kekulé structure keeps them. Double bonds outside rings follow the
+  stored E/Z. Inside rings of eight or more atoms a drawing may not yet,
+  though the coordinates <code>writeMolBlock</code> writes do.</li>
+<li>A matched region sits on a gold halo, <code>palette::MATCH_FILL</code>, with a fine
+  edge in a deeper shade of the same hue. Set <code>matchFill</code> to
+  <code>palette::MINT_HALO</code> for the equally light mint used for substructure hits;
+  <code>palette::GOLD_HALO</code> is the default gold. <code>depictSVG</code> highlights exactly the
+  bonds in <code>highlightBonds</code>, or the bonds joining highlighted atoms when none
+  are given. <code>depictWithMapping</code> highlights every bond between matched atoms,
+  so for a match that leaves such a bond unmatched, as a chain query on a
+  ring does, pass the matched bonds to <code>depictSVG</code>. <code>depictPair</code> highlights a
+  bond only when the mapping carries it onto a bond of the other molecule.</li>
+<li>In single-molecule drawings, <code>atomHighlightColors</code> and
+  <code>bondHighlightColors</code> set the halo colour of individual atoms and bonds: the
+  alpha sets how strongly the colour is mixed with the background, an opaque
+  colour is drawn at the strength of <code>matchFill</code>, and an alpha of 0 draws no
+  halo. <code>palette::HIGHLIGHT_1</code> to <code>HIGHLIGHT_6</code> (gold, sky, coral, deep teal,
+  bright teal and mint) stay distinct for colour-blind readers; for greyscale
+  print, use <code>HIGHLIGHT_1</code>, <code>HIGHLIGHT_4</code> and <code>HIGHLIGHT_5</code>, which differ in
+  lightness. <code>matchStroke</code> and <code>matchWidth</code> give matched bonds their own
+  colour or weight, such as deep teal, <code>{13, 51, 48, 1.0}</code>; <code>matchStroke</code>
+  defaults to the default bond colour, so set it as well when changing
+  <code>bondColor</code>.</li>
 <li><code>depictor.hpp</code> provides <code>compute2DCoords(graph, options)</code>, an overload
   keeping the atoms of a <code>CoordMap2D</code> fixed, and
   <code>generateDepictionMatching2DStructure</code>, which aligns a molecule to a
@@ -2763,6 +2864,7 @@ could compute from incomplete rings.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2827,7 +2929,7 @@ could compute from incomplete rings.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

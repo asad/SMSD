@@ -107,3 +107,7 @@
 
 /* Notebook cells. */
 .jp-InputArea-editor, .highlight-ipynb { border-radius: 10px !important; }
+
+/* Notebook output: keep printed columns intact and give phones the full width. */
+.jp-RenderedText pre { white-space: pre; word-break: normal; overflow-wrap: normal; overflow-x: auto; }
+@media screen and (max-width: 44.984375em) { .jp-InputPrompt, .jp-OutputPrompt { display: none; } }

@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Packed fingerprint index - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/PACKED_INDEX/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Packed fingerprint index - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -915,6 +933,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1078,6 +1124,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1887,6 +1961,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1901,7 +1977,7 @@ in memory. <code>smsd.FingerprintCorpus</code> (also <code>smsd.corpus.Fingerpri
 builds and reads it; <code>smsd.butina</code> and <code>smsd.maxmin</code> cluster and select from
 it. Every operation on the index, including opening it, needs NumPy, which the
 <code>numpy</code> extra installs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.1.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.2.0"</span>
 </code></pre></div>
 <p>The examples use the same inline library as <a href="../SCREENING/">Screening a library</a>:
 14 benzodiazepines, 7 common drugs and 512 generated trisubstituted benzenes.
@@ -2744,7 +2820,7 @@ describes the GPU choices and <code>corpus.cuda_calls</code>.</p>
   <code>FingerprintOptions</code>.</li>
 <li><a href="../../PACKED_CORPORA/">Packed fingerprint corpora</a>: the reference contract,
   including <a href="../../PACKED_CORPORA/#cpu-and-cuda-backends">CPU and CUDA backends</a>.</li>
-<li>The <a href="../../python/examples/library_screening.ipynb">library screening notebook</a>
+<li>The <a href="../../notebooks/library_screening/">library screening notebook</a>
   builds, reopens and clusters an index.</li>
 </ul>
 
@@ -2760,6 +2836,7 @@ describes the GPU choices and <code>corpus.cuda_calls</code>.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2824,7 +2901,7 @@ describes the GPU choices and <code>corpus.cuda_calls</code>.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

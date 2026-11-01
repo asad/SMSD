@@ -61,6 +61,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Release notes - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/RELEASE_NOTES/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Release notes - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -80,7 +98,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#smsd-pro-810" class="md-skip">
+        <a href="#smsd-pro-820" class="md-skip">
           Skip to content
         </a>
       
@@ -268,7 +286,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -718,6 +736,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -881,6 +927,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1545,10 +1619,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#changes" class="md-nav__link">
+  <a href="#whats-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changes
+        What's new
       
     </span>
   </a>
@@ -1556,10 +1630,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-from-803" class="md-nav__link">
+  <a href="#built-for" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrading from 8.0.3
+        Built for
       
     </span>
   </a>
@@ -1567,10 +1641,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#downloads" class="md-nav__link">
+  <a href="#get-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Downloads
+        Get started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-810" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 8.1.0
       
     </span>
   </a>
@@ -1620,10 +1705,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#changes" class="md-nav__link">
+  <a href="#whats-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changes
+        What's new
       
     </span>
   </a>
@@ -1631,10 +1716,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-from-803" class="md-nav__link">
+  <a href="#built-for" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrading from 8.0.3
+        Built for
       
     </span>
   </a>
@@ -1642,10 +1727,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#downloads" class="md-nav__link">
+  <a href="#get-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Downloads
+        Get started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-810" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 8.1.0
       
     </span>
   </a>
@@ -1665,6 +1761,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1672,6 +1770,36 @@
   
 
 
+<h1 id="smsd-pro-820">SMSD Pro 8.2.0<a class="headerlink" href="#smsd-pro-820" title="Permanent link">&para;</a></h1>
+<p><strong>Exact search on the hardware you already own.</strong></p>
+<p>SMSD Pro 8.2.0 brings GPU screening to Apple silicon, publication-ready structure figures and clearer guidance for AI assistants. Exact, provable substructure and maximum common substructure (MCS) search now runs on even more of the hardware researchers already own, from an Apple silicon laptop to a GPU server. Completed searches return the same results as in 8.1.0, so existing pipelines upgrade with confidence.</p>
+<h2 id="whats-new">What's new<a class="headerlink" href="#whats-new" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>GPU screening on Apple silicon.</strong> The new optional <a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-metal/README.md"><code>smsd-metal</code></a> package lets prepared fingerprint screens of large compound libraries run on the Mac's GPU, with exactly the same hits and scores as the CPU. See <a href="../guide/CPU_GPU/#install-the-metal-package">CPU and GPU screening</a>.</li>
+<li><strong>GPU screening on Windows.</strong> A <a href="../guide/GPU_ON_WINDOWS/">step-by-step guide</a> covers NVIDIA GPUs through WSL2.</li>
+<li><strong>Publication-ready figures.</strong> Regular rings, crisp labels and one soft halo over the shared core: gold for MCS, mint for substructure hits. Drawings go straight into papers, theses and slides, and <code>smsd.highlight.substructure_svg</code> records each hit's search status in the image.</li>
+<li><strong>Errors AI assistants can act on.</strong> When a model calls SMSD's chemistry tools with a wrong argument, SMSD names it and lists what it accepts, so the model can correct itself and carry on. See <a href="../guide/AI_TOOLS/#read-a-tool-result">Read a tool result</a>.</li>
+<li><strong>Time limits that hold.</strong> Short time limits now hold on very large molecules, so high-throughput pipelines keep to schedule.</li>
+<li><strong>Learn by doing.</strong> Seven <a href="../guide/#notebooks">ready-to-run notebooks</a>, covering MCS and substructure search, fingerprints, library screening, CPU and GPU screening and AI tools, run in Colab and set themselves up.</li>
+</ul>
+<h2 id="built-for">Built for<a class="headerlink" href="#built-for" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Drug discovery and biotech teams:</strong> exact matching and screening from the workstation to the GPU, with every result reporting whether it is complete and proved optimal.</li>
+<li><strong>Academic groups:</strong> open source under Apache 2.0, citable by DOI, with figures ready for papers and theses.</li>
+<li><strong>Students:</strong> seven notebooks that set themselves up and run in Colab, in the browser.</li>
+</ul>
+<h2 id="get-started">Get started<a class="headerlink" href="#get-started" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
+</code></pre></div>
+<p>New to SMSD? <a href="https://colab.research.google.com/github/asad/SMSD/blob/v8.2.0/python/examples/mcs_search.ipynb">Open the MCS notebook in Colab</a>; it sets itself up. Explore the user guide, notebooks and reference at <a href="https://asad.github.io/SMSD/">asad.github.io/SMSD</a>.</p>
+<p>Add <code>"smsd-cuda==8.2.0"</code> for NVIDIA GPUs on Linux, or <code>"smsd-metal==8.2.0"</code> on Apple silicon. Wheels cover CPython 3.12–3.15 on Linux (x86_64 and aarch64), Windows (x86_64) and Apple silicon Macs with macOS 14 or later, and run batch work in parallel across CPU cores. Conda users on Linux and macOS can run <code>conda install -c bioinception -c conda-forge smsd</code>. The <a href="../HOWTO-INSTALL/">installation guide</a> covers Docker images, the header-only C++17 library and source builds, and the <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> lists every change.</p>
+<h2 id="upgrading-from-810">Upgrading from 8.1.0<a class="headerlink" href="#upgrading-from-810" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Drawings and 2D coordinates have the new look, including the wedges written to MOL files; completed searches and every 8.x API are unchanged.</li>
+<li>Tool refusal messages now carry more detail; code that checks them should match how they start.</li>
+<li>Install <code>smsd-cuda</code> and <code>smsd-metal</code> at the same version as <code>smsd</code>.</li>
+<li>The Java library and command-line tool are stable and continue to receive bug fixes, while new features arrive in C++ and Python first. Maven Central carries 8.0.3, and a <a href="../HOWTO-INSTALL/#java-source-build">Java source build</a> gives the current library, with the changes in <a href="#upgrading-from-803">Upgrading from 8.0.3</a>.</li>
+</ul>
 <h1 id="smsd-pro-810">SMSD Pro 8.1.0<a class="headerlink" href="#smsd-pro-810" title="Permanent link">&para;</a></h1>
 <p>SMSD Pro 8.1.0 adds Python data and machine-learning adapters, local MCP tools,
 packed fingerprint corpora, corpus threshold searches and SMARTS export of MCS
@@ -1679,7 +1807,7 @@ results, and corrects the C++ RDKit adapter. The deprecated 8.x APIs remain
 available and supported throughout the 8.x line. The Java library and
 command-line tool stay at 8.0.3 on Maven Central. The CPU Docker images carry
 the 8.1.0 command-line tool; otherwise the Java changes below are available
-only from a source build. The <a href="../CHANGELOG.md">changelog</a> lists every change.</p>
+only from a source build. The <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> lists every change.</p>
 <h2 id="changes">Changes<a class="headerlink" href="#changes" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../PYTHON_ADAPTERS/">Python adapters</a> give fingerprints as NumPy, PyTorch,
@@ -1697,8 +1825,8 @@ only from a source build. The <a href="../CHANGELOG.md">changelog</a> lists ever
   guide to <a href="../AI_ASSISTANTS/">connecting AI assistants</a> make the interfaces and
   local tools easier to find. New Python examples cover NVIDIA screening checked
   against the CPU, an offline chain of the molecular tools and an MCP client.</li>
-<li>The <a href="../packaging/mcp/README.md">MCP container recipe</a> and
-  <a href="../examples/huggingface/README.md">Hugging Face demonstration source</a> use
+<li>The <a href="https://github.com/asad/SMSD/blob/master/packaging/mcp/README.md">MCP container recipe</a> and
+  <a href="https://github.com/asad/SMSD/blob/master/examples/huggingface/README.md">Hugging Face demonstration source</a> use
   supplied wheelhouses. They are source examples, not deployed services or
   published images. Native SVG helpers highlight existing MCS results.</li>
 <li><a href="../PACKED_CORPORA/">Packed fingerprint corpora</a> are read-only memory-mapped
@@ -1707,7 +1835,7 @@ only from a source build. The <a href="../CHANGELOG.md">changelog</a> lists ever
   intersections on the GPU, and <code>"auto"</code> does so when a supported GPU is
   available. Clustering decisions stay on the CPU, and <code>cuda_calls</code> counts
   completed CUDA calls. All-pairs work is quadratic.</li>
-<li><a href="../packaging/smsd-cuda/README.md"><code>smsd-cuda</code></a> adds <code>smsd_cuda.preload()</code>,
+<li><a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-cuda/README.md"><code>smsd-cuda</code></a> adds <code>smsd_cuda.preload()</code>,
   retained device workspaces for prepared corpora, opt-in CUDA Graph replay
   (<code>SMSD_CUDA_GRAPHS=1</code>) and on-device top-k selection.</li>
 <li><code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code> screen target iterables
@@ -1739,7 +1867,7 @@ only from a source build. The <a href="../CHANGELOG.md">changelog</a> lists ever
   C++ path-fingerprint <code>batchFingerprint</code> and <code>batchFingerprintScreen</code> now reach
   the caller instead of ending the process.</li>
 <li>Conda recipes build the CPU package and the Linux CUDA package; the
-  <a href="../packaging/conda/README.md">conda guide</a> gives the conda, mamba and Pixi
+  <a href="https://github.com/asad/SMSD/blob/master/packaging/conda/README.md">conda guide</a> gives the conda, mamba and Pixi
   install routes.</li>
 <li>NOTICE now carries licence notices for the RDKit MACCS key definitions and
   pybind11. The <code>smsd-cuda</code> package now ships the CUB and CCCL licences, and its
@@ -1857,7 +1985,7 @@ screening and native Windows CUDA wheels are not provided. See the
 that depend on truncated ring perception, and the built-in named SMARTS
 predicates. It adds opt-in Metal fingerprint screening for C++ source builds
 on macOS and a Python call that fingerprints many molecules at once. The
-<a href="../CHANGELOG.md">changelog</a> lists every change.</p>
+<a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> lists every change.</p>
 <h2 id="changes_1">Changes<a class="headerlink" href="#changes_1" title="Permanent link">&para;</a></h2>
 <ul>
 <li>C++ and Java MCIS searches with stereochemistry find the largest mapping
@@ -1911,7 +2039,7 @@ and add <code>"smsd-cuda==8.0.3"</code> for GPU screening with an NVIDIA GPU.</p
 <h1 id="smsd-pro-802">SMSD Pro 8.0.2<a class="headerlink" href="#smsd-pro-802" title="Permanent link">&para;</a></h1>
 <p>SMSD Pro 8.0.2 adds the optional <code>smsd-cuda</code> package and ordered batches of
 corpus screening queries. Matching runs on the CPU. The
-<a href="../CHANGELOG.md">changelog</a> lists the changes in full.</p>
+<a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> lists the changes in full.</p>
 <h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>TargetCorpus.screen_many</code> screens ECFP4 Tanimoto similarity for each query;
@@ -2178,6 +2306,7 @@ molecule.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2226,7 +2355,7 @@ molecule.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

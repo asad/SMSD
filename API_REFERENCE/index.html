@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="API reference - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/API_REFERENCE/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="API reference - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -82,7 +100,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#smsd-pro-810-api-reference" class="md-skip">
+        <a href="#smsd-pro-820-api-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1766,6 +1840,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metal-package-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metal package entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2145,6 +2230,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#metal-package-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metal package entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2163,6 +2259,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2170,14 +2268,13 @@
   
 
 
-<h1 id="smsd-pro-810-api-reference">SMSD Pro 8.1.0 API reference<a class="headerlink" href="#smsd-pro-810-api-reference" title="Permanent link">&para;</a></h1>
-<p>This reference describes the 8.1.0 source API. Use a matching wheel or build;
+<h1 id="smsd-pro-820-api-reference">SMSD Pro 8.2.0 API reference<a class="headerlink" href="#smsd-pro-820-api-reference" title="Permanent link">&para;</a></h1>
+<p>This reference describes the 8.2.0 source API. Use a matching wheel or build;
 an earlier installed native extension cannot provide new Python APIs.</p>
 <p>The Python package provides molecular graphs, exact searches, fingerprints,
 screening, depiction and optional data adapters. Java and C++ expose related
 graph operations; their names and available options are documented in the
-<a href="../java/README.md">Java guide</a> and <a href="../CPP/">C++ guide</a>. Identical fingerprint
-parameters do not establish bit identity across toolkits.</p>
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md">Java guide</a> and <a href="../CPP/">C++ guide</a>.</p>
 <h2 id="mcs-and-substructure-searches">MCS and substructure searches<a class="headerlink" href="#mcs-and-substructure-searches" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
@@ -2213,8 +2310,7 @@ or cancellation-stopped call can retain a useful witness without proving an
 optimum. An unfinished result with no witness does not prove absence.
 <code>complete</code> also records enumeration completeness; a requested result limit
 can stop enumeration after an optimum is found. Ring-perception work limits
-can prevent a proof even when a mapping is feasible. Preserve stopped cases
-when analysing outcomes; stopped latency is not completed-work throughput.</p>
+can prevent a proof even when a mapping is feasible.</p>
 <p>Search budgets apply after input parsing and preparation. General API options
 permit native defaults and unlimited node settings; set explicit finite limits
 when accepting untrusted or interactive requests. The MCP tools impose their
@@ -2224,8 +2320,8 @@ later independent request.</p>
 <p><code>ChemOptions</code> controls atom type, charge, isotope, bond order, aromatic
 compatibility, stereo, ring and optional tautomer handling. The default
 profile does not require matching formal charges or isotopes. Use explicit
-options or <code>ChemOptions.profile("strict")</code> when those restrictions matter;
-do not infer them from a tool or method name. <code>complete_rings_only</code>,
+options or <code>ChemOptions.profile("strict")</code> when those restrictions matter.
+<code>complete_rings_only</code>,
 <code>ring_matches_ring_only</code> and <code>ring_fusion_mode</code> impose different restrictions.
 The graph aromaticity model is a preparation choice, selected through
 <code>perceive_aromaticity</code> or the builder. The deprecated chemistry
@@ -2240,8 +2336,7 @@ The graph aromaticity model is a preparation choice, selected through
 <p><code>Substructure.find</code> takes a molecule query; <code>Substructure.smarts</code> compiles a
 predicate query. <code>with_induced(True)</code> additionally requires query non-bonds
 to remain non-bonds. SMARTS predicates can specify hydrogen, isotope, charge,
-aromaticity and topology directly. A parsed SMARTS string and a proved search
-result are separate facts.</p>
+aromaticity and topology directly.</p>
 <p><code>MCS.match_constrained</code> processes queries in order while excluding already
 used target atoms. <code>MCS.consensus</code> builds a progressive common graph with a
 support threshold and supporting mappings. It is an approximation and always
@@ -2269,10 +2364,13 @@ induced non-edge requirements; retain the associated <code>SearchResult</code>.<
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">assert</span> <span class="s1">'&lt;svg'</span> <span class="ow">in</span> <span class="n">svg</span> <span class="ow">and</span> <span class="s1">'data-search-status='</span> <span class="ow">in</span> <span class="n">svg</span>
 </code></pre></div>
 <p>Native <code>depict_svg</code>, <code>depict_mapping</code> and <code>depict_pair</code> return SVG strings and
-use <code>DepictOptions</code>. The pair renderer highlights mapped atoms and input
-bonds between them. <code>smsd.highlight.mcs_svg</code> carries search flags in the SVG
+use <code>DepictOptions</code>. The pair renderer highlights mapped atoms and each bond
+between them that the mapping carries onto a bond of the other molecule.
+<code>smsd.highlight.mcs_svg</code> carries search flags in the SVG
 and rejects selected-edge witnesses that this renderer would over-highlight;
-render <code>best.to_graph(query)</code> separately in that case. The MCP depiction tool
+render <code>best.to_graph(query)</code> separately in that case.
+<code>smsd.highlight.substructure_svg</code> draws a substructure hit on the target with
+the same flags. The MCP depiction tool
 instead labels this highlighting scope and returns the selected bond mapping
 alongside the image.</p>
 <p>The older <code>depict_mcs</code>, <code>depict_substructure</code> and deprecated <code>to_svg</code> helpers
@@ -2343,8 +2441,7 @@ requested. <code>fingerprint_from_smiles</code> is a text convenience helper. Fa
 include MCS-aware paths, element paths, ECFP/circular, FCFP and topological
 torsions; <code>FingerprintOptions</code> adds configurable invariants, fragment/scaffold
 choices, stereo and SMARTS keys. <code>FingerprintOptions.maccs()</code> supplies 166
-MACCS keys, with key number <code>k</code> at position <code>k - 1</code>. Fingerprint family names
-and options are not guarantees of cross-tool bit identity.</p>
+MACCS keys, with key number <code>k</code> at position <code>k - 1</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">specification</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprints</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="n">options</span><span class="o">=</span><span class="n">specification</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span>
@@ -2397,7 +2494,7 @@ fingerprint width and row count. <code>create</code>/<code>from_smiles</code> co
 <code>threshold_pairs</code> and <code>top_k_pairs</code> read it. Use its context manager or <code>close</code>.
 The underlying file must remain unchanged while open. Chunk bounds limit
 working arrays, not returned-hit storage, mapped pages or total comparison
-work. Counts of representable rows are not throughput or memory measurements.</p>
+work.</p>
 <p><code>stream_screen_smiles</code> and <code>stream_screen_many_smiles</code> process target
 iterables in chunks. <code>butina</code> clusters by similarity to a chosen centre;
 members need not be mutually close. <code>maxmin</code> makes a greedy diverse selection
@@ -2445,20 +2542,22 @@ be quadratic even when it avoids a dense distance matrix.</p>
 <p>Arrow can share a native-endian, C-contiguous 2-D integer NumPy buffer and
 retains its owner. Shared input must not be mutated. Other inputs/layouts can
 require copies; <code>zero_copy_only=True</code> rejects those cases and table metadata
-records the ownership/copy result. A tensor/graph adapter's device argument
-does not itself establish a GPU chemistry kernel.</p>
+records the ownership/copy result. The <code>device</code> argument of the tensor and
+graph adapters only places the output; the chemistry runs on the CPU.</p>
 <h2 id="accelerators-and-molecular-tools">Accelerators and molecular tools<a class="headerlink" href="#accelerators-and-molecular-tools" title="Permanent link">&para;</a></h2>
 <p>Exact MCS/substructure proof remains on the CPU. GPU support is operation-,
 build-, device- and package-dependent; availability alone does not prove a
 particular call dispatched to a device. <code>gpu_is_available</code> and
 <code>gpu_device_info</code> describe discovery. <code>warm_start</code> explicitly prepares a
 reusable corpus/query path. Packed corpus APIs expose explicit backends and
-retain deterministic CPU-defined score/hit semantics. Native Metal packed
-fingerprint screening is available only in C++ and runs only when requested
-explicitly; Python screening and search never run on Metal. See
-<a href="../PYTHON/#optional-cuda-screening">CUDA operation scope</a>,
+retain deterministic CPU-defined score/hit semantics. The optional <code>smsd-cuda</code>
+and <code>smsd-metal</code> packages let prepared ECFP4 screens and requested corpus
+pre-screens use an NVIDIA or Apple GPU; packed corpora use CUDA only. The C++
+Metal packed-fingerprint provider runs only when requested explicitly. See
+<a href="../guide/CPU_GPU/">CPU and GPU screening</a>,
 <a href="../CPP/#optional-metal-fingerprint-screening">native Metal scope</a> and the optional
-<a href="../packaging/smsd-cuda/README.md"><code>smsd-cuda</code> package</a> for build and device
+<a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-cuda/README.md"><code>smsd-cuda</code></a> and
+<a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-metal/README.md"><code>smsd-metal</code></a> packages for build and device
 requirements; the <a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a>
 lists the GPU that automatic screening uses by default.</p>
 <p>The eight <a href="../MCP_SERVER/">MCP tools</a> expose finite text, atom, target, result
@@ -2471,9 +2570,8 @@ LangChain and LlamaIndex tools, without creating a model client.</p>
 <p>The 8.x API retains deprecated names such as <code>canonical_smiles</code>,
 <code>prewarm_graph</code>, <code>read_molfile</code>, <code>export_sdf</code>, <code>dearomatize</code>,
 <code>overlapCoefficient</code>, <code>count_overlapCoefficient</code>, <code>to_svg</code> and <code>chem=</code>.
-Use their documented replacements. Retaining these names is not permission
-to remove or reinterpret them in a minor release; warnings and old return
-values remain part of the compatibility behaviour.</p>
+Use their documented replacements; the old names keep their warnings and
+return values throughout 8.x.</p>
 <h2 id="native-graph-and-option-objects">Native graph and option objects<a class="headerlink" href="#native-graph-and-option-objects" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2542,7 +2640,8 @@ values remain part of the compatibility behaviour.</p>
 <code>FragmentMode</code>, <code>ScaffoldMode</code>, <code>RSLabel</code>, <code>EZLabel</code>, and the nested
 <code>MCS.Objective</code>/<code>MCS.Connectivity</code>. Use their named values rather than numeric
 ordinals. Graph atom arrays are in graph index order; <code>canonical_label</code> and
-<code>orbit</code> are derived data and are not permission to replace caller numbering.
+<code>orbit</code> are derived values, and results always use the caller's atom
+numbering.
 <code>properties</code> supports ordinary string-key/value mapping operations.</p>
 <p><code>smsd.RingBasisUnavailable</code> is the native <code>RuntimeError</code> subclass raised when
 a result needs the minimum cycle basis and ring perception reached its work
@@ -2556,7 +2655,7 @@ required only for the corresponding call.</p>
 <!-- CALLABLE_INDEX -->
 
 <h3 id="molecules-and-io">Molecules and I/O<a class="headerlink" href="#molecules-and-io" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_molecule.py">_molecule.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_molecule.py">_molecule.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -2571,15 +2670,15 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.canonical_smiles(mol)</code></td>
-<td>Deprecated alias of :func:to_smiles.</td>
+<td>Deprecated alias of <code>to_smiles</code>.</td>
 </tr>
 <tr>
 <td><code>smsd.count_components(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Count the number of connected components in a molecule.</td>
 </tr>
 <tr>
 <td><code>smsd.export_sdf(molecules, filename)</code></td>
-<td>Deprecated alias of :func:write_sdf.</td>
+<td>Deprecated alias of <code>write_sdf</code>.</td>
 </tr>
 <tr>
 <td><code>smsd.clear_cache()</code></td>
@@ -2587,11 +2686,11 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.extract_subgraph(mol, atom_indices)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Extract a subgraph containing only the specified atoms.</td>
 </tr>
 <tr>
 <td><code>smsd.murcko_scaffold(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Compute the Bemis-Murcko scaffold (ring systems and linkers).</td>
 </tr>
 <tr>
 <td><code>smsd.parse_mapped_smiles(smiles)</code></td>
@@ -2607,11 +2706,11 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.prewarm_graph(mol)</code></td>
-<td>Deprecated alias of :func:prewarm that returns None.</td>
+<td>Deprecated alias of <code>prewarm</code> that returns None.</td>
 </tr>
 <tr>
 <td><code>smsd.read_mol_block(mol_block)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Parse an MDL MOL V2000 block into a MolGraph.</td>
 </tr>
 <tr>
 <td><code>smsd.read_mol_file(filename)</code></td>
@@ -2619,7 +2718,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.read_molfile(filename)</code></td>
-<td>Deprecated alias of :func:read_mol_file that reads the file as UTF-8 text.</td>
+<td>Deprecated alias of <code>read_mol_file</code> that reads the file as UTF-8 text.</td>
 </tr>
 <tr>
 <td><code>smsd.read_sdf(filename)</code></td>
@@ -2627,11 +2726,11 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.same_canonical_graph(mol1, mol2)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Check if two molecules are canonically identical.</td>
 </tr>
 <tr>
 <td><code>smsd.split_components(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Split a molecule into its connected components.</td>
 </tr>
 <tr>
 <td><code>smsd.strip_atom_maps(smiles)</code></td>
@@ -2639,7 +2738,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Generate canonical SMARTS with configurable predicates.</td>
 </tr>
 <tr>
 <td><code>smsd.to_smiles(mol)</code></td>
@@ -2647,15 +2746,15 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.translate_to_atom_ids(mapping, g1, g2)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Translate MCS mapping from internal 0-based indices to external atom IDs.</td>
 </tr>
 <tr>
 <td><code>smsd.write_mol_block(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Write a MolGraph as an MDL MOL V2000 block.</td>
 </tr>
 <tr>
 <td><code>smsd.write_mol_block_v3000(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Write a MolGraph as an MDL MOL V3000 block.</td>
 </tr>
 <tr>
 <td><code>smsd.write_molfile(mol, filename, *, v3000=False, sdf=False)</code></td>
@@ -2667,12 +2766,12 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.write_sdf_record(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Write a MolGraph as a single SDF record.</td>
 </tr>
 </tbody>
 </table>
 <h3 id="chemical-graph-helpers">Chemical graph helpers<a class="headerlink" href="#chemical-graph-helpers" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_chemistry.py">_chemistry.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_chemistry.py">_chemistry.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -2682,28 +2781,28 @@ required only for the corresponding call.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>smsd.CIPDescriptors (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.CIPDescriptors</code> (class)</td>
+<td>CIP stereo descriptors for all centres and double bonds.</td>
 </tr>
 <tr>
-<td><code>smsd.EZLabel (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.EZLabel</code> (enum)</td>
+<td>CIP E/Z labels returned by <code>assign_cip</code>.</td>
 </tr>
 <tr>
-<td><code>smsd.RSLabel (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.RSLabel</code> (enum)</td>
+<td>CIP R/S labels returned by <code>assign_cip</code>.</td>
 </tr>
 <tr>
-<td><code>smsd.RelevantCycleFamilies (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.RelevantCycleFamilies</code> (class)</td>
+<td>Relevant cycles grouped into families, in ascending ring size, then root.</td>
 </tr>
 <tr>
-<td><code>smsd.RelevantCycleFamily (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.RelevantCycleFamily</code> (class)</td>
+<td>One family of relevant cycles: its ring size, root and member cycles.</td>
 </tr>
 <tr>
 <td><code>smsd.assign_cip(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Compute the CIP descriptors of every stereocentre and stereogenic double bond.</td>
 </tr>
 <tr>
 <td><code>smsd.assign_ez(mol)</code></td>
@@ -2715,7 +2814,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.classify_pharmacophore(mol, atom_index)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Classify an atom into pharmacophoric feature classes (FCFP invariant).</td>
 </tr>
 <tr>
 <td><code>smsd.compute_relevant_cycle_families(mol)</code></td>
@@ -2723,15 +2822,15 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.compute_sssr(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Return the Smallest Set of Smallest Rings (minimum cycle basis) as lists of atom indices, sorted by ring size.</td>
 </tr>
 <tr>
 <td><code>smsd.dearomatize(mol)</code></td>
-<td>Deprecated alias of :func:kekulize.</td>
+<td>Deprecated alias of <code>kekulize</code>.</td>
 </tr>
 <tr>
 <td><code>smsd.implicit_h(atomic_num, bond_order_sum, formal_charge, aromatic=False)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Compute implicit hydrogen count for an atom with the SMILES valence model.</td>
 </tr>
 <tr>
 <td><code>smsd.kekulize(mol)</code></td>
@@ -2743,7 +2842,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.rings_truncated(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Whether the bounded Horton/minimum-basis perception stopped early or failed to reach the graph's cycle rank.</td>
 </tr>
 <tr>
 <td><code>smsd.relevant_cycles_truncated(mol)</code></td>
@@ -2760,7 +2859,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="prepared-searches-and-results">Prepared searches and results<a class="headerlink" href="#prepared-searches-and-results" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/search.py">search.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/search.py">search.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -2944,7 +3043,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="fingerprints-and-metrics">Fingerprints and metrics<a class="headerlink" href="#fingerprints-and-metrics" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_fingerprints.py">_fingerprints.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_fingerprints.py">_fingerprints.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -2955,19 +3054,19 @@ required only for the corresponding call.</p>
 <tbody>
 <tr>
 <td><code>smsd.analyze_fp_quality(fp, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Analyse fingerprint quality: density, set bits, collision rate.</td>
 </tr>
 <tr>
 <td><code>smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Circular fingerprint (Morgan).</td>
 </tr>
 <tr>
 <td><code>smsd.circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Count-based circular fingerprint (Morgan).</td>
 </tr>
 <tr>
 <td><code>smsd.cosine(fp1, fp2, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Cosine similarity between two fingerprints (lists of set bit positions).</td>
 </tr>
 <tr>
 <td><code>smsd.count_cosine(fp1, fp2)</code></td>
@@ -2979,7 +3078,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.count_overlapCoefficient(fp1, fp2)</code></td>
-<td>Deprecated alias of :func:count_overlap_coefficient.</td>
+<td>Deprecated alias of <code>count_overlap_coefficient</code>.</td>
 </tr>
 <tr>
 <td><code>smsd.count_overlap_coefficient(fp1, fp2)</code></td>
@@ -2995,7 +3094,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.dice(fp1, fp2, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Dice similarity between two fingerprints (lists of set bit positions).</td>
 </tr>
 <tr>
 <td><code>smsd.fingerprint(mol, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None)</code></td>
@@ -3007,7 +3106,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.fingerprint_subset(fp1, fp2)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Check if fingerprint fp1 is a subset of fp2 (all bits in fp1 are set in fp2).</td>
 </tr>
 <tr>
 <td><code>smsd.fingerprints(mols, *, kind='mcs', path_length=7, fp_size=2048, radius=2, options=None, num_threads=0)</code></td>
@@ -3019,11 +3118,11 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.mcs_fingerprint(mol, path_length=7, fp_size=2048, tautomer_aware=False)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Compute MCS-aware path fingerprint.</td>
 </tr>
 <tr>
 <td><code>smsd.overlapCoefficient(fp1, fp2, fp_size=2048)</code></td>
-<td>Deprecated alias of :func:overlap_coefficient.</td>
+<td>Deprecated alias of <code>overlap_coefficient</code>.</td>
 </tr>
 <tr>
 <td><code>smsd.overlap_coefficient(fp1, fp2, fp_size=2048)</code></td>
@@ -3031,11 +3130,11 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.path_fingerprint(mol, path_length=7, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Element path fingerprint over heavy atoms: each path of up to path_length bonds is hashed by its atomic numbers.</td>
 </tr>
 <tr>
 <td><code>smsd.soergel(fp1, fp2, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Soergel distance between two fingerprints (lists of set bit positions).</td>
 </tr>
 <tr>
 <td><code>smsd.tanimoto_coefficient(fp1, fp2, fp_size=2048)</code></td>
@@ -3055,12 +3154,12 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.topological_torsion_counts(mol, fp_size=2048)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Count-based topological torsion fingerprint.</td>
 </tr>
 </tbody>
 </table>
 <h3 id="graph-and-fingerprint-screening">Graph and fingerprint screening<a class="headerlink" href="#graph-and-fingerprint-screening" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_screening.py">_screening.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_screening.py">_screening.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3091,7 +3190,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.TargetCorpus.is_prewarmed (property)</code></td>
-<td>Whether :meth:prewarm has run since the last targets were added.</td>
+<td>Whether <code>prewarm</code> has run since the last targets were added.</td>
 </tr>
 <tr>
 <td><code>smsd.TargetCorpus.screen(query, threshold, *, num_threads=0)</code></td>
@@ -3115,7 +3214,7 @@ required only for the corresponding call.</p>
 </tr>
 <tr>
 <td><code>smsd.gpu_is_available()</code></td>
-<td>True when a GPU is available at run time: through an installed smsd-cuda package that finds a device, or through a native module built with CUDA or Metal. Python screening and search never run on Metal; a Metal-enabled source build changes only what this function and <code>gpu_device_info()</code> report.</td>
+<td>True when a GPU is available at run time: through an installed smsd-cuda or smsd-metal package that finds a device, or through a native module built with CUDA or Metal. A CUDA- or Metal-enabled source build of <code>smsd</code> itself changes only what this function and <code>gpu_device_info()</code> report.</td>
 </tr>
 <tr>
 <td><code>smsd.screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_threads=0)</code></td>
@@ -3132,7 +3231,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="coordinates-and-layout">Coordinates and layout<a class="headerlink" href="#coordinates-and-layout" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_layout.py">_layout.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_layout.py">_layout.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3142,101 +3241,101 @@ required only for the corresponding call.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>smsd.Point2D (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.Point2D</code> (class)</td>
+<td>A 2D point with writable coordinates.</td>
 </tr>
 <tr>
-<td><code>smsd.Point3D (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.Point3D</code> (class)</td>
+<td>A 3D point with writable coordinates.</td>
 </tr>
 <tr>
 <td><code>smsd.align_2d(coords, reference)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Align 2D coordinates to a reference by the optimal rotation.</td>
 </tr>
 <tr>
 <td><code>smsd.bounding_box_2d(coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>float, float, float]</td>
 </tr>
 <tr>
 <td><code>smsd.canonical_orientation(mol, coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Rotate to the canonical orientation (30-degree grid alignment).</td>
 </tr>
 <tr>
 <td><code>smsd.center_2d(coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Centre 2D coordinates on the origin.</td>
 </tr>
 <tr>
 <td><code>smsd.count_crossings(mol, coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Count the number of bond crossings in a 2D layout.</td>
 </tr>
 <tr>
 <td><code>smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Force-directed 2D layout minimisation.</td>
 </tr>
 <tr>
 <td><code>smsd.generate_coords_2d(mol, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Generate 2D coordinates for a molecule.</td>
 </tr>
 <tr>
 <td><code>smsd.generate_coords_3d(mol, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Generate an approximate 3D geometry for a molecule.</td>
 </tr>
 <tr>
 <td><code>smsd.is_degenerate_layout(coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Check if a 2D layout is degenerate (all points collinear or stacked).</td>
 </tr>
 <tr>
 <td><code>smsd.layout_quality(mol, coords, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Compute a layout quality score (0.0 = perfect).</td>
 </tr>
 <tr>
 <td><code>smsd.layout_sssr(mol)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>The ring set used by 2D layout, as lists of atom indices.</td>
 </tr>
 <tr>
 <td><code>smsd.match_template(mol, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Check whether a molecule matches a known scaffold template.</td>
 </tr>
 <tr>
 <td><code>smsd.mirror_x(coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Mirror 2D coordinates about the X axis (flip vertically).</td>
 </tr>
 <tr>
 <td><code>smsd.mirror_y(coords)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Mirror 2D coordinates about the Y axis (flip horizontally).</td>
 </tr>
 <tr>
 <td><code>smsd.normalise_bond_length(mol, coords, target=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Normalise bond lengths to the target value.</td>
 </tr>
 <tr>
 <td><code>smsd.reduce_crossings(mol, coords, max_iter=1000)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Reduce bond crossings in a 2D layout by optimising ring orientations.</td>
 </tr>
 <tr>
 <td><code>smsd.resolve_overlaps(coords, threshold=0.3, max_iter=100)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Resolve atom-atom overlaps by pushing the atoms apart.</td>
 </tr>
 <tr>
 <td><code>smsd.rotate_2d(coords, angle)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Rotate 2D coordinates by angle (radians) about the centroid.</td>
 </tr>
 <tr>
 <td><code>smsd.scale_2d(coords, factor)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Scale 2D coordinates uniformly about the centroid.</td>
 </tr>
 <tr>
 <td><code>smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Stress majorisation for 2D layout.</td>
 </tr>
 <tr>
 <td><code>smsd.translate_2d(coords, dx, dy)</code></td>
-<td>Native callable; its runtime docstring includes an ordinary example.</td>
+<td>Translate 2D coordinates by (dx, dy).</td>
 </tr>
 </tbody>
 </table>
 <h3 id="depiction">Depiction<a class="headerlink" href="#depiction" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_depiction.py">_depiction.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_depiction.py">_depiction.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3246,24 +3345,24 @@ required only for the corresponding call.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>smsd.DepictOptions (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.DepictOptions</code> (class)</td>
+<td>Native SVG drawing options.</td>
 </tr>
 <tr>
-<td><code>smsd.depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs)</code></td>
+<td><code>smsd.depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight='gold', **kwargs)</code></td>
 <td>Render a molecule with MCS or substructure atoms highlighted and numbered.</td>
 </tr>
 <tr>
-<td><code>smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0))</code></td>
-<td>Find the MCS and return an RDKit image with matched atoms highlighted; <code>highlight_color</code> is deprecated and has no effect.</td>
+<td><code>smsd.depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, size=(600, 300), highlight_color=(0.5, 0.8, 1.0), highlight='gold')</code></td>
+<td>Find the MCS and return an RDKit image with the matched atoms and bonds highlighted; <code>highlight_color</code> is deprecated and has no effect.</td>
 </tr>
 <tr>
-<td><code>smsd.depict_pair(mol1, mol2, mapping, opts=None, **kwargs)</code></td>
+<td><code>smsd.depict_pair(mol1, mol2, mapping, opts=None, *, highlight='gold', **kwargs)</code></td>
 <td>Render two molecules side by side with an MCS mapping highlighted.</td>
 </tr>
 <tr>
-<td><code>smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300))</code></td>
-<td>Find a substructure and return an RDKit image with the matched atoms highlighted.</td>
+<td><code>smsd.depict_substructure(query, target, *, timeout_ms=10000, size=(600, 300), highlight='mint')</code></td>
+<td>Find a substructure and return an RDKit image with the matched atoms and bonds highlighted.</td>
 </tr>
 <tr>
 <td><code>smsd.depict_svg(mol_or_smiles, opts=None, **kwargs)</code></td>
@@ -3280,7 +3379,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="proof-bearing-highlights">Proof-bearing highlights<a class="headerlink" href="#proof-bearing-highlights" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/highlight.py">highlight.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/highlight.py">highlight.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3290,13 +3389,17 @@ required only for the corresponding call.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>smsd.highlight.mcs_svg(query, target, result, *, opts=None, **kwargs)</code></td>
+<td><code>smsd.highlight.mcs_svg(query, target, result, *, highlight='gold', opts=None, **kwargs)</code></td>
 <td>Render the two molecules with the best result's atom correspondence.</td>
+</tr>
+<tr>
+<td><code>smsd.highlight.substructure_svg(query, target, result, *, highlight='mint', opts=None, **kwargs)</code></td>
+<td>Render the target with the best hit's atoms and the bonds the hit carries.</td>
 </tr>
 </tbody>
 </table>
 <h3 id="packed-corpus-and-streaming">Packed corpus and streaming<a class="headerlink" href="#packed-corpus-and-streaming" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/corpus.py">corpus.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/corpus.py">corpus.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3360,7 +3463,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="clustering-and-selection">Clustering and selection<a class="headerlink" href="#clustering-and-selection" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/clustering.py">clustering.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/clustering.py">clustering.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3380,7 +3483,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="optional-data-adapters">Optional data adapters<a class="headerlink" href="#optional-data-adapters" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/adapters.py">adapters.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/adapters.py">adapters.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3406,12 +3509,12 @@ required only for the corresponding call.</p>
 <td>Compute native fingerprints and expand them to a PyTorch feature tensor.</td>
 </tr>
 <tr>
-<td><code>smsd.adapters.FingerprintTransformer (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.adapters.FingerprintTransformer</code> (class)</td>
+<td>A scikit-learn transformer that turns molecules into fingerprints.</td>
 </tr>
 <tr>
-<td><code>smsd.adapters.SimilarityTransformer (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.adapters.SimilarityTransformer</code> (class)</td>
+<td>A scikit-learn transformer that turns molecules into Tanimoto similarities.</td>
 </tr>
 <tr>
 <td><code>smsd.adapters.to_scipy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)</code></td>
@@ -3440,7 +3543,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="warm-start">Warm start<a class="headerlink" href="#warm-start" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/_accelerator.py">_accelerator.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/_accelerator.py">_accelerator.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3456,7 +3559,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="molecular-tools">Molecular tools<a class="headerlink" href="#molecular-tools" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/mcp_server.py">mcp_server.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/mcp_server.py">mcp_server.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3508,7 +3611,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="tool-definitions">Tool definitions<a class="headerlink" href="#tool-definitions" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../python/smsd/tool_definitions.py">tool_definitions.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/python/smsd/tool_definitions.py">tool_definitions.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3534,8 +3637,8 @@ required only for the corresponding call.</p>
 <td>Object schema with finite single-argument bounds and Python defaults.</td>
 </tr>
 <tr>
-<td><code>smsd.tool_definitions.TOOL_REGISTRY (class/enum)</code></td>
-<td>See the native graph/options table or the adapter contract above.</td>
+<td><code>smsd.tool_definitions.TOOL_REGISTRY</code></td>
+<td>The registered molecular tools, by name.</td>
 </tr>
 <tr>
 <td><code>smsd.tool_definitions.get_tool_definitions(provider: str='mcp')</code></td>
@@ -3556,7 +3659,7 @@ required only for the corresponding call.</p>
 </tbody>
 </table>
 <h3 id="cuda-package-entry-points">CUDA package entry points<a class="headerlink" href="#cuda-package-entry-points" title="Permanent link">&para;</a></h3>
-<p>Source: <a href="../packaging/smsd-cuda/python/smsd_cuda/__init__.py"><strong>init</strong>.py</a>.</p>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-cuda/python/smsd_cuda/__init__.py"><strong>init</strong>.py</a>.</p>
 <table>
 <thead>
 <tr>
@@ -3587,6 +3690,38 @@ required only for the corresponding call.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="metal-package-entry-points">Metal package entry points<a class="headerlink" href="#metal-package-entry-points" title="Permanent link">&para;</a></h3>
+<p>Source: <a href="https://github.com/asad/SMSD/blob/master/packaging/smsd-metal/python/smsd_metal/__init__.py"><strong>init</strong>.py</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Callable</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd_metal.capsule()</code></td>
+<td>A capsule holding the accelerator's table, which smsd attaches.</td>
+</tr>
+<tr>
+<td><code>smsd_metal.device_info()</code></td>
+<td>A description of the device, such as 'Apple M2 Pro (Metal, 21845 MB)'.</td>
+</tr>
+<tr>
+<td><code>smsd_metal.is_available()</code></td>
+<td>Whether a Metal device can be used: this is an Apple silicon Mac with a GPU.</td>
+</tr>
+<tr>
+<td><code>smsd_metal.preload()</code></td>
+<td>Compile the Metal screening kernels without screening data.</td>
+</tr>
+<tr>
+<td><code>smsd_metal.unavailable_reason()</code></td>
+<td>Why no Metal device can be used, or None when one can.</td>
+</tr>
+</tbody>
+</table>
 
 
 
@@ -3600,6 +3735,7 @@ required only for the corresponding call.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -3664,7 +3800,7 @@ required only for the corresponding call.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

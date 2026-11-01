@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Clustering and diversity - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/CLUSTERING/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Clustering and diversity - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -932,6 +950,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1095,6 +1141,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1921,6 +1995,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1942,7 +2018,7 @@ on a GPU. Every example uses the inline library of
 512 generated trisubstituted benzenes.</p>
 <p>All three tools read a <code>FingerprintCorpus</code>, so they need NumPy, from the
 <code>numpy</code> extra:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.1.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.2.0"</span>
 </code></pre></div>
 <h2 id="choose-a-method">Choose a method<a class="headerlink" href="#choose-a-method" title="Permanent link">&para;</a></h2>
 <table>
@@ -2437,47 +2513,12 @@ same <code>backend</code> argument as the other searches of a packed index:</p>
 </tr>
 </tbody>
 </table>
-<p>The GPU takes only the fingerprint comparisons; the decisions stay on the CPU:</p>
-<table>
-<thead>
-<tr>
-<th>Call</th>
-<th>On the GPU</th>
-<th>On the CPU</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>butina</code></td>
-<td>Exact integer intersection counts of one row against a tile of rows</td>
-<td>Tanimoto scores from those counts, threshold tests, neighbour counts, centre choice, membership and recounting</td>
-</tr>
-<tr>
-<td><code>maxmin</code></td>
-<td>Exact integer intersection counts of the last picked row against a tile of rows</td>
-<td>Tanimoto distances, minimum-distance updates and the choice of the next row</td>
-</tr>
-<tr>
-<td><code>top_k_pairs</code></td>
-<td>Intersection counts, the threshold test and the best k of each tile</td>
-<td>Tanimoto scores from those counts, and the merge of the tile lists into the final k with the same score and row-order tie break</td>
-</tr>
-<tr>
-<td><code>threshold_pairs</code></td>
-<td>Exact integer intersection counts</td>
-<td>Tanimoto scores and the inclusive threshold test</td>
-</tr>
-</tbody>
-</table>
-<p>Both devices form each score from the same integer counts with the same
-double-precision division, and every tie is broken on the CPU by row order. The
-clusters, selections, neighbours and scores are therefore identical on either
-device; the GPU does not make any of these methods approximate. Each device
-call covers one tile of at most 1,048,576 row pairs, and a 64 MiB host-work
-estimate can make a tile smaller than <code>chunk_size</code>. The rows of a tile are
-sent to the device for that call and released afterwards, so the index is not
-kept on the GPU between calls, and a Butina run sends the library once for
-every pass it makes.</p>
+<p>The GPU takes only the fingerprint comparisons. Every score, threshold test and
+tie break is settled identically on either device, so clusters, selections,
+neighbours and scores are the same on the GPU as on the CPU; the GPU does not
+make any of these methods approximate. The index is not kept on the GPU between
+calls, so a Butina run sends the library to the device once for every pass it
+makes.</p>
 <p><code>corpus.cuda_calls</code> is the cumulative number of packed CUDA calls that the
 corpus has completed, clustering passes included. Read it before and after a
 call: an increase proves that the device did work for that call. It is not a
@@ -2755,7 +2796,7 @@ outside 0 to 1, or one that is not finite, raises <code>ValueError</code>.</p>
   including <a href="../../PACKED_CORPORA/#cpu-and-cuda-backends">CPU and CUDA
   backends</a> and <a href="../../PACKED_CORPORA/#ordering-work-and-memory">ordering, work
   and memory</a>.</li>
-<li>The <a href="../../python/examples/feature_search.ipynb">MCS to a small library
+<li>The <a href="../../notebooks/feature_search/">MCS to a small library
   search</a> notebook runs Butina
   clustering and MaxMin selection.</li>
 </ul>
@@ -2772,6 +2813,7 @@ outside 0 to 1, or one that is not finite, raises <code>ValueError</code>.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2836,7 +2878,7 @@ outside 0 to 1, or one that is not finite, raises <code>ValueError</code>.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

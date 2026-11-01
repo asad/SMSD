@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Java - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/JAVA/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Java - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1390,10 +1464,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#smarts-export-in-810" class="md-nav__link">
+  <a href="#smarts-export" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SMARTS export in 8.1.0
+        SMARTS export
       
     </span>
   </a>
@@ -1816,10 +1890,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#smarts-export-in-810" class="md-nav__link">
+  <a href="#smarts-export" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SMARTS export in 8.1.0
+        SMARTS export
       
     </span>
   </a>
@@ -2033,6 +2107,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -2041,8 +2117,6 @@
 
 
 <h1 id="smsd-pro-java-guide">SMSD Pro Java guide<a class="headerlink" href="#smsd-pro-java-guide" title="Permanent link">&para;</a></h1>
-<p>Java prepared queries retain their CPU <code>matchMany</code> API. The optional native
-corpus prefilters exposed in C++ and Python do not add a Java GPU search API.</p>
 <p>The package <code>com.bioinception.smsd.core</code> (artefact <code>com.bioinceptionlabs:smsd</code>)
 provides substructure, maximum common substructure (MCS) and SMARTS search,
 fingerprints, stereo descriptors, standardisation and R-group decomposition
@@ -2050,11 +2124,14 @@ for CDK 2.13 <code>IAtomContainer</code> molecules and <code>MolGraph</code> gra
 command-line interface (CLI) is <code>com.bioinception.smsd.cli.SMSDcli</code>
 (<code>com.bioinceptionlabs:smsd-cli</code>). The <a href="#api-reference">Javadoc</a> lists every
 public member.</p>
-<p>In this release the Java library and command-line tool stay at 8.0.3 on Maven
-Central. This guide covers the Java code in the 8.1.0 source, which a
+<p>From 8.2.0, the Java library and command-line tool receive bug fixes only;
+new features are added to C++ and Python. Java runs every search on the CPU;
+GPU screening and corpus pre-screens are available from C++ and Python. Maven Central carries them at 8.0.3.
+This guide covers the Java code in the 8.2.0 source, which a
 <a href="../HOWTO-INSTALL/#java-source-build">Java source build</a> turns into the library
-and command-line tool; the 8.0.3 artefacts do not have its 8.1.0 changes. The
-CPU <a href="../HOWTO-INSTALL/#docker">Docker images</a> also carry the 8.1.0 command-line
+and command-line tool; the 8.0.3 artefacts do not have the Java changes
+described in the <a href="../RELEASE_NOTES/#upgrading-from-803">upgrade notes</a>. The CPU
+<a href="../HOWTO-INSTALL/#docker">Docker images</a> also carry the 8.2.0 command-line
 tool.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>The JARs run on Java 8 and later; Java 25 LTS is recommended. See the
@@ -2076,19 +2153,19 @@ installers. Maven:</p>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
 </code></pre></div>
 <p>To parse SMILES, as the examples do, add <code>org.openscience.cdk:cdk-smiles:2.13</code>.
-The <a href="../java/README.md">Java module README</a> lists the other
-<a href="../java/README.md#library">optional dependencies</a>, such as <code>jackson-databind</code>
+The <a href="https://github.com/asad/SMSD/blob/master/java/README.md">Java module README</a> lists the other
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md#library">optional dependencies</a>, such as <code>jackson-databind</code>
 for <code>Standardiser.PredicateRegistry.loadJsonFile</code>, and covers
-<a href="../java/README.md#build-from-source">building from source</a> and a
-<a href="../java/README.md#quick-start">quick start</a>. To run an example, save it under
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md#build-from-source">building from source</a> and a
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md#quick-start">quick start</a>. To run an example, save it under
 its class name and compile it from the repository root against the
 self-contained JAR of the source build:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span>PreparedSearchExample.java
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:."</span><span class="w"> </span>PreparedSearchExample
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>PreparedSearchExample.java
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:."</span><span class="w"> </span>PreparedSearchExample
 </code></pre></div>
 <p>With a Java 8 compiler, omit <code>--release 8</code>; on Windows, separate the classpath
 entries with a semicolon.</p>
-<h2 id="smarts-export-in-810">SMARTS export in 8.1.0<a class="headerlink" href="#smarts-export-in-810" title="Permanent link">&para;</a></h2>
+<h2 id="smarts-export">SMARTS export<a class="headerlink" href="#smarts-export" title="Permanent link">&para;</a></h2>
 <p><code>MCS.matchWithSmarts(target)</code> returns <code>MCS.SmartsResult</code>; <code>result()</code> retains the
 ordinary search status and mappings, and <code>smarts()</code> is the best match's portable
 pattern under the prepared chemistry. <code>SearchResult.Match.toSmarts(query,
@@ -2333,8 +2410,7 @@ match, and <code>optimal()</code> and <code>complete()</code> both <code>false</
   of more than 32,768 atoms each;</li>
 <li>the two molecules are too large in bonds, as for two molecules of more than
   16,384 bonds each;</li>
-<li>rarely, a molecule has an atom with 512 or more bonds and the two molecules
-  share many kinds of bond.</li>
+<li>in rare cases, a molecule has an atom with 512 or more bonds.</li>
 </ul>
 <p>MCIS searches are never declined; the time and node limits bound them. The
 C++ and Python libraries use the same limits.</p>
@@ -2668,30 +2744,30 @@ bounded by <code>CIPAssigner.MAX_DEPTH</code>, so check which centres were assig
 </ul>
 <h2 id="command-line-interface">Command-line interface<a class="headerlink" href="#command-line-interface" title="Permanent link">&para;</a></h2>
 <p>A source build of the module <code>com.bioinceptionlabs:smsd-cli</code> writes the
-self-contained <code>smsd-cli-8.1.0-jar-with-dependencies.jar</code>; the
-<a href="../java/README.md#command-line-tool">Java module README</a> shows how to obtain
+self-contained <code>smsd-cli-8.2.0-jar-with-dependencies.jar</code>; the
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md#command-line-tool">Java module README</a> shows how to obtain
 the 8.0.3 JAR or depend on <code>SMSDcli</code>. From the repository root, after a
 source build, print the version and help, test whether benzene is a
 substructure of phenol, and find the MCS of N-methylacetamide and propanamide
 (<code>mcs_size</code> is 4):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span>--version
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span>--help
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--version
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>--help
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"c1ccccc1"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"c1ccc(O)cc1"</span><span class="w"> </span>--json<span class="w"> </span>-
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"CC(=O)NC"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCC(=O)N"</span><span class="w"> </span>--mode<span class="w"> </span>mcs<span class="w"> </span>--json<span class="w"> </span>-
 </code></pre></div>
 <p>MCS mode defaults to a connected MCIS; request MCES and fragments explicitly,
 here for the two ethyl groups of diethyl ether and diethylamine:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"CCOCC"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCNCC"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--mode<span class="w"> </span>mcs<span class="w"> </span>--objective<span class="w"> </span>MCES<span class="w"> </span>--fragments<span class="w"> </span>--timeout<span class="w"> </span><span class="m">1000</span><span class="w"> </span>--json<span class="w"> </span>-
 </code></pre></div>
 <p>SMARTS queries use the type <code>SIG</code> in substructure mode; here the first search
 reports <code>"exists": true</code> (exit status 0) and the second <code>"exists": false</code> (1):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--Q<span class="w"> </span>SIG<span class="w"> </span>--q<span class="w"> </span><span class="s2">"C=O"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CC(=O)O"</span><span class="w"> </span>--json<span class="w"> </span>-
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--Q<span class="w"> </span>SIG<span class="w"> </span>--q<span class="w"> </span><span class="s2">"C=O"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCO"</span><span class="w"> </span>--json<span class="w"> </span>-
 </code></pre></div>
 <p>Options:</p>
@@ -2742,10 +2818,10 @@ incomplete search (SDF: any target failed or incomplete).</p>
 <li><a href="../HOWTO-INSTALL/">Installation guide</a>, including
   <a href="../HOWTO-INSTALL/#portable-java-cli">Java CLI installers</a>.</li>
 <li><a href="../PYTHON/">Python guide</a>, <a href="../CPP/">C++ guide</a>,
-  <a href="../benchmarks/README.md">benchmark guide</a> and <a href="../CHANGELOG.md">changelog</a>.</li>
+  <a href="https://github.com/asad/SMSD/blob/master/benchmarks/README.md">benchmark guide</a> and <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a>.</li>
 </ul>
-<p>SMSD Pro is distributed under the <a href="../LICENSE">Apache License 2.0</a>. Retain
-<a href="../NOTICE">NOTICE</a> and the bundled dependency notices when redistributing it.</p>
+<p>SMSD Pro is distributed under the <a href="https://github.com/asad/SMSD/blob/master/LICENSE">Apache License 2.0</a>. Retain
+<a href="https://github.com/asad/SMSD/blob/master/NOTICE">NOTICE</a> and the bundled dependency notices when redistributing it.</p>
 
 
 
@@ -2759,6 +2835,7 @@ incomplete search (SDF: any target failed or incomplete).</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2823,7 +2900,7 @@ incomplete search (SDF: any target failed or incomplete).</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

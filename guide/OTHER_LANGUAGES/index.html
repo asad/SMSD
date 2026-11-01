@@ -16,7 +16,7 @@
         <link rel="prev" href="../COMMAND_LINE/">
       
       
-        <link rel="next" href="../../notebooks/substructure_search/">
+        <link rel="next" href="../../notebooks/">
       
       
         
@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="C++ and Java - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/OTHER_LANGUAGES/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="C++ and Java - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -725,6 +743,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -979,6 +1025,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1689,6 +1763,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1706,8 +1782,8 @@ it, and where the languages differ. The <a href="../../CPP/">C++ guide</a> and t
 <p>The C++ library is header-only and needs a C++17 compiler: include
 <code>smsd/smsd.hpp</code> and add <code>cpp/include</code> to the include path. An installed CMake
 package provides the target <code>smsd::smsd</code> through
-<code>find_package(smsd 8.1.0 CONFIG REQUIRED)</code>; the
-<a href="../../cpp/README.md#install-and-use-with-cmake">C++ module README</a> shows the
+<code>find_package(smsd 8.2.0 CONFIG REQUIRED)</code>; the
+<a href="https://github.com/asad/SMSD/blob/master/cpp/README.md#install-and-use-with-cmake">C++ module README</a> shows the
 install and a minimal consumer project.</p>
 <p>This program computes ECFP4 similarities of phenol to five molecules, screens a
 prepared <code>TargetCorpus</code> at a threshold of 0.5, and runs exact substructure and
@@ -1809,10 +1885,11 @@ OpenMP when the compiler enables it; the
 build and its options.</p>
 <h2 id="java">Java<a class="headerlink" href="#java" title="Permanent link">&para;</a></h2>
 <p>The Java library is <code>com.bioinceptionlabs:smsd</code> and the command-line tool
-<code>com.bioinceptionlabs:smsd-cli</code>. Maven Central has 8.0.3; for 8.1.0, run
+<code>com.bioinceptionlabs:smsd-cli</code>. From 8.2.0, both receive bug fixes only.
+Maven Central has 8.0.3; for 8.2.0, run
 <code>mvn -f java/pom.xml install</code> from the repository root, which installs both in
 the local Maven repository (Gradle then needs <code>mavenLocal()</code>). The
-<a href="../../java/README.md#installation">Java module README</a> gives the Maven and
+<a href="https://github.com/asad/SMSD/blob/master/java/README.md#installation">Java module README</a> gives the Maven and
 Gradle dependencies, and the code runs on Java 8 or later.</p>
 <p>This program computes the same ECFP4 similarities and runs exact substructure
 and MCS searches over the list on two threads:</p>
@@ -1868,8 +1945,8 @@ and MCS searches over the list on two threads:</p>
 <p>Save it as <code>ScreenExample.java</code> and compile it from the repository root
 against the self-contained JAR of the source build; on Windows, separate the
 class path entries with a semicolon:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar<span class="w"> </span>ScreenExample.java
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:."</span><span class="w"> </span>ScreenExample
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>ScreenExample.java
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:."</span><span class="w"> </span>ScreenExample
 </code></pre></div>
 <p>With JDK 25, <code>javac --release 8</code> warns that release 8 is obsolete; the class
 still compiles and runs on Java 8 or later.</p>
@@ -1926,7 +2003,7 @@ fingerprint comparisons, as above.</p>
 </tr>
 <tr>
 <td>Metal fingerprint screening</td>
-<td>No</td>
+<td>The <code>smsd-metal</code> package (prepared corpora; Apple silicon)</td>
 <td>macOS, when requested explicitly</td>
 <td>No</td>
 </tr>
@@ -1949,9 +2026,9 @@ and the <a href="../../CPP/#optional-metal-fingerprint-screening">C++ guide</a> 
 provider.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../CPP/">C++ guide</a> and <a href="../../cpp/README.md">C++ module README</a>: the
+<li><a href="../../CPP/">C++ guide</a> and <a href="https://github.com/asad/SMSD/blob/master/cpp/README.md">C++ module README</a>: the
   full C++ API, CMake options and the installed package.</li>
-<li><a href="../../JAVA/">Java guide</a> and <a href="../../java/README.md">Java module README</a>: the
+<li><a href="../../JAVA/">Java guide</a> and <a href="https://github.com/asad/SMSD/blob/master/java/README.md">Java module README</a>: the
   full Java API, dependencies and the source build.</li>
 <li><a href="../COMMAND_LINE/">Command line and containers</a>: the Java command-line tool.</li>
 <li><a href="../SCREENING/">Screening a library</a>: the screening routes in Python.</li>
@@ -1969,6 +2046,7 @@ provider.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2010,13 +2088,13 @@ provider.</p>
         
         
           
-          <a href="../../notebooks/substructure_search/" class="md-footer__link md-footer__link--next" aria-label="Next: Substructure and SMARTS search">
+          <a href="../../notebooks/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Substructure and SMARTS search
+                Overview
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2033,7 +2111,7 @@ provider.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

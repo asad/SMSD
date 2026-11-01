@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="Chemistry tools for AI assistants - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/guide/AI_TOOLS/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Chemistry tools for AI assistants - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -272,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../../notebooks/" class="md-tabs__link">
           
   
   
@@ -725,6 +743,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -1128,6 +1174,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1987,6 +2061,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1995,7 +2071,7 @@
 
 
 <h1 id="chemistry-tools-for-ai-assistants">Chemistry tools for AI assistants<a class="headerlink" href="#chemistry-tools-for-ai-assistants" title="Permanent link">&para;</a></h1>
-<p>SMSD Pro 8.1.0 offers eight molecular tools that an AI assistant can call:
+<p>SMSD Pro 8.2.0 offers eight molecular tools that an AI assistant can call:
 maximum common substructure (MCS), substructure and SMARTS matching,
 fingerprints, similarity, small-list screening, standardisation and MCS
 depiction. The tools run on your own machine. They are served to an assistant
@@ -2118,8 +2194,8 @@ one of <code>ecfp</code>, <code>fcfp</code>, <code>circular</code>, <code>path</
 <h2 id="start-the-server">Start the server<a class="headerlink" href="#start-the-server" title="Permanent link">&para;</a></h2>
 <p>Install SMSD Pro with the <code>mcp</code> extra, which adds the MCP Python SDK. The
 server and the tool definitions need SMSD 8.1.0 or later and Python 3.12 or
-later:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[mcp]==8.1.0"</span>
+later; the refusal messages that list allowed values need 8.2.0:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[mcp]==8.2.0"</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>smsd-mcp
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Equivalent: python -m smsd.mcp_server</span>
 </code></pre></div>
@@ -2129,7 +2205,7 @@ is normally started by the client rather than from a shell; run by hand, it
 waits silently for protocol messages. Without the <code>mcp</code> extra it stops with
 <code>ImportError: The MCP server requires the official SDK; install smsd[mcp]</code>.</p>
 <p>To check an installation without an assistant, run
-<a href="../../python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> from the
+<a href="https://github.com/asad/SMSD/blob/master/python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> from the
 examples. It starts the server with the same interpreter, lists the eight
 tools and runs one <code>find_mcs</code> call through the protocol.</p>
 <h2 id="connect-an-mcp-client">Connect an MCP client<a class="headerlink" href="#connect-an-mcp-client" title="Permanent link">&para;</a></h2>
@@ -2263,7 +2339,7 @@ an enumeration stopped by its result cap, and the messages with which
 <a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"absence proved:"</span><span class="p">,</span> <span class="n">proves_absence</span><span class="p">(</span><span class="n">absent</span><span class="p">),</span> <span class="s2">"| after a stop:"</span><span class="p">,</span>
 <a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>      <span class="n">proves_absence</span><span class="p">(</span><span class="n">stopped</span><span class="p">))</span>
 <a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
-<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="c1"># Bad arguments are refused before any molecular work, with a short message.</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="c1"># Bad arguments are refused before any molecular work; the message says what is accepted.</span>
 <a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="k">for</span> <span class="n">arguments</span> <span class="ow">in</span> <span class="p">({</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">},</span>
 <a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="mi">60000</span><span class="p">},</span>
 <a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="s2">"500"</span><span class="p">},</span>
@@ -2282,10 +2358,10 @@ an enumeration stopped by its result cap, and the messages with which
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>stopped: False TIMED_OUT False False
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>capped: 2 LIMIT_REACHED complete: False truncated: True
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>absence proved: True | after a stop: False
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>refused: Missing required tool argument
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>refused: timeout_ms is outside its supported range
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>refused: Missing required tool argument 'target_smiles' for find_mcs; required arguments: query_smiles, target_smiles
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>refused: timeout_ms is outside its supported range; allowed range: 0 to 30000
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>refused: timeout_ms must have JSON type integer
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>refused: Unknown tool argument
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>refused: Unknown tool argument 'path' for find_mcs; allowed arguments: query_smiles, target_smiles, objective, connected, timeout_ms, node_limit, match_stereo, complete_rings_only, ring_matches_ring_only
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>refused: Unclosed ring(s): 1
 </code></pre></div>
 <p><code>search_smarts</code> reports a capped list as <code>LIMIT_REACHED</code> with
@@ -2293,9 +2369,11 @@ an enumeration stopped by its result cap, and the messages with which
 and <code>optimal</code> stays true because a match was found. Arguments are refused
 before any molecular work: unknown tools, unknown or missing arguments, JSON
 type changes such as a string for an integer, and values out of range each
-raise <code>ValueError</code> with a short message. A SMILES or SMARTS parse error also
-raises <code>ValueError</code>. Return that message to the model as the tool's answer, so
-that it can correct the call.</p>
+raise <code>ValueError</code>. The message names the argument and, where a list helps,
+what is accepted: the available tools, the tool's allowed or required
+arguments, the allowed values or the allowed range. A SMILES or SMARTS parse
+error also raises <code>ValueError</code>. Return that message to the model as the tool's
+answer, so that it can correct the call.</p>
 <p>Fingerprint, similarity, screening and standardisation results are not
 searches. They report <code>status: "COMPLETED"</code>, except a canonical tautomer
 chosen from a stopped enumeration, described below, and a <code>proof</code> whose scope
@@ -2413,9 +2491,10 @@ tautomer is a choice of representation, not a prediction of the most stable
 form. Tautomer enumeration stops at 128 tautomers or 256 transformations; when
 it stops, the result reports <code>LIMIT_REACHED</code> and <code>complete: false</code>, and the
 choice is made from the tautomers found.</p>
-<p>The drawing highlights the mapped atoms and the input bonds between them. For
-an MCES search, the selected common bonds are those in <code>bond_mapping</code>; the
-drawing can also highlight other bonds between mapped atoms. A search with no
+<p>The drawing highlights the mapped atoms and each bond between them that the
+mapping carries onto a bond of the other molecule. For an MCES search, the
+selected common bonds are those in <code>bond_mapping</code>; the drawing can also
+highlight such bonds outside it. A search with no
 match returns <code>svg: None</code>, and a stopped search keeps its stopped status when
 drawn. The SVG is checked before it is returned and contains no scripts,
 external references or document declarations.</p>
@@ -2571,13 +2650,13 @@ the third answers:</p>
 <a id="__codelineno-12-61" name="__codelineno-12-61" href="#__codelineno-12-61"></a>
 <a id="__codelineno-12-62" name="__codelineno-12-62" href="#__codelineno-12-62"></a><span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"content"</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span> <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s2">"role"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"tool"</span><span class="p">]</span>
 <a id="__codelineno-12-63" name="__codelineno-12-63" href="#__codelineno-12-63"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"optimal"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_count"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">6</span>
-<a id="__codelineno-12-64" name="__codelineno-12-64" href="#__codelineno-12-64"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Unknown tool argument"</span><span class="p">}</span>
+<a id="__codelineno-12-64" name="__codelineno-12-64" href="#__codelineno-12-64"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">"error"</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"Unknown tool argument 'timeout' for find_mcs"</span><span class="p">)</span>
 <a id="__codelineno-12-65" name="__codelineno-12-65" href="#__codelineno-12-65"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">"budget"</span><span class="p">][</span><span class="s2">"timeout_ms"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span>
 <a id="__codelineno-12-66" name="__codelineno-12-66" href="#__codelineno-12-66"></a><span class="k">assert</span> <span class="n">model</span><span class="o">.</span><span class="n">requests</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"tools"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"function"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"find_mcs"</span>
 </code></pre></div>
 <p>The program prints:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>call_1 -&gt; status=COMPLETED optimal=True atoms=6
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>call_2 -&gt; Unknown tool argument
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>call_2 -&gt; Unknown tool argument 'timeout' for find_mcs; allowed arguments: query_smiles, target_smiles, objective, connected, timeout_ms, node_limit, match_stereo, complete_rings_only, ring_matches_ring_only
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>call_3 -&gt; status=COMPLETED optimal=True atoms=6
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>model requests: 3
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>answer: The MCS has 6 atoms; COMPLETED, optimal and complete, so it is proved maximum.
@@ -2590,7 +2669,7 @@ loop, so that the model can correct its call. To replace the fixed replies
 with a model, replace <code>model.create</code> with the client call of your model API;
 <a href="../../AI_ASSISTANTS/#use-the-tool-definitions-from-python">Connecting AI assistants</a>
 shows that change for each API. For a fixed sequence of calls with no model at
-all, see <a href="../../python/examples/agent_workflow.py"><code>agent_workflow.py</code></a>, which
+all, see <a href="https://github.com/asad/SMSD/blob/master/python/examples/agent_workflow.py"><code>agent_workflow.py</code></a>, which
 screens a list, runs an MCS on each hit and draws the best one.</p>
 <h2 id="limits-and-safety">Limits and safety<a class="headerlink" href="#limits-and-safety" title="Permanent link">&para;</a></h2>
 <p>The limits are fixed in the server and apply equally to <code>call_tool</code>. Each
@@ -2683,7 +2762,7 @@ result reports them under <code>limits</code>.</p>
   input is parsed and the SMARTS compiled; preparation, depiction and
   serialisation come on top, and standardisation has no time budget. For a
   hard deadline, apply process or container limits. The
-  <a href="../../packaging/mcp/README.md">container recipe</a> runs the server with no
+  <a href="https://github.com/asad/SMSD/blob/master/packaging/mcp/README.md">container recipe</a> runs the server with no
   network access, a read-only file system and memory and CPU caps.</li>
 <li>No zero node limit. A <code>node_limit</code> of 0 is refused rather than read as
   unlimited.</li>
@@ -2918,8 +2997,8 @@ families and coefficients.</p>
   signature of every tool function.</li>
 <li><a href="../GETTING_STARTED/#reading-a-result">Getting started</a>: what a search
   result proves.</li>
-<li>The <a href="../../python/examples/mcp_stdio_client.py">MCP stdio client</a> and
-  <a href="../../python/examples/agent_workflow.py">agent workflow</a> examples.</li>
+<li>The <a href="https://github.com/asad/SMSD/blob/master/python/examples/mcp_stdio_client.py">MCP stdio client</a> and
+  <a href="https://github.com/asad/SMSD/blob/master/python/examples/agent_workflow.py">agent workflow</a> examples.</li>
 </ul>
 
 
@@ -2934,6 +3013,7 @@ families and coefficients.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -2998,7 +3078,7 @@ families and coefficients.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   

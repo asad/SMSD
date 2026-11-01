@@ -63,6 +63,24 @@
 
     
     
+  
+    
+    
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SMSD Pro">
+    <meta property="og:title" content="MCP server - SMSD Pro">
+    <meta property="og:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta property="og:url" content="https://asad.github.io/SMSD/MCP_SERVER/">
+    <meta property="og:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="SMSD Pro: exact chemistry search, proved">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MCP server - SMSD Pro">
+    <meta name="twitter:description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+    <meta name="twitter:image" content="https://asad.github.io/SMSD/assets/img/social-card.png">
+  
+
   </head>
   
   
@@ -270,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../notebooks/substructure_search/" class="md-tabs__link">
+        <a href="../notebooks/" class="md-tabs__link">
           
   
   
@@ -720,6 +738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/GPU_ON_WINDOWS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU screening on Windows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/MACHINE_LEARNING/" class="md-nav__link">
         
   
@@ -883,6 +929,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notebooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1667,6 +1741,8 @@
               
               <article class="md-content__inner md-typeset">
                 
+  
+  
                   
 
 
@@ -1680,8 +1756,8 @@ Protocol Python SDK. The same registry exports function definitions for model
 clients and optional LangChain and LlamaIndex adapters. Exporting a definition
 or calling a tool does not make a model request, need an API key or contact a
 network service.</p>
-<p>Install SMSD 8.1.0 with the optional MCP SDK, then start the server:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'smsd[mcp]==8.1.0'</span>
+<p>Install SMSD 8.2.0 with the optional MCP SDK, then start the server:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'smsd[mcp]==8.2.0'</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>smsd-mcp
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Equivalent: python -m smsd.mcp_server</span>
 </code></pre></div>
@@ -1799,9 +1875,10 @@ tautomers and 256 transformations. If that enumeration stops, the result reports
 <p><code>depict_mcs</code> accepts at most 256 atoms per input and returns at most 1 MiB of
 SVG, with dimensions bounded to 200–1,600 by 150–1,200. Its native SVG is
 checked for executable elements, external references and document entities.
-The drawing highlights mapped atoms and input bonds between them. For MCES,
-the returned <code>bond_mapping</code> is the selected-edge witness; the drawing can also
-show other input bonds between highlighted atoms. No match gives <code>svg: null</code>.
+The drawing highlights mapped atoms and each bond between them that the
+mapping carries onto a bond of the other molecule. For MCES, the returned
+<code>bond_mapping</code> is the selected-edge witness; the drawing can also highlight
+such bonds outside it. No match gives <code>svg: null</code>.
 A stopped search remains stopped when depicted. Each result is limited to
 2 MiB as JSON text, measured before the MCP SDK encodes it.</p>
 <h2 id="function-definitions-and-framework-adapters">Function definitions and framework adapters<a class="headerlink" href="#function-definitions-and-framework-adapters" title="Permanent link">&para;</a></h2>
@@ -1835,8 +1912,8 @@ local tools, not clients, models or indexes:</p>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">tools</span> <span class="o">=</span> <span class="n">llamaindex_tools</span><span class="p">()</span>  <span class="c1"># optional llama-index-core dependency</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">assert</span> <span class="n">tools</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">query_smiles</span><span class="o">=</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="n">target_smiles</span><span class="o">=</span><span class="s2">"CCN"</span><span class="p">)</span><span class="o">.</span><span class="n">raw_output</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]</span>
 </code></pre></div>
-<p>See the <a href="../packaging/mcp/README.md">container recipe</a> and the
-<a href="../examples/huggingface/README.md">Hugging Face demonstration source</a>. Neither
+<p>See the <a href="https://github.com/asad/SMSD/blob/master/packaging/mcp/README.md">container recipe</a> and the
+<a href="https://github.com/asad/SMSD/blob/master/examples/huggingface/README.md">Hugging Face demonstration source</a>. Neither
 deploys a service. The official protocol reference is the
 <a href="https://github.com/modelcontextprotocol/python-sdk">MCP Python SDK</a>.</p>
 
@@ -1852,6 +1929,7 @@ deploys a service. The official protocol reference is the
 
 
                 
+
               </article>
             </div>
           
@@ -1916,7 +1994,7 @@ deploys a service. The official protocol reference is the
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2018-2026 BioInception PVT LTD
+      Copyright &copy; 2018–2026 BioInception PVT LTD
     </div>
   
   
