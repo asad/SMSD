@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fbioinceptionlabs%2Fsmsd%2Fmaven-metadata.xml&label=maven%20central" alt="Maven Central"/></a>
-  <a href="https://pypi.org/project/smsd/"><img src="https://img.shields.io/pypi/v/smsd?label=pypi" alt="PyPI"/></a>
+  <a href="https://pypi.org/project/smsd/"><img src="https://img.shields.io/pypi/v/smsd?label=pypi&cacheSeconds=3600" alt="PyPI"/></a>
   <a href="https://pepy.tech/projects/smsd"><img src="https://static.pepy.tech/personalized-badge/smsd?period=total&amp;units=INTERNATIONAL_SYSTEM&amp;left_color=BLACK&amp;right_color=GREEN&amp;left_text=PyPI%20downloads" alt="PyPI downloads (all time)" title="Lifetime PyPI download events, including automated and repeat downloads"></a>
   <a href="https://anaconda.org/bioinception/smsd"><img src="https://img.shields.io/conda/vn/bioinception/smsd?label=conda" alt="Conda"/></a>
   <a href="https://asad.github.io/SMSD/"><img src="https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330" alt="Documentation"/></a>
