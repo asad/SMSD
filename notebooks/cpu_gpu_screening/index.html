@@ -2007,7 +2007,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="cpu-and-gpu-screening">CPU and GPU screening<a class="anchor-link" href="#cpu-and-gpu-screening">¶</a></h1><p>This notebook shows where SMSD 8.2.0 work runs. Graph matching, which covers
+<h1 id="cpu-and-gpu-screening">CPU and GPU screening<a class="anchor-link" href="#cpu-and-gpu-screening">¶</a></h1><p>This notebook shows where SMSD 8.2.1 work runs. Graph matching, which covers
 every substructure, SMARTS and MCS search, always runs on the CPU. A GPU can
 take over screening steps: an NVIDIA GPU of compute capability 7.5 or later
 through the optional <code>smsd-cuda</code> package, or the GPU of an Apple silicon Mac
@@ -2018,7 +2018,7 @@ check for a usable device first. NumPy is optional and needed only for the
 packed-index steps, which report when it is missing.</p>
 <h2 id="setup">Setup<a class="anchor-link" href="#setup">¶</a></h2><p>Run the next cell first in Colab or local Jupyter. It installs SMSD Pro and
 the notebook's missing table or numerical dependencies into the current
-kernel, using that kernel's Python. An already installed SMSD 8.2.0 or later
+kernel, using that kernel's Python. An already installed SMSD 8.2.1 or later
 is kept. Installation needs internet access; the chemistry examples use inline
 inputs. No wheel upload or copied setup cell is needed.</p>
 <p>If an older SMSD is already imported, restart the kernel before running
@@ -2063,10 +2063,10 @@ setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>
 <span class="n">_smsd_parts</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_smsd_version</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[:</span><span class="mi">3</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">part</span><span class="o">.</span><span class="n">isdigit</span><span class="p">())</span>
 <span class="n">_requirements</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"smsd"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">_smsd_parts</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+<span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"smsd"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">_smsd_parts</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
     <span class="k">if</span> <span class="s2">"smsd"</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Restart the kernel, then run this setup cell before importing SMSD"</span><span class="p">)</span>
-    <span class="n">_requirements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"smsd&gt;=8.2.0,&lt;9"</span><span class="p">)</span>
+    <span class="n">_requirements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"smsd&gt;=8.2.1,&lt;9"</span><span class="p">)</span>
 <span class="k">if</span> <span class="n">_requirements</span><span class="p">:</span>
     <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
         <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--only-binary=:all:"</span><span class="p">,</span>
@@ -2106,10 +2106,10 @@ except importlib.metadata.PackageNotFoundError:
 _smsd_parts = tuple(int(part) for part in _smsd_version.split(".")[:3]
                     if part.isdigit())
 _requirements = []
-if importlib.util.find_spec("smsd") is None or _smsd_parts &lt; (8, 2, 0):
+if importlib.util.find_spec("smsd") is None or _smsd_parts &lt; (8, 2, 1):
     if "smsd" in sys.modules:
         raise RuntimeError("Restart the kernel, then run this setup cell before importing SMSD")
-    _requirements.append("smsd&gt;=8.2.0,&lt;9")
+    _requirements.append("smsd&gt;=8.2.1,&lt;9")
 if _requirements:
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
@@ -2143,7 +2143,7 @@ print("Using SMSD", smsd.__version__)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Using SMSD 8.2.0
+<pre>Using SMSD 8.2.1
 </pre>
 </div>
 </div>
@@ -2227,8 +2227,8 @@ def show_table(frame):
 <span class="kn">from</span><span class="w"> </span><span class="nn">smsd.corpus</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintCorpus</span><span class="p">,</span> <span class="n">stream_screen_smiles</span>
 
 <span class="n">_release</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(\d+)\.(\d+)\.(\d+)"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
-<span class="k">if</span> <span class="n">_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_release</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"This notebook needs SMSD 8.2.0 or later; found </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">_release</span><span class="o">.</span><span class="n">groups</span><span class="p">())</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"This notebook needs SMSD 8.2.1 or later; found </span><span class="si">{</span><span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"SMSD"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -2284,8 +2284,8 @@ from smsd.clustering import butina, maxmin
 from smsd.corpus import FingerprintCorpus, stream_screen_smiles
 
 _release = re.match(r"(\d+)\.(\d+)\.(\d+)", smsd.__version__)
-if _release is None or tuple(int(part) for part in _release.groups()) &lt; (8, 2, 0):
-    raise RuntimeError(f"This notebook needs SMSD 8.2.0 or later; found {smsd.__version__}")
+if _release is None or tuple(int(part) for part in _release.groups()) &lt; (8, 2, 1):
+    raise RuntimeError(f"This notebook needs SMSD 8.2.1 or later; found {smsd.__version__}")
 print("SMSD", smsd.__version__)
 
 try:
@@ -2339,7 +2339,7 @@ print("CUDA screening:", "ready" if ready else f"unavailable ({reason})")</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>SMSD 8.2.0
+<pre>SMSD 8.2.1
 CUDA screening: unavailable (smsd-cuda is not installed)
 </pre>
 </div>
