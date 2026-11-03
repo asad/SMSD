@@ -1926,8 +1926,7 @@ screening on an Apple silicon Mac, add the Metal package instead:
 <code>python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"</code>. On Windows, GPU
 screening runs under WSL2, with the Linux CUDA package or the GPU Docker image;
 see <a href="../guide/GPU_ON_WINDOWS/">GPU screening on Windows</a>. Maven Central
-carries the Java library and command-line tool
-at 8.2.1, as
+carries the Java library and command-line tool at 8.2.1, as
 <code>com.bioinceptionlabs:smsd:8.2.1</code> and <code>com.bioinceptionlabs:smsd-cli:8.2.1</code>;
 the <a href="https://github.com/asad/SMSD/blob/master/java/README.md#installation">Java module README</a> gives their Maven and
 Gradle dependencies. The <a href="#docker">CPU Docker images</a> carry the 8.2.1
@@ -2055,7 +2054,7 @@ CLI dependencies, and runs on Java 8 or later:</p>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>java<span class="w"> </span>-jar<span class="w"> </span>smsd-cli-8.2.1-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"CCN"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"CCCNC"</span><span class="w"> </span>-m<span class="w"> </span>--json<span class="w"> </span>-
 </code></pre></div>
-<p>The last command runs a substructure search and writes every mapping as JSON
+<p>The last command runs a substructure search and writes all mappings as JSON
 to standard output. The <a href="#docker">CPU Docker images</a> also carry the 8.2.1 tool,
 and a <a href="#java-source-build">Java source build</a> produces it.</p>
 <h2 id="java-source-build">Java source build<a class="headerlink" href="#java-source-build" title="Permanent link">&para;</a></h2>
@@ -2203,7 +2202,7 @@ It requires the xz archive to be smaller than 2,000,000,000 bytes. An existing
 output is never overwritten. Failed exports retain the partial archive,
 stderr log and a JSON record with <code>accepted=false</code>.</p>
 <h2 id="check-the-documented-examples">Check the documented examples<a class="headerlink" href="#check-the-documented-examples" title="Permanent link">&para;</a></h2>
-<p>After a source build, this runs every Python, Java and C++ code block in the
+<p>After a source build, this runs the Python, Java and C++ code blocks in the
 main guides; examples that need RDKit are skipped when it is absent:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>python<span class="w"> </span>scripts/check_examples.py<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--jar<span class="w"> </span>java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar<span class="w"> </span><span class="se">\</span>
