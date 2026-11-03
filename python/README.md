@@ -239,9 +239,6 @@ covers optional integrations and source-build dependencies. See the
 [release notes](https://asad.github.io/SMSD/RELEASE_NOTES/) when upgrading.
 Existing deprecated APIs remain supported throughout the 8.x line.
 
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and documentation corrections.
-
 ## Cite SMSD Pro
 
 If you use SMSD Pro in research, cite the paper and software release:

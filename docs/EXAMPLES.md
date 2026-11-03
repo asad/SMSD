@@ -1,7 +1,7 @@
 # SMSD Pro Python examples
 
 Runnable examples for the `smsd` Python package beyond molecule search. Each
-block is self-contained, and blocks that write files create them in the current
+block is self-contained. Blocks that write files create them in the current
 directory. Searches, options and the full API reference are in the
 [Python guide](PYTHON.md). Interpreter and platform requirements are in the
 [supported-platforms table](HOWTO-INSTALL.md#supported-platforms).

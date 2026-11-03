@@ -19,9 +19,7 @@ same version:
 screening on an Apple silicon Mac, add the Metal package instead:
 `python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"`. On Windows, GPU
 screening runs under WSL2, with the Linux CUDA package or the GPU Docker image;
-see [GPU screening on Windows](guide/GPU_ON_WINDOWS.md). SMSD is maintained
-at the 8.2.0 feature baseline across C++, Python and Java. Updates cover bug
-fixes, security, compatibility and documentation corrections. Maven Central
+see [GPU screening on Windows](guide/GPU_ON_WINDOWS.md). Maven Central
 carries the Java library and command-line tool
 at 8.2.1, as
 `com.bioinceptionlabs:smsd:8.2.1` and `com.bioinceptionlabs:smsd-cli:8.2.1`;

@@ -5,7 +5,7 @@
 </p>
 
 <h1 align="center">SMSD Pro™</h1>
-<p align="center"><strong>Substructure and MCS search for chemical graphs</strong></p>
+<p align="center"><strong>Substructure, MCS and similarity search for molecules</strong></p>
 
 <p align="center">
   <a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fbioinceptionlabs%2Fsmsd%2Fmaven-metadata.xml&label=maven%20central" alt="Maven Central"/></a>
@@ -29,41 +29,24 @@ and maps atoms by their zero-based indices in the input molecules.
 - **Python**: a binding to the native library that accepts RDKit molecules when
   RDKit is installed and converts Open Babel molecules.
 
-## What's new in 8.2.1
+## What's new
 
-A maintenance update. C++ headers compile when Windows defines `STRICT` and
-`IGNORE`; drawings keep the stored E/Z of non-aromatic ring double bonds; in
-C++ and Python, the directional SMARTS bonds `/` and `\` also match aromatic
-bonds, and elemental-hydrogen SMARTS hold with large atom-map labels. The
-[release notes](docs/RELEASE_NOTES.md) give the details.
+**8.2.1** is a maintenance release:
 
-## What's new in 8.2.0
+- C++ headers compile when Windows defines `STRICT` and `IGNORE`.
+- Drawings keep the stored E/Z of non-aromatic ring double bonds.
+- In C++ and Python, the directional SMARTS bonds `/` and `\` also match
+  aromatic bonds.
+- In C++ and Python, elemental-hydrogen SMARTS hold with large atom-map labels.
 
-- **GPU screening on Apple silicon.** The optional `smsd-metal` package lets
-  prepared fingerprint screens run on the Mac's GPU, with the same hits and
-  scores as the CPU.
-- **GPU screening on Windows.** A
-  [step-by-step guide](docs/guide/GPU_ON_WINDOWS.md) covers NVIDIA GPUs
-  through WSL2.
-- **Publication-ready figures.** Regular rings, crisp labels and one soft halo
-  over the shared core: gold for MCS, mint for substructure hits, ready for
-  papers, theses and slides.
-- **Errors AI assistants can act on.** When a model calls a tool with a
-  wrong argument, SMSD names it and lists what it accepts, so the model
-  can correct itself.
-- **Time limits that hold.** Short time limits hold on very large molecules,
-  so high-throughput pipelines keep to schedule.
-- **Seven ready-to-run notebooks** that run in Colab and set themselves up;
-  [try the MCS notebook](https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/mcs_search.ipynb).
-
-Completed searches return the same results as in 8.1.0, and every 8.x API
-remains supported. The [release notes](docs/RELEASE_NOTES.md) cover the
-upgrade.
-
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and
-documentation corrections. Maven Central carries the Java library and
-command-line tool at 8.2.1. A [source build](#java) is also available.
+**8.2.0** added the `smsd-metal` package for GPU screening on Apple silicon, a
+[guide to GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md) through WSL2,
+improved drawings, clearer tool errors for AI assistants, time limits that hold
+on very large molecules, and seven notebooks, such as the
+[MCS notebook](https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/mcs_search.ipynb)
+for Colab. Searches give the same results as in 8.1.0, and every 8.x API
+remains supported; the [release notes](docs/RELEASE_NOTES.md) and
+[changelog](CHANGELOG.md) give the details.
 
 Beyond search, the 8.x line brings [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
 [local molecular tools and MCP](docs/MCP_SERVER.md),

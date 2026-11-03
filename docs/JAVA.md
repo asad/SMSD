@@ -8,9 +8,7 @@ command-line interface (CLI) is `com.bioinception.smsd.cli.SMSDcli`
 (`com.bioinceptionlabs:smsd-cli`). The [Javadoc](#api-reference) lists every
 public member.
 
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and
-documentation corrections. Java runs every search on the CPU; GPU screening
+Java runs every search on the CPU; GPU screening
 and corpus pre-screens are available from C++ and Python. Maven
 Central carries both at 8.2.1, the release this guide covers; the
 [upgrade notes](RELEASE_NOTES.md#upgrading-from-803) describe the Java changes

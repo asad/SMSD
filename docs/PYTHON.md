@@ -25,9 +25,6 @@ The package uses SMSD's native C++ engine.
 | Highlight a matched core as SVG | [Drawing examples](EXAMPLES.md#svg-drawing) |
 | Read files, lay out molecules or work with stereo | [Python examples](EXAMPLES.md) |
 
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and documentation corrections.
-
 ## Installation
 
 With pip:

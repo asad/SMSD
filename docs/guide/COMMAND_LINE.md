@@ -13,8 +13,7 @@ similarity screening are not available on the command line; the
 The 8.2.1 tool is on Maven Central as `com.bioinceptionlabs:smsd-cli:8.2.1`;
 the [installation guide](../HOWTO-INSTALL.md#portable-java-cli) shows how to
 download and run it. The CPU [Docker images](#docker-images) and a Java source
-build also provide it. SMSD is maintained at the 8.2.0 feature baseline
-across C++, Python and Java. To build 8.2.1,
+build also provide it. To build 8.2.1,
 use a JDK (Java 25 LTS preferred) and Maven 3.9 or later, and from the
 repository root run:
 

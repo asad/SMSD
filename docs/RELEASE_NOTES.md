@@ -3,11 +3,10 @@
 This maintenance update fixes C++ header compilation on Windows, ring
 double-bond stereo in drawings, elemental-hydrogen SMARTS with large atom-map
 labels and directional SMARTS bonds on aromatic rings. The Python package page
-has clearer installation, search-configuration and screening examples, with
-links to the
-[website](https://asad.github.io/SMSD/) and [user guide](https://asad.github.io/SMSD/guide/).
-Package documentation links and the Maven Central version in the release guide
-are also corrected.
+now has clearer installation, search-configuration and screening examples, and
+links to the [website](https://asad.github.io/SMSD/) and
+[user guide](https://asad.github.io/SMSD/guide/). Package documentation links
+and the Maven Central version in the release guide are also corrected.
 
 C++ headers preserve the Windows `STRICT` and `IGNORE` macros without expanding
 them in their own declarations. Application code that names the corresponding
@@ -37,10 +36,6 @@ non-aromatic bonds; write a bond that may be aromatic without a direction, as
 in `cc` or `c-,:c`. A SMARTS taken from a molecule with stereo double bonds on
 two neighbouring atoms of an aromatic ring, such as `C/C=C/c1ccccc1/C=C/C`,
 does not match that molecule.
-
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and
-documentation corrections.
 
 # SMSD Pro 8.2.0
 

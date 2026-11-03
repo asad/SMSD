@@ -8,8 +8,8 @@ neighbours, Butina clustering and MaxMin selection.
 Run its setup cell first, in Jupyter or Colab. It installs SMSD 8.2.0 or
 later into the current kernel when it is missing or older, then attempts to
 install NumPy for feature arrays and mapped storage and scikit-learn for the
-pipeline; installation needs internet access, and the cells that use an
-optional package report when it is missing. To run it locally, install
+pipeline; installation needs internet access. Cells that use an
+optional package say so when it is missing. To run it locally, install
 Jupyter in the same environment. The saved notebook has empty outputs, and
 running it leaves no corpus file behind.
 
@@ -27,7 +27,7 @@ notice when an optional package such as NumPy, pandas or IPython is missing.
 
 `ai_tools.ipynb` calls the molecular tools from Python with no model, prints
 their tool definitions and runs an assistant tool loop against a model served
-on your own machine, so that no molecule leaves it. Model requests are off by
+on your own machine, so no molecule leaves it. Model requests are off by
 default; set `RUN_LOCAL_MODEL` to `True` in the setup cell to run the loop.
 When the switch is off or no local model server answers, the loop cells say so
 and the rest of the notebook still runs. The

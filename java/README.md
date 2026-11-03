@@ -13,10 +13,6 @@ Both run on Java 8 and later; Java 25 LTS is recommended.
 The [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
 gives the requirements.
 
-SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and
-documentation corrections.
-
 ## Installation
 
 ### Library
