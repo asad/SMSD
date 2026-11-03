@@ -16,7 +16,7 @@
   <artifactId>smsd</artifactId>
   <packaging>jar</packaging>
   <name>SMSD</name>
-  <description>Substructure and MCS search for chemical graphs</description>
+  <description>Exact substructure, SMARTS and maximum common substructure (MCS) search, molecular fingerprints and similarity screening for CDK molecules</description>
 
   <dependencies>
     <!-- ===== CDK: the modules the library compiles against ===== -->

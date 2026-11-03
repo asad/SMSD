@@ -16,7 +16,7 @@
   <artifactId>smsd-cli</artifactId>
   <packaging>jar</packaging>
   <name>SMSD CLI</name>
-  <description>Command-line substructure and MCS search for chemical files and SMILES</description>
+  <description>Command-line substructure, SMARTS, MCS and fingerprint similarity search for chemical files and SMILES</description>
 
   <dependencies>
     <dependency>

@@ -33,6 +33,7 @@ keywords = [
     "mcs", "maximum-common-substructure", "mcis", "mces",
     "molecular-fingerprints", "ecfp", "maccs", "tanimoto",
     "molecular-similarity", "screening", "batch-search", "tautomer",
+    "virtual-screening", "drug-discovery", "rdkit", "gpu", "apple-silicon",
 ]
 
 [project.optional-dependencies]
