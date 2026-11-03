@@ -208,7 +208,7 @@ and the [Python examples](docs/EXAMPLES.md).
 ### Screening
 
 Rank a library by ECFP4 similarity, then search it by substructure as a
-prepared corpus; the search can use every core:
+prepared corpus; the search can use all cores:
 
 ```python
 import smsd
@@ -292,7 +292,7 @@ java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
 ```
 
 This runs a substructure search; add `--mode mcs` for MCS search, and use
-`--help` to list every option. The tool also reads MOL, MOL2, CML and PDB files,
+`--help` to list the options. The tool also reads MOL, MOL2, CML and PDB files,
 and SDF files as batch targets.
 
 ## Features
@@ -310,7 +310,7 @@ and SDF files as batch targets.
   topological-torsion and structural-key fingerprints, including the 166 MACCS
   keys, configured once with `FingerprintOptions` (rings, ring sizes, R/S and
   E/Z, fragments, Murcko framework) and giving the same bits in C++, Java and
-  Python of the same version. Batch searches can use every processor core.
+  Python of the same version. Batch searches can use all processor cores.
   Optional GPU screening is provided separately by `smsd-cuda` for NVIDIA GPUs
   and `smsd-metal` for Apple silicon Macs; matching runs on the CPU. See
   [CPU and GPU screening](docs/guide/CPU_GPU.md) for its scope. Native C++
@@ -338,7 +338,7 @@ and optimality flags before treating it as a proved optimum.
 ## Documentation
 
 The documentation site, [asad.github.io/SMSD](https://asad.github.io/SMSD/),
-brings the user guide, notebooks and reference together. The same pages are
+hosts the user guide, notebooks and reference. The same pages are
 in this repository:
 
 | Guide | Contents |
@@ -393,8 +393,8 @@ If you use SMSD Pro in research, please cite:
 > DOI: [10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
 
 To cite the software itself, use the DOI for all versions,
-[10.5281/zenodo.23639199](https://doi.org/10.5281/zenodo.23639199), which always
-resolves to the latest archived version. Citation metadata is available in
+[10.5281/zenodo.23639199](https://doi.org/10.5281/zenodo.23639199), which resolves
+to the latest archived version. Citation metadata is available in
 [CITATION.cff](CITATION.cff).
 
 Copyright (c) 2018-2026 BioInception PVT LTD.

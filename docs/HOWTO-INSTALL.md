@@ -20,8 +20,7 @@ screening on an Apple silicon Mac, add the Metal package instead:
 `python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"`. On Windows, GPU
 screening runs under WSL2, with the Linux CUDA package or the GPU Docker image;
 see [GPU screening on Windows](guide/GPU_ON_WINDOWS.md). Maven Central
-carries the Java library and command-line tool
-at 8.2.1, as
+carries the Java library and command-line tool at 8.2.1, as
 `com.bioinceptionlabs:smsd:8.2.1` and `com.bioinceptionlabs:smsd-cli:8.2.1`;
 the [Java module README](../java/README.md#installation) gives their Maven and
 Gradle dependencies. The [CPU Docker images](#docker) carry the 8.2.1
@@ -124,7 +123,7 @@ java -jar smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-The last command runs a substructure search and writes every mapping as JSON
+The last command runs a substructure search and writes all mappings as JSON
 to standard output. The [CPU Docker images](#docker) also carry the 8.2.1 tool,
 and a [Java source build](#java-source-build) produces it.
 
@@ -328,7 +327,7 @@ stderr log and a JSON record with `accepted=false`.
 
 ## Check the documented examples
 
-After a source build, this runs every Python, Java and C++ code block in the
+After a source build, this runs the Python, Java and C++ code blocks in the
 main guides; examples that need RDKit are skipped when it is absent:
 
 ```bash

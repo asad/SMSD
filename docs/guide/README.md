@@ -2,7 +2,7 @@
 
 This guide shows how to search, compare and screen molecules with SMSD Pro
 8.2.1. Most chapters work in Python; the last two cover the command-line tool,
-the Docker images and the C++ and Java libraries. Every Python example is a
+the Docker images and the C++ and Java libraries. Each Python example is a
 complete program that runs on a CPU-only machine, and the output shown below
 each one comes from running it on such a machine.
 
@@ -13,7 +13,7 @@ need to find substructures and common substructures, compute fingerprints or
 screen a compound library. It assumes a working knowledge of Python and of
 SMILES, and no knowledge of how SMSD Pro searches. Each chapter starts from a
 task and shows the calls that carry it out. The
-[reference pages](#reference-pages) list every function and option.
+[reference pages](#reference-pages) list the functions and options.
 
 ## Chapters
 
@@ -56,8 +56,8 @@ screening steps can run on an NVIDIA or Apple GPU;
 Windows.
 [Machine learning and data frames](MACHINE_LEARNING.md) hands fingerprints to
 data-frame and model-training libraries, and
-[Chemistry tools for AI assistants](AI_TOOLS.md) offers bounded molecular
-tools to an assistant or to your own code. The last two chapters leave Python:
+[Chemistry tools for AI assistants](AI_TOOLS.md) describes bounded molecular
+tools for an assistant or for your own code. The last two chapters leave Python:
 [Command line and containers](COMMAND_LINE.md) runs single searches and SDF
 batch searches from a shell or a Docker image, and
 [C++ and Java](OTHER_LANGUAGES.md) shows the same searches in the other
@@ -79,7 +79,7 @@ common pattern, so a detail is found in the same place in each:
 
 ## Reading a result
 
-Every search returns a `SearchResult`, and four of its fields say what the
+Each search returns a `SearchResult`, and four of its fields say what the
 result proves:
 
 - `status`: why the search ended, one of `COMPLETED`, `TIMED_OUT`,

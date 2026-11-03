@@ -2,7 +2,7 @@
 
 This chapter installs SMSD Pro 8.2.1, runs a first substructure search and a
 first maximum common substructure (MCS) search, and sets out the conventions
-that every other chapter relies on: what a result proves, how molecules are
+that the other chapters rely on: what a result proves, how molecules are
 given and numbered, the default chemistry, and time limits and threads.
 
 ## Install
@@ -15,7 +15,7 @@ python -c "import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').
 ```
 
 The package has no required dependencies. Searches, fingerprints, prepared
-target corpora, streamed screens and corpus searches all work without the
+target corpora, streamed screens and corpus searches work without the
 optional packages. Extras add the packages that particular features need, for
 example `python -m pip install "smsd[rdkit,numpy]==8.2.1"`:
 

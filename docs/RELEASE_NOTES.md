@@ -5,8 +5,8 @@ double-bond stereo in drawings, elemental-hydrogen SMARTS with large atom-map
 labels and directional SMARTS bonds on aromatic rings. The Python package page
 now has clearer installation, search-configuration and screening examples, and
 links to the [website](https://asad.github.io/SMSD/) and
-[user guide](https://asad.github.io/SMSD/guide/). Package documentation links
-and the Maven Central version in the release guide are also corrected.
+[user guide](https://asad.github.io/SMSD/guide/). It also corrects the package documentation links and the Maven Central
+version in the release guide.
 
 C++ headers preserve the Windows `STRICT` and `IGNORE` macros without expanding
 them in their own declarations. Application code that names the corresponding
