@@ -1998,6 +1998,30 @@ work.</p>
 <td>ECFP4 screening on Apple silicon GPUs; automatic by default on an Apple M5</td>
 </tr>
 <tr>
+<td><code>smsd</code> conda package (<code>bioinception</code> channel)</td>
+<td>linux-64, linux-aarch64, osx-arm64 and win-64</td>
+<td>Python 3.12–3.15</td>
+<td>CPU/OpenMP</td>
+</tr>
+<tr>
+<td><code>smsd-cuda</code> conda package</td>
+<td>linux-64</td>
+<td>Python 3.12–3.15; matching <code>smsd</code></td>
+<td>As the <code>smsd-cuda</code> wheel</td>
+</tr>
+<tr>
+<td><code>smsd-metal</code> conda package</td>
+<td>osx-arm64</td>
+<td>Python 3.12–3.15; matching <code>smsd</code></td>
+<td>As the <code>smsd-metal</code> wheel</td>
+</tr>
+<tr>
+<td>Docker images (release files)</td>
+<td>Linux amd64 and arm64 (CPU); Linux amd64 with an NVIDIA GPU (CUDA)</td>
+<td>Docker</td>
+<td>CPU, or CPU and CUDA</td>
+</tr>
+<tr>
 <td>Java library, CLI JAR and portable CLI</td>
 <td>Windows, macOS or Linux</td>
 <td>Java 8 or later; Java 25 LTS preferred</td>
@@ -2017,20 +2041,25 @@ work.</p>
 </tr>
 </tbody>
 </table>
-<p>Minimum operating-system versions are build targets. The standard wheel matrix
-has four CPython versions on four platforms. Free-threaded CPython and Intel
-macOS need source builds. The <code>smsd</code> wheels screen on the CPU; GPU screening
-comes from the separate <code>smsd-cuda</code> and <code>smsd-metal</code> packages. Native Windows
-CUDA is not provided: on Windows, use the Linux CUDA wheel or the GPU Docker
-image under WSL2, as described in <a href="../guide/GPU_ON_WINDOWS/">GPU screening on Windows</a>.
-Native C++ source builds on macOS include <a href="../CPP/#optional-metal-fingerprint-screening">optional Metal
-support</a>, which a program uses only
-when it links <code>smsd_metal</code>. Search matching runs on the CPU in every package.
-By default, automatic ECFP4 screening of a prepared <code>TargetCorpus</code> uses the
-GPU only on a Tesla T4 with <code>smsd-cuda</code> or an Apple M5 with <code>smsd-metal</code>, and
-only for a corpus of at least 100,000 targets;
-<a href="../guide/CPU_GPU/#automatic-use-in-prepared-screens">CPU and GPU screening</a>
-gives the settings for other devices and the explicit routes.</p>
+<p>Notes:</p>
+<ul>
+<li>Minimum operating-system versions are the build targets.</li>
+<li>Free-threaded CPython and Intel Macs need a source build.</li>
+<li>The <code>smsd</code> package screens on the CPU. GPU screening comes from the separate
+  <code>smsd-cuda</code> and <code>smsd-metal</code> packages, and search matching always runs on the
+  CPU.</li>
+<li>There is no native Windows CUDA package. On Windows, use the Linux CUDA
+  wheel or the GPU Docker image under WSL2; see
+  <a href="../guide/GPU_ON_WINDOWS/">GPU screening on Windows</a>.</li>
+<li>Native C++ builds on macOS can include
+  <a href="../CPP/#optional-metal-fingerprint-screening">Metal support</a>, used only when
+  a program links <code>smsd_metal</code>.</li>
+<li>By default, a prepared <code>TargetCorpus</code> of at least 100,000 targets is screened
+  on the GPU automatically only on a Tesla T4 with <code>smsd-cuda</code> or an Apple M5
+  with <code>smsd-metal</code>.
+  <a href="../guide/CPU_GPU/#automatic-use-in-prepared-screens">CPU and GPU screening</a>
+  gives the settings for other devices.</li>
+</ul>
 <h2 id="verify-downloads">Verify downloads<a class="headerlink" href="#verify-downloads" title="Permanent link">&para;</a></h2>
 <p>Each GitHub release includes a <code>SHA256SUMS</code> file. Download it into the same
 directory as the release files, then check each file you use.</p>
