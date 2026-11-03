@@ -1756,21 +1756,22 @@
 
 <h1 id="known-issues">Known issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h1>
 <p>These are the known limitations of SMSD Pro 8.2.1, each with a workaround where
-one exists. When a fix ships, the <a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> records it.</p>
+one exists. Each one has a GitHub issue you can follow; when a fix ships, the
+<a href="https://github.com/asad/SMSD/blob/master/CHANGELOG.md">changelog</a> records it and the issue is closed.</p>
 <h2 id="smarts">SMARTS<a class="headerlink" href="#smarts" title="Permanent link">&para;</a></h2>
-<p><strong>Directional bonds on aromatic rings in Java.</strong> In Java, <code>/</code> and <code>\</code> match
+<p><strong>Directional bonds on aromatic rings in Java.</strong> (<a href="https://github.com/asad/SMSD/issues/28">issue 28</a>) In Java, <code>/</code> and <code>\</code> match
 only single, non-aromatic bonds, so <code>c/c</code> does not match benzene. C++ and
 Python also match aromatic bonds. In Java, write a bond that may be aromatic
 without a direction, such as <code>cc</code> or <code>c-,:c</code>.</p>
-<p><strong>Stereo double bonds on neighbouring aromatic ring atoms.</strong> A SMARTS taken from
+<p><strong>Stereo double bonds on neighbouring aromatic ring atoms.</strong> (<a href="https://github.com/asad/SMSD/issues/29">issue 29</a>) A SMARTS taken from
 a molecule with stereo double bonds on two neighbouring atoms of an aromatic
 ring does not match that molecule. For example, <code>C/C=C/c1ccccc1/C=C/C</code> does not
 match itself. Leave the directions off one of the two double bonds, as in
 <code>C/C=C/c1ccccc1C=CC</code>; that double bond is then matched without its E/Z.</p>
 <h2 id="drawings">Drawings<a class="headerlink" href="#drawings" title="Permanent link">&para;</a></h2>
-<p><strong>E/Z on aromatic rings.</strong> Stored E/Z on aromatic ring bonds, as in some
+<p><strong>E/Z on aromatic rings.</strong> (<a href="https://github.com/asad/SMSD/issues/30">issue 30</a>) Stored E/Z on aromatic ring bonds, as in some
 annulenes, may not be shown in generated coordinates and drawings.</p>
-<p><strong>Some large macrocycles.</strong> For a few large macrocycles with many stored ring
+<p><strong>Some large macrocycles.</strong> (<a href="https://github.com/asad/SMSD/issues/31">issue 31</a>) For a few large macrocycles with many stored ring
 double-bond configurations, such as abamectin, no layout is found that shows
 every stored E/Z. Coordinate generation and drawing then raise an error
 (<code>ValueError</code> in Python, <code>std::invalid_argument</code> in C++) rather than show the
