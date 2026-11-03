@@ -4,7 +4,7 @@
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -47,6 +47,11 @@ numbering and search status.
 Use `screen_targets` with an explicit threshold before MCS when an atom-count
 Tanimoto bound is wanted; this bound does not represent bond Tanimoto or weighted
 MCS scores. ECFP similarity is not a substructure test.
+
+## Documentation
+
+The [SMSD documentation](https://asad.github.io/SMSD/) covers installation, supported platforms
+and CPU and GPU screening.
 
 ## Requirements
 

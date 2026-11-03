@@ -484,11 +484,7 @@ class SmartsParser {
         const int size = static_cast<int>(smarts_.size());
         int at = pos_, isotope = -1, charge = 0;
         if (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
-            isotope = 0;
-            while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
-                if (isotope > 100000) return false;
-                isotope = isotope * 10 + (smarts_[at++] - '0');
-            }
+            isotope = parser_detail::readDecimal(smarts_, at);
         }
         if (at >= size || smarts_[at] != 'H') return false;
         ++at;
@@ -497,11 +493,7 @@ class SmartsParser {
             int magnitude = 0;
             while (at < size && smarts_[at] == sign) { ++magnitude; ++at; }
             if (magnitude == 1 && at < size && parser_detail::isAsciiDigit(smarts_[at])) {
-                magnitude = 0;
-                while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
-                    if (magnitude > 100000) return false;
-                    magnitude = magnitude * 10 + (smarts_[at++] - '0');
-                }
+                magnitude = parser_detail::readDecimal(smarts_, at);
             }
             charge = sign == '+' ? magnitude : -magnitude;
         }
@@ -509,11 +501,7 @@ class SmartsParser {
         if (at < size && smarts_[at] == ':') {
             ++at;
             if (at >= size || !parser_detail::isAsciiDigit(smarts_[at])) return false;
-            atomClass = 0;
-            while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
-                if (atomClass > 100000) return false;
-                atomClass = atomClass * 10 + (smarts_[at++] - '0');
-            }
+            atomClass = parser_detail::readDecimal(smarts_, at);
         }
         if (at >= size || smarts_[at] != ']') return false;
         std::vector<AtomExpr> parts;

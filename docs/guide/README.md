@@ -1,7 +1,7 @@
 # SMSD Pro user guide
 
 This guide shows how to search, compare and screen molecules with SMSD Pro
-8.2.0. Most chapters work in Python; the last two cover the command-line tool,
+8.2.1. Most chapters work in Python; the last two cover the command-line tool,
 the Docker images and the C++ and Java libraries. Every Python example is a
 complete program that runs on a CPU-only machine, and the output shown below
 each one comes from running it on such a machine.
@@ -99,7 +99,7 @@ fields and shows a stopped search.
 
 ## Running the examples
 
-Install SMSD Pro 8.2.0 as shown in
+Install SMSD Pro 8.2.1 as shown in
 [Getting started](GETTING_STARTED.md#install). Each Python block is a complete
 program: copy it into a file and run it with `python`. The values each program
 prints are also checked with `assert` statements. Programs that write files

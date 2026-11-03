@@ -394,9 +394,9 @@ final class SmartsInput {
    * keeping the operands in order, so a long chain nests logarithmically; shorter chains are
    * left as parsed. Evaluation reads the operands in the same order, so matches are unchanged.
    *
-   * <p>Reads each directional bond, / or \, as a single, non-aromatic bond, as Daylight SMARTS
-   * and the native parser do. CDK parses it as a bond of order one, which an aromatic bond of a
-   * Kekule structure also has; the direction itself is kept on the double bond's stereo element.
+   * <p>Reads each directional bond, / or \, as a single, non-aromatic bond; the native parser also
+   * accepts an aromatic bond, a known difference. CDK parses it as a bond of order one, as for an
+   * aromatic bond of a Kekule structure; the direction is kept on the double bond's stereo element.
    */
   private static void normalise(IAtomContainer query) {
     Deque<Object> pending = new ArrayDeque<>();

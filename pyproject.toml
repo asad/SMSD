@@ -4,8 +4,8 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "8.2.0"
-description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
+version = "8.2.1"
+description = "Molecular substructure and maximum common substructure search, fingerprints and similarity screening"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.12"
@@ -27,7 +27,13 @@ classifiers = [
     "Operating System :: OS Independent",
     "Natural Language :: English",
 ]
-keywords = ["cheminformatics", "mcs", "maximum-common-substructure", "substructure", "graph-matching", "chemistry", "smiles", "smarts", "fingerprint", "ecfp", "maccs", "similarity", "screening", "tautomer"]
+keywords = [
+    "cheminformatics", "chemistry", "molecular-graphs",
+    "substructure-search", "smarts", "smiles", "graph-matching",
+    "mcs", "maximum-common-substructure", "mcis", "mces",
+    "molecular-fingerprints", "ecfp", "maccs", "tanimoto",
+    "molecular-similarity", "screening", "batch-search", "tautomer",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0,<10", "pytest-timeout>=2.0,<3"]
@@ -46,9 +52,11 @@ mcp = ["mcp>=1.26,<3"]
 smsd-mcp = "smsd.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/asad/SMSD"
+Homepage = "https://asad.github.io/SMSD/"
 Repository = "https://github.com/asad/SMSD"
-Documentation = "https://github.com/asad/SMSD/blob/master/python/README.md"
+Documentation = "https://asad.github.io/SMSD/guide/"
+Examples = "https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#screening"
+Notebooks = "https://asad.github.io/SMSD/notebooks/"
 Changelog = "https://github.com/asad/SMSD/blob/master/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/asad/SMSD/issues"
 

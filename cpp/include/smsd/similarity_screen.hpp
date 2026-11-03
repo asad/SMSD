@@ -9,6 +9,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/mol_graph.hpp"
 #include "smsd/detail/overlap_similarity.hpp"
 #include <unordered_map>
@@ -385,3 +390,6 @@ inline std::vector<int> screenTargets(const MolGraph& query,
 }
 
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

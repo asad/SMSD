@@ -1,6 +1,6 @@
-# SMSD Pro 8.2.0 API reference
+# SMSD Pro 8.2.1 API reference
 
-This reference describes the 8.2.0 source API. Use a matching wheel or build;
+This reference describes the 8.2.1 source API. Use a matching wheel or build;
 an earlier installed native extension cannot provide new Python APIs.
 
 The Python package provides molecular graphs, exact searches, fingerprints,

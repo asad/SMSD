@@ -33,6 +33,18 @@ implementation code.
 | Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, `ringsTruncated` when the ring search stops before finding a complete set of rings, `relevantCyclesTruncated` for incomplete relevant-cycle enumeration, and `RingBasisUnavailable`, thrown where an exact ring basis is required but unavailable); `relevant_cycle_families.hpp` (`computeRelevantCycleFamilies`, `relevantCycleFamilyOf`, `relevantCycleFamilyMembers`: relevant cycles grouped into families with exact member counts); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
 | Data and utilities | `hungarian.hpp` (`optimalAssign`); `periodic_table.hpp` (`getElement`, `atomicWeight`, `paulingElectronegativity` and more); `scaffold_library.hpp` (reference ring systems, scaffolds, pharmacophore and functional-group SMARTS, drug-likeness limits); `bond_energies.hpp` (`bondDissociationEnergy`, `mappingBondChangeCost`, in kJ/mol); `color_palette.hpp` (`mapNumberToPaletteColor`, a fixed 20-colour cycle for atom-map numbers); `rdkit_adapter.hpp` ([optional](#optional-native-adapter)) |
 
+### Windows headers
+
+SMSD headers preserve the Windows `STRICT` and `IGNORE` macros while protecting
+their enum declarations and inline definitions from expansion. In application
+code, temporarily suppress these macros with `push_macro`, `#undef` and
+`pop_macro` around `ChemOptions` expressions that name the `STRICT` or `IGNORE`
+enumerators. A qualified C++ name still undergoes macro expansion. Named
+profiles such as `ChemOptions::profile("strict")` can be selected while these
+macros are defined.
+Define `NOMINMAX` before including `<windows.h>` to suppress its separate
+`min` and `max` macros.
+
 ## Prepared queries
 
 `MCS::find` and `Substructure::find` take a `MolGraph` or SMILES;
@@ -77,12 +89,14 @@ int main() {
 
 ## SMARTS
 
-SMARTS follows Daylight semantics, as in Java: `[H]`, `[2H]` and `[H+]` are
-hydrogen atoms, `[CH]` and `[H1]` count hydrogens, `r<n>` is the smallest ring
-size, `(C.C)` requires one target component and `(C).(C)` different ones. `/`
-and `\` are single, non-aromatic bonds; a double bond between them must have
-the written configuration unless one is `/?` or `\?`, and an unpaired one
-matches either way.
+SMARTS follows Daylight semantics: `[H]`, `[2H]` and `[H+]` are hydrogen atoms,
+`[CH]` and `[H1]` count hydrogens, `r<n>` is the smallest ring size, `(C.C)`
+requires one target component and `(C).(C)` different ones. `/` and `\` are
+single or aromatic bonds; a double bond between them must have the written
+configuration unless one is `/?` or `\?`, an aromatic bond between them matches
+only when one is `/?` or `\?`, and an unpaired one matches either way. Java
+matches `/` and `\` only on single, non-aromatic bonds; see the
+[Java guide](JAVA.md).
 
 `parseSMARTS(text, maxRecursionDepth = 20)` throws `std::invalid_argument` for
 malformed SMARTS, including a pattern that ends with a bond such as `CC-`, and
@@ -717,9 +731,15 @@ could compute from incomplete rings.
 - Drawings follow journal practice: a near-black skeleton in ACS proportions,
   regular-weight labels and aromatic rings with alternating double bonds;
   `aromaticStyle = AromaticStyle::CIRCLE` draws circles, and a molecule
-  without a Kekulé structure keeps them. Double bonds outside rings follow the
-  stored E/Z. Inside rings of eight or more atoms a drawing may not yet,
-  though the coordinates `writeMolBlock` writes do.
+  without a Kekulé structure keeps them. Automatically generated layouts
+  follow stored double-bond stereo, including non-aromatic ring bonds. If a
+  matching ring layout cannot be found, including for a stored E/Z that the
+  ring cannot take, coordinate generation and drawing throw
+  `std::invalid_argument` rather than show the other isomer. Constrained
+  layouts retain fixed coordinates and throw the same exception when a
+  matching layout cannot be found under those constraints. Stored E/Z on
+  aromatic rings, such as annulenes, may not be reflected in the layout.
+  MOL export is unaffected and keeps its own coordinate and stereo checks.
 - A matched region sits on a gold halo, `palette::MATCH_FILL`, with a fine
   edge in a deeper shade of the same hue. Set `matchFill` to
   `palette::MINT_HALO` for the equally light mint used for substructure hits;

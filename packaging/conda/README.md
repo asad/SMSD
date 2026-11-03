@@ -115,10 +115,10 @@ priority. These commands install local conda artefacts, not PyPI wheels:
 ```sh
 conda index /path/to/local-channel
 conda create -n smsd-cpu --strict-channel-priority \
-  -c file:///path/to/local-channel -c conda-forge "python=3.12" "smsd=8.2.0"
+  -c file:///path/to/local-channel -c conda-forge "python=3.12" "smsd=8.2.1"
 mamba create -n smsd-gpu --strict-channel-priority \
   -c file:///path/to/local-channel -c conda-forge \
-  "python=3.12" "smsd=8.2.0" "smsd-cuda=8.2.0" "cuda-version=12.8"
+  "python=3.12" "smsd=8.2.1" "smsd-cuda=8.2.1" "cuda-version=12.8"
 ```
 
 Use the frozen version in both package specifications if it changes. For Pixi:
@@ -126,11 +126,11 @@ Use the frozen version in both package specifications if it changes. For Pixi:
 ```sh
 pixi init --channel file:///path/to/local-channel --channel conda-forge \
   --platform linux-64 smsd-demo
-pixi add --manifest-path smsd-demo/pixi.toml "python=3.12" "smsd=8.2.0"
+pixi add --manifest-path smsd-demo/pixi.toml "python=3.12" "smsd=8.2.1"
 pixi run --manifest-path smsd-demo/pixi.toml python -c "import smsd; print(smsd.__version__)"
 ```
 
-On a compatible Linux NVIDIA host, add `"smsd-cuda=8.2.0"` and
+On a compatible Linux NVIDIA host, add `"smsd-cuda=8.2.1"` and
 `"cuda-version=12.8"` to the same Pixi environment. Use the native platform
 for CPU installations. No lockfile is included; Pixi creates one when it
 solves the environment. A separate Pixi build recipe is unnecessary: Pixi

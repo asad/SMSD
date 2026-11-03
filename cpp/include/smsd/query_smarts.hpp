@@ -6,6 +6,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/mol_graph.hpp"
 #include <algorithm>
 #include <map>
@@ -147,3 +152,6 @@ inline std::string toQuerySMARTS(const MolGraph& graph, const ChemOptions& chemi
     return result;
 }
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

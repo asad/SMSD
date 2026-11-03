@@ -1,3 +1,47 @@
+# SMSD Pro 8.2.1
+
+This maintenance update fixes C++ header compilation on Windows, ring
+double-bond stereo in drawings, elemental-hydrogen SMARTS with large atom-map
+labels and directional SMARTS bonds on aromatic rings. The Python package page
+has clearer installation, search-configuration and screening examples, with
+links to the
+[website](https://asad.github.io/SMSD/) and [user guide](https://asad.github.io/SMSD/guide/).
+Package documentation links and the Maven Central version in the release guide
+are also corrected.
+
+C++ headers preserve the Windows `STRICT` and `IGNORE` macros without expanding
+them in their own declarations. Application code that names the corresponding
+enum values still needs the [documented macro suppression](CPP.md#windows-headers).
+
+In C++ and Python, non-aromatic ring double bonds retain their stored stereo
+in generated coordinates and automatic SVG drawings; constrained layouts keep
+their fixed coordinates. If no matching layout can be found, coordinate
+generation and drawing raise an error (`ValueError` in Python,
+`std::invalid_argument` in C++) instead of showing the other isomer. This
+includes a stored E/Z that the ring cannot take, such as trans in cyclohexene;
+8.2.0 drew such molecules without that E/Z. Stored E/Z on aromatic rings, such
+as annulenes, may not be reflected in the layout. In the MCP server,
+`depict_mcs` reports such a drawing failure as an error.
+
+In C++ and Python, elemental-hydrogen SMARTS no longer match the oxygen in
+methanol when their atom-map label is large. Numeric overflow still reports an
+invalid input.
+
+In C++ and Python, the directional SMARTS bonds `/` and `\` also match aromatic
+bonds: `c/c` matches benzene, and `C/N=c1/cccc[nH]1`, with a direction on an
+aromatic ring bond, matches itself as SMARTS. At a double bond, a negated or
+alternative direction on such a bond now follows the E/Z of that double bond,
+as it already did on a single bond, so a few patterns, such as `C/N=c!/c`, match
+fewer molecules. In Java directional bonds still match only single,
+non-aromatic bonds; write a bond that may be aromatic without a direction, as
+in `cc` or `c-,:c`. A SMARTS taken from a molecule with stereo double bonds on
+two neighbouring atoms of an aromatic ring, such as `C/C=C/c1ccccc1/C=C/C`,
+does not match that molecule.
+
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and
+documentation corrections.
+
 # SMSD Pro 8.2.0
 
 **Exact search on the hardware you already own.**

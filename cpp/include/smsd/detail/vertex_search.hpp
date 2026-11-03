@@ -11,6 +11,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/detail/search_results.hpp"
 #include "smsd/detail/bridge_bound.hpp"
 
@@ -1797,3 +1802,6 @@ private:
 
 } // namespace search_detail
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

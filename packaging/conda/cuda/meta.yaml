@@ -45,7 +45,7 @@ test:
     - python -m pip check
 
 about:
-  home: https://github.com/asad/SMSD
+  home: https://asad.github.io/SMSD/
   license: Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception
   license_file:
     - packaging/smsd-cuda/LICENSE
@@ -57,6 +57,7 @@ about:
     Linux x86-64 CUDA accelerator, built with CUDA 12.8 and dynamically linked
     to the conda CUDA runtime. Requires an NVIDIA device and system driver for
     execution. The CPU package remains independently installable.
+  doc_url: https://asad.github.io/SMSD/guide/
   dev_url: https://github.com/asad/SMSD
 
 extra:

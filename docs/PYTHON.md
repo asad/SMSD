@@ -1,14 +1,48 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.2.0. The
-[Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
-files, R-groups and scaffolds.
+[![PyPI](https://img.shields.io/pypi/v/smsd?label=PyPI)](https://pypi.org/project/smsd/)
+[![Conda](https://img.shields.io/conda/vn/bioinception/smsd?label=conda)](https://anaconda.org/bioinception/smsd)
+[![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.15-3776ab)](HOWTO-INSTALL.md)
+[![Documentation](https://img.shields.io/badge/docs-user%20guide-0d3330)](https://asad.github.io/SMSD/guide/)
+
+Find chemical motifs, compare molecular structures and screen collections
+with substructure search, maximum common substructure (MCS) and molecular
+fingerprints. This page provides the Python 8.2.1 quickstart and API reference.
+The package uses SMSD's native C++ engine.
+
+**[User guide](https://asad.github.io/SMSD/guide/)** ·
+[Examples](EXAMPLES.md) · [Notebooks](https://asad.github.io/SMSD/notebooks/) ·
+[API reference](#api-reference) · [Project website](https://asad.github.io/SMSD/)
+
+## At a glance
+
+| Task | Start here |
+|---|---|
+| Find a SMILES or SMARTS query in molecules | [Substructure searches](#searches) |
+| Find a common structure and its atom/bond mapping | [MCS objectives and fragments](#mcis-mces-and-fragments) |
+| Reuse a target library and confirm screened candidates | [Target collections](#smarts-and-target-collections) and [screening examples](EXAMPLES.md#screening) |
+| Compare fingerprints or retrieve top-k hits | [Fingerprints](#fingerprints) and [packed corpora](PACKED_CORPORA.md) |
+| Highlight a matched core as SVG | [Drawing examples](EXAMPLES.md#svg-drawing) |
+| Read files, lay out molecules or work with stereo | [Python examples](EXAMPLES.md) |
+
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and documentation corrections.
 
 ## Installation
 
+With pip:
+
 ```bash
-python -m pip install "smsd==8.2.0"
+python -m pip install "smsd==8.2.1"
 ```
+
+With conda or mamba:
+
+```bash
+conda install -c bioinception -c conda-forge smsd=8.2.1
+```
+
+Use the same channels and package name with `mamba`.
 
 The CPU/OpenMP wheels cover CPython 3.12–3.15; the [supported-platforms
 table](HOWTO-INSTALL.md#supported-platforms) lists the operating systems and
@@ -41,7 +75,7 @@ search do not run on them, so they change only what `gpu_is_available()` and
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -79,7 +113,7 @@ requirements of both GPU packages.
 later, and needs the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"
 ```
 
 Prepared ECFP4 screens of a `TargetCorpus` and
@@ -91,6 +125,106 @@ Packed `FingerprintCorpus` scans run on the CPU. `SMSD_DISABLE_GPU` turns Metal
 off as it does CUDA, and `smsd_metal.preload()` readies the device before the
 first screen. See
 [CPU and GPU screening](guide/CPU_GPU.md#install-the-metal-package).
+
+## Quickstart
+
+These examples need only `smsd`.
+
+### Find a chemical motif
+
+Search for a carboxylic acid with a SMARTS pattern. Batch results follow the
+input order:
+
+```python
+import smsd
+
+library = {
+    "aspirin": "CC(=O)Oc1ccccc1C(=O)O",
+    "paracetamol": "CC(=O)Nc1ccc(O)cc1",
+    "ethanol": "CCO",
+}
+acid = smsd.Substructure.smarts("C(=O)[OX2H1]")
+results = acid.match_many(list(library.values()), num_threads=1)
+
+for name, hit in zip(library, results):
+    print(name, hit.found)
+# aspirin True
+# paracetamol False
+# ethanol False
+```
+
+For molecule queries, use `Substructure.find(query)`. The
+[substructure guide](guide/SUBSTRUCTURE.md) and [SMARTS guide](guide/SMARTS.md)
+explain the matching rules.
+
+### Compare two molecules
+
+Find the common carbon skeleton of ethanol and ethylamine:
+
+```python
+import smsd
+
+query, target = "CCO", "CCN"
+result = smsd.MCS.find(query).with_timeout(1000).match(target)
+
+if result.found:
+    print(result.best.atom_count, result.best.bond_count)  # 2 1
+    print(result.best.atom_mapping)  # query atom index -> target atom index
+print(result.status.name, result.optimal, result.complete)
+```
+
+The timeout is in milliseconds per target. A stopped search may return a
+valid match without proving it is the largest. Check `optimal`, `complete`
+and `status`; an empty unfinished result does not prove that no match exists.
+The default is a connected maximum common induced subgraph (MCIS), ranked by
+atoms, then bonds. See [results](#results) and [MCS objectives](#mcis-mces-and-fragments).
+
+### Configure a search
+
+Set limits and chemistry rules before preparing a query:
+
+```python
+import smsd
+
+options = smsd.MCS.Options()
+options.timeout_ms = 1000
+options.node_limit = 100000
+options.chemistry.match_bond_order = smsd.BondOrderMode.STRICT
+options.chemistry.ring_matches_ring_only = True
+options.chemistry.use_chirality = True
+options.chemistry.use_bond_stereo = True
+
+prepared = smsd.MCS.find("c1ccc(O)cc1").with_options(options)
+configured = prepared.match("c1ccc(N)cc1")
+atoms = configured.best.atom_count if configured.found else 0
+print(atoms, configured.status.name, configured.optimal, configured.complete)  # 6 COMPLETED True True
+```
+
+| Setting | Controls |
+|---|---|
+| `timeout_ms`, `node_limit` | Time per target and search-node allowance |
+| `chemistry.match_bond_order` | Equal bond orders (`STRICT`) or relaxed matching |
+| `chemistry.ring_matches_ring_only` | Ring atoms and bonds map only to rings |
+| `chemistry.complete_rings_only` | Restrict matches to complete rings; see [chemistry options](#chemistry-options) |
+| `chemistry.use_chirality`, `chemistry.use_bond_stereo` | Tagged atom and double-bond stereochemistry |
+| `.with_objective(smsd.MCS.Objective.MCES)` | Maximise common bonds instead of common atoms |
+| `.with_fragments()` | Allow a disconnected common graph |
+
+`with_options` copies the settings into a new prepared query. Molecule-based
+substructure searches use `Substructure.Options()` in the same way. SMARTS
+patterns state their own atom and bond rules; among these chemistry settings,
+only `complete_rings_only` applies to SMARTS. See the full
+[chemistry options](#chemistry-options) and [search limits](#timeouts-node-limits-and-cancellation).
+
+### Screen a molecular library
+
+The [screening examples](EXAMPLES.md#screening) show fingerprint ranking,
+substructure confirmation and MCS-bound screening followed by graph search.
+ECFP4 Tanimoto coefficients and the atom-count MCS Tanimoto upper bound are
+distinct quantities. A surviving MCS-bound candidate still needs graph search
+and inspection of `status`, `optimal` and `complete`. See
+[target collections](#smarts-and-target-collections) for reusable corpora and
+[explicit corpus prefilters](#explicit-corpus-prefilters) for threshold decisions.
 
 ## Additions in 8.1.0
 
@@ -943,7 +1077,13 @@ accepts a molecule.
   `depict_svg`.
 
 The native SVG functions need no RDKit; keyword arguments set `DepictOptions`
-attributes, on `opts` when given. Defaults: `bond_length` and `padding` 30 px;
+attributes, on `opts` when given. Native coordinate generation and SVG drawing
+preserve stored stereo on non-aromatic ring double bonds. If a matching ring
+layout cannot be found, including for a stored E/Z that the ring cannot take,
+they raise `ValueError` rather than show the other isomer. Stored E/Z on
+aromatic rings, such as annulenes, may not be reflected in the layout.
+
+Defaults: `bond_length` and `padding` 30 px;
 `line_width`, `bold_width`, `font_size` and `match_width` 0 (automatic);
 `width` and `height` 0 (fitted to the molecule); `bond_spacing` and
 `highlight_radius` 0 (18% and 32% of `bond_length`); `highlight_opacity` 0.30

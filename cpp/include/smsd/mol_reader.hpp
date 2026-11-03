@@ -404,7 +404,7 @@ inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph, CoordinateF
     const bool hasTetrahedralStereo = std::any_of(graph.tetraChirality.begin(), graph.tetraChirality.end(),
                                                 [](int winding) { return winding != 0; });
     if (stereoBonds.empty() && !hasTetrahedralStereo) return std::vector<Point2D>(graph.n, {0, 0});
-    auto coordinates = generateCoords2D(graph);
+    auto coordinates = detail_layout::generateCoords2DImpl(graph, 1.5, false);
     auto geometry = [&](int first, int second) {
         int firstLigand = -1, secondLigand = -1;
         for (int neighbor : graph.neighbors[first]) if (neighbor != second) { firstLigand = neighbor; break; }

@@ -35,6 +35,7 @@
 #include <numeric>
 #include <random>
 #include <set>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -2008,7 +2009,8 @@ inline void snapToGrid(std::vector<Point2D>& coords) {
 }
 
 /// Mirror `atoms` in the line through `pivot` and `root`, onto the grid.
-inline void reflectInBondAxis(std::vector<Point2D>& coords, const std::vector<int>& atoms, int pivot, int root) {
+inline void reflectInBondAxis(std::vector<Point2D>& coords, const std::vector<int>& atoms, int pivot, int root,
+                              double gridScale = 1.0) {
     const Point2D origin = coords[pivot];
     const double axisX = coords[root].x - origin.x, axisY = coords[root].y - origin.y;
     const double lengthSquared = axisX * axisX + axisY * axisY;
@@ -2016,8 +2018,8 @@ inline void reflectInBondAxis(std::vector<Point2D>& coords, const std::vector<in
     for (int atom : atoms) {
         const double relativeX = coords[atom].x - origin.x, relativeY = coords[atom].y - origin.y;
         const double projection = (relativeX * axisX + relativeY * axisY) / lengthSquared;
-        coords[atom] = {onGrid(origin.x + 2 * projection * axisX - relativeX),
-                        onGrid(origin.y + 2 * projection * axisY - relativeY)};
+        coords[atom] = {gridScale * onGrid((origin.x + 2 * projection * axisX - relativeX) / gridScale),
+                        gridScale * onGrid((origin.y + 2 * projection * axisY - relativeY) / gridScale)};
     }
 }
 
@@ -2231,6 +2233,167 @@ inline void spreadStereoBonds(const MolGraph& g, std::vector<Point2D>& coords) {
     }
 }
 
+/** Whether the first ligands show the stored relation without collinear bonds. */
+inline bool doubleBondStereoMatches(const MolGraph& g, const std::vector<Point2D>& coords,
+                                   int first, int second) {
+    const double axisX = coords[second].x - coords[first].x;
+    const double axisY = coords[second].y - coords[first].y;
+    const double axisSquared = axisX * axisX + axisY * axisY;
+    if (!std::isfinite(axisSquared) || axisSquared < 1e-20) return false;
+    auto referenceSide = [&](int end, int partner) {
+        double reference = 0;
+        for (int ligand : g.neighbors[end]) {
+            if (ligand == partner) continue;
+            const double armX = coords[ligand].x - coords[end].x;
+            const double armY = coords[ligand].y - coords[end].y;
+            const double length = std::sqrt(axisSquared * (armX * armX + armY * armY));
+            if (!std::isfinite(length) || length < 1e-20) return 0.0;
+            const double side = (axisX * armY - axisY * armX) / length;
+            if (std::abs(side) < 1e-6) return 0.0;
+            if (reference == 0) reference = side;
+            else if (reference * side >= 0) return 0.0;
+        }
+        return reference;
+    };
+    const double relation = referenceSide(first, second) * referenceSide(second, first);
+    return relation != 0 && (relation > 0 ? 1 : 2) == g.dbStereo(first, second);
+}
+
+/**
+ * Repair ring E/Z by reflecting a component between two fixed ring pivots.
+ * Every moved bond is internal or ends on a pivot, so its length is retained.
+ * A move must correct more configured bonds, preserve the ones already correct
+ * and add no layout defects. An unsuccessful repair reports failure rather
+ * than returning coordinates for the other isomer.
+ */
+inline void honourRingDoubleBondStereo(const MolGraph& g, std::vector<Point2D>& coords,
+                                      const std::vector<RingSystem>& systems,
+                                      const std::vector<bool>& fixed = {}) {
+    std::vector<std::pair<int, int>> bonds;
+    std::vector<size_t> ringBonds;
+    double totalLength = 0;
+    int bondCount = 0;
+    for (int first = 0; first < g.n; ++first)
+        for (int second : g.neighbors[first]) {
+            if (second <= first) continue;
+            totalLength += std::hypot(coords[first].x - coords[second].x,
+                                      coords[first].y - coords[second].y);
+            ++bondCount;
+            if (g.bondOrder(first, second) != 2 || g.dbStereo(first, second) == 0) continue;
+            if (branchFrom(g, second, first).empty()) ringBonds.push_back(bonds.size());
+            bonds.emplace_back(first, second);
+        }
+    if (ringBonds.empty()) return;
+    const double bondLength = totalLength / bondCount;
+    if (!std::isfinite(bondLength) || bondLength < 1e-10)
+        throw std::invalid_argument("Cannot lay out stored ring double-bond stereo");
+    auto matches = [&]() {
+        std::vector<bool> result;
+        for (const auto& bond : bonds)
+            result.push_back(doubleBondStereoMatches(g, coords, bond.first, bond.second));
+        return result;
+    };
+    auto defects = [&]() {
+        auto unit = coords;
+        for (auto& point : unit) { point.x /= bondLength; point.y /= bondLength; }
+        return findDefects(g, unit);
+    };
+    auto correct = matches();
+    for (bool improved = true; improved;) {
+        improved = false;
+        for (size_t bondIndex : ringBonds) {
+            if (correct[bondIndex]) continue;
+            const auto before = coords;
+            const auto beforeDefects = defects();
+            std::vector<Point2D> best;
+            std::vector<bool> bestMatches;
+            LayoutDefects bestDefects;
+            int bestCorrect = static_cast<int>(std::count(correct.begin(), correct.end(), true));
+            double bestDisplacement = std::numeric_limits<double>::infinity();
+            const auto bond = bonds[bondIndex];
+            for (const auto& ends : {bond, std::make_pair(bond.second, bond.first)})
+                for (const auto& system : systems) {
+                    if (!system.atoms.count(ends.first) || !system.atoms.count(ends.second)) continue;
+                    for (int pivot : system.atoms) {
+                        if (pivot == ends.first || pivot == ends.second) continue;
+                        std::vector<int> moved{ends.second};
+                        std::vector<bool> moving(g.n, false);
+                        moving[ends.second] = true;
+                        for (size_t at = 0; at < moved.size(); ++at)
+                            for (int neighbour : g.neighbors[moved[at]])
+                                if (neighbour != ends.first && neighbour != pivot && !moving[neighbour]) {
+                                    moving[neighbour] = true;
+                                    moved.push_back(neighbour);
+                                }
+                        if (!fixed.empty() && std::any_of(moved.begin(), moved.end(),
+                                [&](int atom) { return fixed[atom]; })) continue;
+                        bool splitsRing = false;
+                        for (const auto& protectedSystem : systems)
+                            for (const auto& ring : protectedSystem.rings) {
+                                if (ring.size() >= 8 && !std::all_of(ring.begin(), ring.end(),
+                                        [&](int atom) { return g.aromatic[atom]; })) continue;
+                                int inside = 0, outside = 0;
+                                for (int atom : ring) {
+                                    if (atom == ends.first || atom == pivot) continue;
+                                    if (moving[atom]) ++inside; else ++outside;
+                                }
+                                if (inside && outside) splitsRing = true;
+                            }
+                        if (splitsRing) continue;
+                        reflectInBondAxis(coords, moved, ends.first, pivot, bondLength);
+                        const auto nextMatches = matches();
+                        bool keepsStereo = nextMatches[bondIndex];
+                        for (int atom = 0; atom < g.n && keepsStereo; ++atom)
+                            for (int neighbour : g.neighbors[atom]) {
+                                if (neighbour <= atom) continue;
+                                const double previousLength = std::hypot(before[atom].x - before[neighbour].x,
+                                                                         before[atom].y - before[neighbour].y);
+                                const double nextLength = std::hypot(coords[atom].x - coords[neighbour].x,
+                                                                     coords[atom].y - coords[neighbour].y);
+                                if (!std::isfinite(nextLength)
+                                        || std::abs(nextLength - previousLength) > 1e-4 * bondLength)
+                                    keepsStereo = false;
+                            }
+                        for (size_t index = 0; index < bonds.size(); ++index)
+                            if (correct[index] && !nextMatches[index]) keepsStereo = false;
+                        for (int atom = 0; atom < g.n && keepsStereo; ++atom)
+                            if (atom < static_cast<int>(g.tetraChirality.size()) && g.tetraChirality[atom] != 0
+                                    && !stereoUnreadable(g, before, atom)
+                                    && stereoUnreadable(g, coords, atom)) keepsStereo = false;
+                        if (keepsStereo) {
+                            const auto nextDefects = defects();
+                            const int nextCorrect = static_cast<int>(std::count(nextMatches.begin(), nextMatches.end(), true));
+                            double displacement = 0;
+                            for (int atom : moved) {
+                                const double dx = coords[atom].x - before[atom].x;
+                                const double dy = coords[atom].y - before[atom].y;
+                                displacement += dx * dx + dy * dy;
+                            }
+                            if (nextDefects.noneAdded(beforeDefects) && (nextCorrect > bestCorrect
+                                    || (nextCorrect == bestCorrect && !best.empty()
+                                        && (nextDefects.fewerThan(bestDefects)
+                                            || (!bestDefects.fewerThan(nextDefects) && displacement < bestDisplacement))))) {
+                                best = coords;
+                                bestMatches = nextMatches;
+                                bestDefects = nextDefects;
+                                bestCorrect = nextCorrect;
+                                bestDisplacement = displacement;
+                            }
+                        }
+                        coords = before;
+                    }
+                }
+            if (!best.empty()) {
+                coords = std::move(best);
+                correct = std::move(bestMatches);
+                improved = true;
+            }
+        }
+    }
+    if (std::any_of(ringBonds.begin(), ringBonds.end(), [&](size_t index) { return !correct[index]; }))
+        throw std::invalid_argument("Cannot lay out stored ring double-bond stereo");
+}
+
 /**
  * Relax a layout in which each rigid group moves as one body.  Bonds pull
  * towards unit length and non-bonded atoms push apart; a free atom follows
@@ -2338,32 +2501,10 @@ inline void restoreUnitBonds(const MolGraph& g, std::vector<Point2D>& coords,
 // generateCoords2D — comprehensive structure diagram generation pipeline
 // ==========================================================================
 
-/**
- * Generate publication-quality 2D coordinates for a molecule.
- *
- * Multi-phase pipeline:
- *
- * Phase 1: Template matching — try extended template library for known scaffolds.
- * Phase 2: Ring-first layout — place ring systems as regular polygons, fuse
- *          adjacent rings by shared edges.
- * Phase 3: Chain layout — place acyclic branches in zig-zag convention.
- * Phase 4: Stored E/Z, then rigid clash removal — reflect branches across
- *          acyclic single bonds.
- * Phase 5: Refinement, only when crossings, clashes or uneven bonds remain —
- *          exact ring systems move as rigid bodies, so they stay regular.
- *          Afterwards, in every layout, branches at stereocentres and stereo
- *          double bonds turn where two bonds would lie in a line, so that the
- *          drawn stereo stays readable.
- * Phase 6: Canonical orientation — principal axis horizontal, then bonds
- *          turned onto the 30-degree grid as nearly as they will go.
- * Phase 7: Bond length normalisation — scale to target bond length.
- *
- * @param g                The molecular graph.
- * @param targetBondLength Desired bond length in coordinate units (default 1.5).
- * @return                 2D coordinates for each atom, crossing-free where possible.
- */
-inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
-                                              double targetBondLength = 1.5) {
+namespace detail_layout {
+
+inline std::vector<Point2D> generateCoords2DImpl(const MolGraph& g, double targetBondLength,
+                                               bool requireRingStereo) {
     int n = g.n;
     if (n == 0) return {};
     if (n == 1) return {{0.0, 0.0}};
@@ -2641,6 +2782,7 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
         }
     }
     detail_layout::spreadStereoBonds(g, coords);
+    if (requireRingStereo) detail_layout::honourRingDoubleBondStereo(g, coords, systems);
 
     // --- Phase 6: Canonical orientation ---
     transform::canonicalOrientation(g, coords);
@@ -2652,6 +2794,38 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
         transform::scale2D(coords, targetBondLength);
 
     return coords;
+}
+
+} // namespace detail_layout
+
+/**
+ * Generate publication-quality 2D coordinates for a molecule.
+ *
+ * Multi-phase pipeline:
+ *
+ * Phase 1: Template matching — try extended template library for known scaffolds.
+ * Phase 2: Ring-first layout — place ring systems as regular polygons, fuse
+ *          adjacent rings by shared edges.
+ * Phase 3: Chain layout — place acyclic branches in zig-zag convention.
+ * Phase 4: Stored E/Z, then rigid clash removal — reflect branches across
+ *          acyclic single bonds.
+ * Phase 5: Refinement, only when crossings, clashes or uneven bonds remain —
+ *          exact ring systems move as rigid bodies, so they stay regular.
+ *          Afterwards, in every layout, branches at stereocentres and stereo
+ *          double bonds turn where two bonds would lie in a line, so that the
+ *          drawn stereo stays readable.
+ * Phase 6: Canonical orientation — principal axis horizontal, then bonds
+ *          turned onto the 30-degree grid as nearly as they will go.
+ * Phase 7: Bond length normalisation — scale to target bond length.
+ *
+ * @param g                The molecular graph.
+ * @param targetBondLength Desired bond length in coordinate units (default 1.5).
+ * @return                 2D coordinates for each atom, crossing-free where possible.
+ * @throws std::invalid_argument if no layout showing the stored ring double-bond stereo is found.
+ */
+inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
+                                          double targetBondLength = 1.5) {
+    return detail_layout::generateCoords2DImpl(g, targetBondLength, true);
 }
 
 

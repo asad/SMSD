@@ -4,11 +4,11 @@ FROM ${PYTHON_BASE}
 ARG SMSD_WHEEL
 COPY wheelhouse/ /opt/wheelhouse/
 COPY copy_licences.py /opt/copy_licences.py
-RUN case "${SMSD_WHEEL}" in smsd-8.2.0-*.whl) ;; *) echo 'Set SMSD_WHEEL to the matching SMSD 8.2.0 wheel basename' >&2; exit 1 ;; esac \
+RUN case "${SMSD_WHEEL}" in smsd-8.2.1-*.whl) ;; *) echo 'Set SMSD_WHEEL to the matching SMSD 8.2.1 wheel basename' >&2; exit 1 ;; esac \
     && test "${SMSD_WHEEL##*/}" = "${SMSD_WHEEL}" \
     && python -m pip install --no-cache-dir --no-index --find-links=/opt/wheelhouse \
        "/opt/wheelhouse/${SMSD_WHEEL}[mcp]" \
-    && python -c "from importlib.metadata import version; assert version('smsd') == '8.2.0'; assert version('mcp')" \
+    && python -c "from importlib.metadata import version; assert version('smsd') == '8.2.1'; assert version('mcp')" \
     && python /opt/copy_licences.py /usr/share/doc/smsd \
     && rm -rf /opt/wheelhouse /opt/copy_licences.py
 

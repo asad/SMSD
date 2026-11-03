@@ -52,9 +52,10 @@ Completed searches return the same results as in 8.1.0, and every 8.x API
 remains supported. The [release notes](docs/RELEASE_NOTES.md) cover the
 upgrade.
 
-The Java library and command-line tool are stable and continue to
-receive bug fixes, while new features arrive in C++ and
-Python first. Maven Central carries 8.2.0. A [source build](#java) is also available.
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and
+documentation corrections. Maven Central carries the Java library and
+command-line tool at 8.2.1. A [source build](#java) is also available.
 
 Beyond search, the 8.x line brings [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
 [local molecular tools and MCP](docs/MCP_SERVER.md),
@@ -71,7 +72,7 @@ and [Hugging Face demonstration](examples/huggingface/README.md) are included.
 | Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.12–3.15; RDKit optional |
 | Python, NVIDIA GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
 | Python, Apple GPU (optional) | `smsd-metal` on [PyPI](https://pypi.org/project/smsd-metal/) | macOS 14 or later on Apple silicon; the same version as `smsd` |
-| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.2.0 | Java 8 or later; CDK 2.13 |
+| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.2.1 | Java 8 or later; CDK 2.13 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
@@ -126,18 +127,18 @@ repository:
 mvn -f java/pom.xml install
 ```
 
-Maven projects can use the 8.2.0 library from Maven Central. It brings only
+Maven projects can use the 8.2.1 library from Maven Central. It brings only
 the CDK modules it needs:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.2.0</version>
+  <version>8.2.1</version>
 </dependency>
 ```
 
-In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.2.0")`. The
+In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.2.1")`. The
 example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
@@ -172,8 +173,8 @@ Compile with Java 25 and run on Java 8 or later, here against the self-contained
 JAR of the build, which includes CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar QuickStart.java
-java -cp "java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:." QuickStart
+javac --release 8 -cp java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar QuickStart.java
+java -cp "java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar:." QuickStart
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
@@ -227,7 +228,7 @@ On Linux x86_64 with an NVIDIA GPU, install `smsd-cuda` next to `smsd` of the
 same version:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"
 ```
 
 ECFP4 screens of a prepared `TargetCorpus` use the GPU automatically on a Tesla
@@ -253,7 +254,7 @@ On an Apple silicon Mac, install [`smsd-metal`](packaging/smsd-metal/README.md)
 instead:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"
 ```
 
 The same prepared ECFP4 screens then use the Apple GPU automatically on an
@@ -263,13 +264,13 @@ extends this to other Apple GPUs and smaller corpora, and
 pre-screen. Packed fingerprint indexes do not use Metal. [CPU and GPU
 screening](docs/guide/CPU_GPU.md) describes both packages side by side.
 
-The [8.2.0 release](https://github.com/asad/SMSD/releases/tag/v8.2.0) has a GPU
-Docker image, `smsd-8.2.0-cuda-linux-amd64.tar.xz`, with Python, `smsd`,
+The [8.2.1 release](https://github.com/asad/SMSD/releases/tag/v8.2.1) has a GPU
+Docker image, `smsd-8.2.1-cuda-linux-amd64.tar.xz`, with Python, `smsd`,
 `smsd-cuda` and the CUDA runtime. The image needs the NVIDIA Container Toolkit:
 
 ```bash
-docker load -i smsd-8.2.0-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.2.0-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
+docker load -i smsd-8.2.1-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.2.1-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
 ```
 
 Native Windows CUDA is not provided. On Windows, use the Linux CUDA package or
@@ -284,7 +285,7 @@ for amd64 and arm64.
 The Java build also produces the command-line tool, as a self-contained JAR:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 

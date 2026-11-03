@@ -12,19 +12,19 @@ pinned: false
 
 This is source for a small Gradio/Hugging Face Docker Space demonstration. It
 is not a deployed Space. The Docker recipe explicitly uses CPython 3.12 on
-Linux. Supply a reviewed matching SMSD 8.2.0 CPython 3.12 wheel for the image
+Linux. Supply a reviewed matching SMSD 8.2.1 CPython 3.12 wheel for the image
 architecture, from PyPI or the [GitHub release](https://github.com/asad/SMSD/releases),
 and compatible Gradio 5 or 6 dependency wheels in `wheelhouse/`. SMSD is
-installed from that local wheel only, and the build stops if it is not 8.2.0.
+installed from that local wheel only, and the build stops if it is not 8.2.1.
 
 ```sh
 cd examples/huggingface
 docker build --network=none --build-arg SMSD_WHEEL=YOUR_MATCHING_SMSD_WHEEL.whl \
-  -t smsd-mcs-demo:8.2.0 .
-docker run --rm --memory=1g --cpus=1 -p 127.0.0.1:7860:7860 smsd-mcs-demo:8.2.0
+  -t smsd-mcs-demo:8.2.1 .
+docker run --rm --memory=1g --cpus=1 -p 127.0.0.1:7860:7860 smsd-mcs-demo:8.2.1
 ```
 
-Replace the wheel placeholder with the actual `smsd-8.2.0-...whl` basename.
+Replace the wheel placeholder with the actual `smsd-8.2.1-...whl` basename.
 All installation inputs must already be in the wheelhouse. A cached base image
 is needed for offline building; pin a reviewed `PYTHON_BASE` digest for a
 reproducible image. `--network=none` restricts build steps, not daemon base-image

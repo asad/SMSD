@@ -2,7 +2,7 @@
 
 The optional modules `smsd.adapters`, `smsd.mcp_server` and `smsd.highlight`
 leave the core API unchanged. They are part of `smsd` from 8.1.0
-(`python -m pip install "smsd==8.2.0"`). NumPy, PyTorch, scikit-learn and the
+(`python -m pip install "smsd==8.2.1"`). NumPy, PyTorch, scikit-learn and the
 MCP SDK are loaded only by the functions that need them.
 
 ## NumPy and PyTorch

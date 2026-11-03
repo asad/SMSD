@@ -6,6 +6,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/search.hpp"
 #include "smsd/batch.hpp"
 #include "smsd/smiles_parser.hpp"
@@ -150,3 +155,6 @@ public:
 };
 
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

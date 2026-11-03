@@ -49,19 +49,26 @@ test:
     - python check_launcher.py  # [win]
 
 about:
-  home: https://github.com/asad/SMSD
+  home: https://asad.github.io/SMSD/
   license: Apache-2.0
   license_file:
     - LICENSE
     - NOTICE
     - licenses/rdkit/LICENSE
     - licenses/pybind11/LICENSE
-  summary: Substructure and MCS search and fingerprints for chemical graphs
+  summary: Chemical substructure search, SMARTS, MCS, molecular fingerprints and similarity screening
   description: |
-    Native Python bindings for SMSD, built with OpenMP; GPU screening comes from
-    the separate smsd-cuda and smsd-metal packages. Data and ML dependencies
-    remain optional.
-  doc_url: https://github.com/asad/SMSD/blob/master/docs/PYTHON.md
+    SMSD Pro provides substructure and SMARTS search, maximum common substructure (MCS) search, molecular fingerprints and similarity screening for chemical graphs.
+
+    Use it for cheminformatics tasks such as finding molecular motifs, comparing common substructures and screening compound libraries. Search results include atom and bond mappings and explicit search status fields.
+
+    Install: `conda install -c bioinception -c conda-forge smsd`
+
+    - [Homepage](https://asad.github.io/SMSD/)
+    - [User guide](https://asad.github.io/SMSD/guide/)
+    - [Python examples](https://github.com/asad/SMSD/blob/master/python/README.md)
+    - [Screening examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#screening)
+  doc_url: https://asad.github.io/SMSD/guide/
   dev_url: https://github.com/asad/SMSD
 
 extra:

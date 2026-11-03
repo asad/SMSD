@@ -10,6 +10,11 @@
 #ifndef SMSD_CHEM_OPTIONS_HPP
 #define SMSD_CHEM_OPTIONS_HPP
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/parser_utils.hpp"
 
 #include <algorithm>
@@ -125,5 +130,8 @@ struct ChemOptions {
 };
 
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")
 
 #endif // SMSD_CHEM_OPTIONS_HPP

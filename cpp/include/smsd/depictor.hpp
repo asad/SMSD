@@ -257,7 +257,7 @@ inline std::vector<Point2D> compute2DCoords(const MolGraph& mol,
     MolGraph prepared = prepareMolForDrawing(mol, options.kekulize);
     double targetBondLength = detail_depictor::inferBondLengthFromAnchors(
         prepared, coordMap, options.bondLength);
-    auto coords = generateCoords2D(prepared, targetBondLength);
+    auto coords = detail_layout::generateCoords2DImpl(prepared, targetBondLength, false);
 
     std::vector<int> mobileIndices;
     std::vector<Point2D> reference;
@@ -279,6 +279,8 @@ inline std::vector<Point2D> compute2DCoords(const MolGraph& mol,
                                      options.constrainedStep,
                                      options.repulsionStrength);
     detail_depictor::enforceAnchors(coords, coordMap);
+    detail_layout::honourRingDoubleBondStereo(prepared, coords,
+                                             detail_layout::findRingSystems(prepared), fixed);
     return coords;
 }
 

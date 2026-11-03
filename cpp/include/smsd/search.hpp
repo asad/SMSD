@@ -11,6 +11,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/common_atom_search.hpp"
 #include "smsd/common_bond_search.hpp"
 #include "smsd/mol_graph.hpp"
@@ -536,3 +541,6 @@ inline bool validateTautomerConsistency(
 
 
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

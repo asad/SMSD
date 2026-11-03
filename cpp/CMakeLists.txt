@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 8.2.0 LANGUAGES CXX)
+project(smsd VERSION 8.2.1 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -359,6 +359,7 @@ if(SMSD_BUILD_TESTS)
     smsd_add_test(smsd_cip_tests tests/test_cip.cpp)
     smsd_add_test(smsd_layout_tests tests/test_layout.cpp)
     smsd_add_test(smsd_portability_tests tests/test_portability.cpp)
+    smsd_add_test(smsd_windows_macro_tests tests/test_windows_macros.cpp)
     # The same checks on the portable bit operations that targets without an intrinsic use.
     smsd_add_test(smsd_portable_bitops_tests tests/test_portability.cpp)
     target_compile_definitions(smsd_portable_bitops_tests PRIVATE SMSD_PORTABLE_BITOPS)

@@ -11,11 +11,11 @@
        `mvn -f java/pom.xml verify` builds and tests both. -->
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-parent</artifactId>
-  <version>8.2.0</version>
+  <version>8.2.1</version>
   <packaging>pom</packaging>
   <name>SMSD Parent</name>
   <description>Shared build configuration for the SMSD library and command-line tool</description>
-  <url>https://github.com/asad/SMSD</url>
+  <url>https://asad.github.io/SMSD/</url>
 
   <organization>
     <name>BioInception PVT LTD</name>

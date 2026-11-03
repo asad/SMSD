@@ -8,13 +8,14 @@ command-line interface (CLI) is `com.bioinception.smsd.cli.SMSDcli`
 (`com.bioinceptionlabs:smsd-cli`). The [Javadoc](#api-reference) lists every
 public member.
 
-From 8.2.0, the Java library and command-line tool receive bug fixes only;
-new features are added to C++ and Python. Java runs every search on the CPU;
-GPU screening and corpus pre-screens are available from C++ and Python. Maven
-Central carries both at 8.2.0, the release this guide covers; the
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and
+documentation corrections. Java runs every search on the CPU; GPU screening
+and corpus pre-screens are available from C++ and Python. Maven
+Central carries both at 8.2.1, the release this guide covers; the
 [upgrade notes](RELEASE_NOTES.md#upgrading-from-803) describe the Java changes
 since 8.0.3. The CPU
-[Docker images](HOWTO-INSTALL.md#docker) also carry the 8.2.0 command-line
+[Docker images](HOWTO-INSTALL.md#docker) also carry the 8.2.1 command-line
 tool.
 
 ## Installation
@@ -27,7 +28,7 @@ requirements. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.2.0</version>
+  <version>8.2.1</version>
 </dependency>
 ```
 
@@ -39,7 +40,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.2.0")
+    implementation("com.bioinceptionlabs:smsd:8.2.1")
 }
 ```
 
@@ -53,8 +54,8 @@ its class name and compile it from the repository root against the
 self-contained JAR of the source build:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar PreparedSearchExample.java
-java -cp "java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:." PreparedSearchExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar PreparedSearchExample.java
+java -cp "java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar:." PreparedSearchExample
 ```
 
 With a Java 8 compiler, omit `--release 8`; on Windows, separate the classpath
@@ -119,6 +120,11 @@ shared between threads; do not modify a target during a search.
 `Substructure.MAX_SMARTS_LENGTH`, `MAX_SMARTS_ATOMS`,
 `MAX_SMARTS_EXPRESSION_NODES`, `MAX_SMARTS_NODES_PER_EXPRESSION` or
 `MAX_SMARTS_RECURSION_DEPTH`.
+
+Known issue: in Java, a directional bond, `/` or `\`, matches only single,
+non-aromatic bonds, while C++ and Python also match aromatic bonds. For
+example, `c/c` does not match benzene in Java. Write a bond that may be aromatic
+without a direction, as in `cc` or `c-,:c`.
 
 `Standardiser.expandNamedPredicates(smarts, registry)` replaces `$name` tokens,
 where a name is ASCII letters, digits and underscores, inside recursive SMARTS
@@ -680,19 +686,19 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 ## Command-line interface
 
 A source build of the module `com.bioinceptionlabs:smsd-cli` writes the
-self-contained `smsd-cli-8.2.0-jar-with-dependencies.jar`; the
+self-contained `smsd-cli-8.2.1-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
-the 8.2.0 JAR or depend on `SMSDcli`. From the repository root, after a
+the 8.2.1 JAR or depend on `SMSDcli`. From the repository root, after a
 source build, print the version and help, test whether benzene is a
 substructure of phenol, and find the MCS of N-methylacetamide and propanamide
 (`mcs_size` is 4):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar --help
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar --help
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SMI --q "CC(=O)NC" --T SMI --t "CCC(=O)N" --mode mcs --json -
 ```
 
@@ -700,7 +706,7 @@ MCS mode defaults to a connected MCIS; request MCES and fragments explicitly,
 here for the two ethyl groups of diethyl ether and diethylamine:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SMI --q "CCOCC" --T SMI --t "CCNCC" \
   --mode mcs --objective MCES --fragments --timeout 1000 --json -
 ```
@@ -709,9 +715,9 @@ SMARTS queries use the type `SIG` in substructure mode; here the first search
 reports `"exists": true` (exit status 0) and the second `"exists": false` (1):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CC(=O)O" --json -
-java -jar java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CCO" --json -
 ```
 

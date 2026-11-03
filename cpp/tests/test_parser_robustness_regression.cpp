@@ -137,6 +137,38 @@ static void testNumericBounds() {
     require(smsd_test::patternMatches(smsd::parseSMARTS("[O+2147483647;H0;X0;v0]"), largeCharge), "boundary charge changed atom properties");
 }
 
+static void testHydrogenNumericFields() {
+    const auto explicitHydrogen = smsd::parseSMILES("[H]OC");
+    const auto methanol = smsd::parseSMILES("CO");
+    for (const char* text : {"[H]", "[H:1]", "[H:2147483647]", "[#1:2147483647]"}) {
+        const auto query = smsd::parseSMARTS(text);
+        const auto mappings = smsd_test::allPatternAtoms(query, explicitHydrogen);
+        require(mappings.size() == 1 && mappings.front().size() == 1
+                && explicitHydrogen.atomicNum.at(mappings.front().at(0)) == 1,
+                std::string(text) + " did not select the hydrogen atom");
+        require(!smsd_test::patternMatches(query, methanol),
+                std::string(text) + " matched an atom other than hydrogen");
+    }
+    const int maximum = std::numeric_limits<int>::max();
+    for (int charge : {maximum, -maximum}) {
+        const auto hydrogen = smsd::MolGraph::Builder().atomCount(1).atomicNumbers({1})
+            .massNumbers({maximum}).formalCharges({charge}).hydrogenCounts({0}).setNeighbors({{}}).build();
+        const char* text = charge > 0 ? "[2147483647H+2147483647:2147483647]"
+                                      : "[2147483647H-2147483647:2147483647]";
+        require(smsd_test::patternMatches(smsd::parseSMARTS(text), hydrogen),
+                "representable hydrogen isotope, charge or class was rejected");
+    }
+    for (const char* text : {"[2147483648H]", "[H+2147483648]", "[H-2147483648]", "[H:2147483648]"})
+        requireInvalid([&] { smsd::parseSMARTS(text); });
+    require(smsd_test::patternMatches(smsd::parseSMARTS("[2H]"), smsd::parseSMILES("[2H]OC")),
+            "an ordinary hydrogen isotope changed");
+    require(smsd_test::patternMatches(smsd::parseSMARTS("[H+]"), smsd::parseSMILES("[H+]")),
+            "an ordinary hydrogen charge changed");
+    require(smsd_test::patternMatches(smsd::parseSMARTS("[CH3]"), methanol)
+            && smsd_test::patternMatches(smsd::parseSMARTS("[H1]"), methanol),
+            "a hydrogen-count primitive changed");
+}
+
 // SMARTS length, atoms (recursive SMARTS included) and expression nodes are bounded, and the
 // bounds are inclusive.
 static void testSmartsLimits() {
@@ -406,6 +438,7 @@ static void testCoordinatesIgnoreTheLocale() {
 
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
+        {"hydrogen-numbers", testHydrogenNumericFields},
         {"branches", testDeepBranches}, {"atom-negation", testAtomNegation},
         {"bond-negation", testBondNegation}, {"numbers", testNumericBounds},
         {"bond-precedence", testBondPrecedence}, {"sparse-stereo", testSparseStereo},

@@ -10,8 +10,10 @@ This also sets the citation's release date without changing the cited article da
 Set the same date in the version's `CHANGELOG.md` heading, in place of `Unreleased`.
 Release assembly extracts the selected version's text from `docs/RELEASE_NOTES.md`
 into the asset `RELEASE_NOTES.md`, suitable for the GitHub release description.
-From 8.2.0, the Java library and command-line tool receive bug fixes only, and
-Maven Central carries them at 8.0.3. PyPI uploads need the full schema 2 wheel
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and
+documentation corrections. Maven Central carries the Java library and
+command-line tool at 8.2.1. PyPI uploads need the full schema 2 wheel
 collection described below. Releases in the 8.x line keep the deprecated APIs.
 
 Use a dedicated CPython 3.14 environment. Release tooling pins pip 26.2.2

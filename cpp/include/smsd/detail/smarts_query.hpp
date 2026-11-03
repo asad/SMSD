@@ -158,12 +158,26 @@ inline bool SmartsQuery::atomStereoCompatible(const MolGraph& target, const std:
 }
 
 inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
+    // Whether a query atom has a plain bond mapped to a double bond, which gives its other bonds a direction.
+    auto atDoubleBond = [&](int atom) {
+        for (size_t position = 0; position < neighbors[atom].size(); ++position) {
+            const int mappedAtom = mapping[atom], mappedNeighbor = mapping[neighbors[atom][position]];
+            if (target.bondOrder(mappedAtom, mappedNeighbor) == 2 && !target.bondAromatic(mappedAtom, mappedNeighbor)
+                && !smarts_detail::hasDirectionalPrimitive(bonds[bondIndices[atom][position]].expr)) return true;
+        }
+        return false;
+    };
     std::vector<int> variableForBond(bonds.size(), -1), allowedDirections;
     for (int bondIndex = 0; bondIndex < static_cast<int>(bonds.size()); ++bondIndex) {
         const auto& bond = bonds[bondIndex];
         if (!smarts_detail::hasDirectionalPrimitive(bond.expr)) continue;
         const int first = mapping[bond.from], second = mapping[bond.to];
-        if (target.bondOrder(first, second) != 1 || target.bondAromatic(first, second)) continue;
+        if (!smarts_detail::isDirectionalCarrier(target, first, second)) continue;
+        // Away from double bonds, an aromatic bond the expression accepts without a direction, as
+        // with /,: or !/, stays free; at a double bond it carries one, like a single bond.
+        if ((target.bondOrder(first, second) != 1 || target.bondAromatic(first, second))
+            && !atDoubleBond(bond.from) && !atDoubleBond(bond.to)
+            && smarts_detail::evalBondExprWithDirection(bond.expr, target, first, second, 0)) continue;
         // Bits of the directions the bond may take: 1 up, 2 down and 4 none, for a double bond
         // without a configuration.
         int allowed = 0;
@@ -188,9 +202,10 @@ inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std:
         constraints[secondVariable].push_back({firstVariable, relation});
     };
     auto outwardOrientation = [&](int bondIndex, int atom) { return bonds[bondIndex].from == atom ? 1 : -1; };
-    // A pair of directional bonds constrains the bond between their atoms, as Daylight SMARTS and
-    // Java read it: a double bond takes the configuration they give it, and an aromatic bond or a
-    // double bond without a configuration matches only when either bond is written with ?.
+    // A pair of directional bonds constrains the bond between their atoms: a double bond takes the
+    // configuration they give it, as in Daylight SMARTS, and an aromatic bond or a double bond
+    // without a configuration matches only when either bond is written with ?. Free aromatic bonds
+    // are not among them.
     for (const auto& focus : bonds) {
         const int first = focus.from, second = focus.to;
         const int mappedFirst = mapping[first], mappedSecond = mapping[second];
@@ -212,6 +227,8 @@ inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std:
             const int atom = end == 0 ? first : second;
             for (int bondIndex : carriers[end])
                 if (configured) specified[variableForBond[bondIndex]] = true;
+            // Bonds on one side of a double bond point opposite ways; an aromatic bond has no sides.
+            if (aromatic) continue;
             for (size_t previous = 0; previous < carriers[end].size(); ++previous) {
                 const int firstBond = carriers[end][previous];
                 for (size_t next = previous + 1; next < carriers[end].size(); ++next) {
@@ -310,7 +327,9 @@ inline bool SmartsQuery::bondCompat(int bi, const MolGraph& target, int ti, int 
         return smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, 1)
             || smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, -1)
             || smarts_detail::evalBondExprWithoutDirection(expression, target, ti, tj)
-                == smarts_detail::StereoTruth::TRUE_VALUE;
+                == smarts_detail::StereoTruth::TRUE_VALUE
+            || ((target.bondOrder(ti, tj) != 1 || target.bondAromatic(ti, tj))
+                && smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, 0));
     return smarts_detail::evalBondExpr(expression, target, ti, tj);
 }
 

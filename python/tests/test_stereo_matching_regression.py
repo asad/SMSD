@@ -74,6 +74,17 @@ def test_mcs_uses_mapped_stereochemistry():
     ("[$([C@@H](F)(Cl)Br)]", "[C@@H](Cl)(F)Br", False),
     ("C/C=C(/F)\\C(Cl)=C/C", "C\\C=C(\\F)/C(Cl)=C\\C", True),
     ("C/C=C(/F)\\C(Cl)=C/C", "C/C=C(\\F)/C(Cl)=C/C", False),
+    ("c/c", "c1ccccc1", True),
+    ("c/c:c/c", "c1ccccc1", False),
+    ("c/?c:c/c", "c1ccccc1", True),
+    ("C/N=c/c", "C/N=c1/cccc[nH]1", True),
+    ("C/N=c\\c", "C/N=c1/cccc[nH]1", False),
+    ("C/N=c1/cccc[nH]1", "C/N=c1/cccc[nH]1", True),
+    ("C/N=c1/cccc[nH]1", "C/N=c1\\cccc[nH]1", False),
+    ("C/N=c(/,:c(\\F):c)", "C/N=c1/c(F)ccc[nH]1", True),
+    ("*!/c:c!/*", "Cn1ccnc1", True),
+    ("C/N=c(!/c)\\[nH]", "C/N=c1/cccc[nH]1", False),
+    ("C/N=c!/c", "C/N=c1/cccc[nH]1", False),
 ])
 def test_compiled_smarts_stereo_entry_points(pattern, target_text, expected):
     query = smsd.Substructure.smarts(pattern)

@@ -67,6 +67,9 @@ def depict_svg(mol_or_smiles, opts=None, **kwargs):
     Returns:
         str: SVG text for a file or a notebook.
 
+    Raises:
+        ValueError: No layout showing the stored ring double-bond stereo is found.
+
     Example::
 
         >>> import smsd
@@ -91,6 +94,9 @@ def depict_mapping(mol_or_smiles, mapping, opts=None, *, highlight="gold", **kwa
 
     Returns:
         str: SVG text with the matched region on the halo and each matched atom numbered.
+
+    Raises:
+        ValueError: No layout showing the stored ring double-bond stereo is found.
 
     Example::
 
@@ -118,6 +124,9 @@ def depict_pair(mol1, mol2, mapping, opts=None, *, highlight="gold", **kwargs):
 
     Returns:
         str: SVG text showing both molecules with the matched regions highlighted.
+
+    Raises:
+        ValueError: No layout showing the stored ring double-bond stereo is found.
 
     Example::
 

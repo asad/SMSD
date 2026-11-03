@@ -5,6 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #include "smsd/depict.hpp"
+#include "smsd/depictor.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -20,6 +21,9 @@
 
 static void checkCoordinates(const smsd::MolGraph& graph,
                              const std::vector<smsd::Point2D>& coordinates, double bondLength) {
+    for (const auto& point : coordinates)
+        if (!std::isfinite(point.x) || !std::isfinite(point.y))
+            throw std::runtime_error("Layout coordinates must be finite");
     for (int first = 0; first < graph.n; ++first)
         for (int second = first + 1; second < graph.n; ++second) {
             const double distance = std::hypot(coordinates[first].x - coordinates[second].x,
@@ -325,16 +329,16 @@ static void checkStoredDoubleBondGeometry() {
 }
 
 static void checkRingDoubleBondsInMolFiles() {
-    // Drawings follow the stored E/Z of double bonds outside rings; inside a large ring they may
-    // not yet, but the coordinates written to a MOL file keep it, so the file reads back as stored.
     for (const char* smiles : {"C1CCCCC/C=C/CCCC1", "C1CCCCC/C=C\\CCCC1"}) {
         const auto graph = smsd::parseSMILES(smiles);
-        const auto back = smsd::readMolBlock(smsd::writeMolBlock(graph));
-        if (back.n != graph.n) throw std::runtime_error(std::string("A MOL file lost atoms of ") + smiles);
-        for (int first = 0; first < graph.n; ++first)
-            for (int second : graph.neighbors[first])
-                if (graph.bondOrder(first, second) == 2 && back.dbStereo(first, second) != graph.dbStereo(first, second))
-                    throw std::runtime_error(std::string("A MOL file lost the ring E/Z of ") + smiles);
+        for (const auto& block : {smsd::writeMolBlock(graph), smsd::writeMolBlockV3000(graph)}) {
+            const auto back = smsd::readMolBlock(block);
+            if (back.n != graph.n) throw std::runtime_error(std::string("A MOL file lost atoms of ") + smiles);
+            for (int first = 0; first < graph.n; ++first)
+                for (int second : graph.neighbors[first])
+                    if (graph.bondOrder(first, second) == 2 && back.dbStereo(first, second) != graph.dbStereo(first, second))
+                        throw std::runtime_error(std::string("A MOL file lost the ring E/Z of ") + smiles);
+        }
     }
 }
 
@@ -545,6 +549,113 @@ static std::vector<std::pair<double, double>> haloDiscs(const std::string& svg) 
         if (svg.find("fill=\"#F9E6B3\"", at) < svg.find("/>", at))
             discs.push_back({std::stod(svg.substr(at + 12)), std::stod(svg.substr(svg.find("cy=\"", at) + 4))});
     return discs;
+}
+
+static void checkDoubleBondRelations(const smsd::MolGraph& graph,
+                                     const std::vector<smsd::Point2D>& coordinates,
+                                     int expected, const std::string& smiles) {
+    if (coordinates.size() != static_cast<size_t>(graph.n))
+        throw std::runtime_error("A ring drawing lost atoms in " + smiles);
+    for (const auto& point : coordinates)
+        if (!std::isfinite(point.x) || !std::isfinite(point.y))
+            throw std::runtime_error("A ring drawing has non-finite coordinates in " + smiles);
+    int checked = 0;
+    for (int first = 0; first < graph.n; ++first)
+        for (int second : graph.neighbors[first]) {
+            const int stored = graph.dbStereo(first, second);
+            if (second <= first || graph.bondOrder(first, second) != 2 || stored == 0) continue;
+            const double axisX = coordinates[second].x - coordinates[first].x;
+            const double axisY = coordinates[second].y - coordinates[first].y;
+            auto side = [&](int end, int partner) {
+                double reference = 0;
+                for (int ligand : graph.neighbors[end]) {
+                    if (ligand == partner) continue;
+                    const double armX = coordinates[ligand].x - coordinates[end].x;
+                    const double armY = coordinates[ligand].y - coordinates[end].y;
+                    const double cross = axisX * armY - axisY * armX;
+                    const double angle = std::atan2(std::abs(cross), axisX * armX + axisY * armY);
+                    if (angle < 1e-6 || angle > M_PI - 1e-6)
+                        throw std::runtime_error("A ring stereo ligand is unreadable in " + smiles);
+                    const double signedSide = cross / (std::hypot(axisX, axisY) * std::hypot(armX, armY));
+                    if (reference == 0) reference = signedSide;
+                    else if (reference * signedSide >= 0)
+                        throw std::runtime_error("Two ring stereo ligands lie on the same side in " + smiles);
+                }
+                return reference;
+            };
+            const double relation = side(first, second) * side(second, first);
+            if (!std::isfinite(relation) || std::abs(relation) < 1e-12
+                    || (relation > 0 ? 1 : 2) != stored)
+                throw std::runtime_error("A ring double bond is drawn as the other isomer in " + smiles);
+            ++checked;
+        }
+    if (checked != expected) throw std::runtime_error("Missing configured double bonds in " + smiles);
+}
+
+static void checkRingDoubleBondDrawings() {
+    const std::string largeCis = std::string("C1") + std::string(18, 'C') + "/C=C\\" + std::string(19, 'C') + "1";
+    const std::string largeTrans = std::string("C1") + std::string(18, 'C') + "/C=C/" + std::string(19, 'C') + "1";
+    for (const auto& test : std::vector<std::pair<const char*, int>>{
+            {"C1CCCCC/C=C/CCCC1", 1}, {"C1CCCCC/C=C\\CCCC1", 1},
+            {"C1CCC/C=C/CC1", 1}, {"C1CCC/C=C\\CC1", 1},
+            {"C1CCCC/C=C/CCC/C=C/CCCC1", 2}, {"C1CCCC/C=C/CCC/C=C\\CCCC1", 2},
+            {"C1CCCC/C(C)=C(/C)CCCC1", 1}, {"C1CCCC/C(C)=C(\\C)CCCC1", 1},
+            {"C1CCCC/C=C/CCCCC1", 1},
+            {"c1ccc2c(c1)CCC/C=C/CCC2", 1}, {largeCis.c_str(), 1}, {largeTrans.c_str(), 1}}) {
+        const auto graph = smsd::parseSMILES(test.first);
+        const auto aromatic = graph.aromatic;
+        const auto raw = smsd::generateCoords2D(graph);
+        checkDoubleBondRelations(graph, raw, test.second, test.first);
+        checkCoordinates(graph, raw, 1.5);
+        std::vector<smsd::Point2D> drawn;
+        for (const auto& point : smsd::layout2D(graph)) drawn.push_back({point.x, point.y});
+        checkDoubleBondRelations(graph, drawn, test.second, test.first);
+        checkCoordinates(graph, drawn, 30.0);
+        std::map<int, int> mapping;
+        for (int atom = 0; atom < graph.n; ++atom) mapping.emplace(atom, atom);
+        drawn.clear();
+        for (const auto& point : haloDiscs(smsd::depictWithMapping(graph, mapping)))
+            drawn.push_back({point.first, point.second});
+        checkDoubleBondRelations(graph, drawn, test.second, test.first);
+        if (graph.aromatic != aromatic) throw std::runtime_error("Ring drawing changed aromaticity");
+    }
+}
+
+static void checkRingStereoAnchors() {
+    const auto trans = smsd::parseSMILES("C1CCCCC/C=C/CCCC1");
+    const auto cis = smsd::parseSMILES("C1CCCCC/C=C\\CCCC1");
+    const auto coordinates = smsd::generateCoords2D(trans);
+    smsd::CoordMap2D anchors;
+    for (int atom : {0, 1}) anchors.emplace(atom, coordinates[atom]);
+    const auto anchored = smsd::compute2DCoords(trans, anchors);
+    checkDoubleBondRelations(trans, anchored, 1, "anchored cyclododecene");
+    for (const auto& entry : anchors)
+        if (anchored[entry.first].x != entry.second.x || anchored[entry.first].y != entry.second.y)
+            throw std::runtime_error("Ring stereo repair moved a fixed atom");
+
+    const auto wrong = smsd::generateCoords2D(cis);
+    for (double scale : {1e-4, 1.0, 1e4}) {
+        smsd::DepictorOptions options;
+        options.bondLength = 1.5 * scale;
+        options.constrainedRefinementIters = 0;
+        anchors.clear();
+        for (int atom : {0, 1}) anchors.emplace(atom, smsd::Point2D{wrong[atom].x * scale, wrong[atom].y * scale});
+        const auto scaled = smsd::compute2DCoords(trans, anchors, options);
+        checkDoubleBondRelations(trans, scaled, 1, "scaled anchored cyclododecene");
+        checkCoordinates(trans, scaled, options.bondLength);
+        for (const auto& entry : anchors)
+            if (scaled[entry.first].x != entry.second.x || scaled[entry.first].y != entry.second.y)
+                throw std::runtime_error("Scaled ring repair moved a fixed atom");
+    }
+    anchors.clear();
+    for (int atom = 0; atom < trans.n; ++atom) anchors.emplace(atom, wrong[atom]);
+    bool refused = false;
+    try {
+        (void)smsd::compute2DCoords(trans, anchors);
+    } catch (const std::invalid_argument& error) {
+        refused = std::string(error.what()) == "Cannot lay out stored ring double-bond stereo";
+    }
+    if (!refused) throw std::runtime_error("Contradictory ring stereo anchors were drawn silently");
 }
 
 struct SvgText { double x, y, size; std::string cls, text; bool outline, centred; };
@@ -799,6 +910,8 @@ int main() {
     checkReadableStereoCentres();
     checkStoredDoubleBondGeometry();
     checkRingDoubleBondsInMolFiles();
+    checkRingDoubleBondDrawings();
+    checkRingStereoAnchors();
     checkGridOrientation();
     checkTransparentHighlight();
     checkIsotopeLabels();

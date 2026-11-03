@@ -39,7 +39,7 @@ test:
     - python run_test.py
 
 about:
-  home: https://github.com/asad/SMSD
+  home: https://asad.github.io/SMSD/
   license: Apache-2.0
   license_file:
     - packaging/smsd-metal/LICENSE
@@ -49,5 +49,5 @@ about:
     Apple silicon GPU accelerator for prepared fingerprint screens, with the same
     hits and scores as the CPU. Requires macOS 14 or later and the same version of
     smsd.
-  doc_url: https://asad.github.io/SMSD/guide/CPU_GPU/
+  doc_url: https://asad.github.io/SMSD/guide/
   dev_url: https://github.com/asad/SMSD

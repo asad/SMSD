@@ -1,6 +1,6 @@
 # Chemistry tools for AI assistants
 
-SMSD Pro 8.2.0 offers eight molecular tools that an AI assistant can call:
+SMSD Pro 8.2.1 offers eight molecular tools that an AI assistant can call:
 maximum common substructure (MCS), substructure and SMARTS matching,
 fingerprints, similarity, small-list screening, standardisation and MCS
 depiction. The tools run on your own machine. They are served to an assistant
@@ -54,7 +54,7 @@ server and the tool definitions need SMSD 8.1.0 or later and Python 3.12 or
 later; the refusal messages that list allowed values need 8.2.0:
 
 ```bash
-python -m pip install "smsd[mcp]==8.2.0"
+python -m pip install "smsd[mcp]==8.2.1"
 smsd-mcp
 # Equivalent: python -m smsd.mcp_server
 ```

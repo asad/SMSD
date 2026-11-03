@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "smsd-metal"
 # Always the smsd version it serves, which the build checks against the SMSD sources.
-version = "8.2.0"
+version = "8.2.1"
 description = "Apple Metal fingerprint screening and GPU pre-screens for SMSD Pro"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -14,7 +14,7 @@ authors = [
     {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
 ]
 dependencies = [
-    "smsd==8.2.0",
+    "smsd==8.2.1",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -31,11 +31,16 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
-keywords = ["cheminformatics", "similarity", "screening", "metal", "gpu", "apple silicon"]
+keywords = [
+    "cheminformatics", "chemistry", "molecular-fingerprints",
+    "molecular-similarity", "similarity", "tanimoto", "screening",
+    "metal", "gpu", "apple silicon",
+]
 
 [project.urls]
-Homepage = "https://github.com/asad/SMSD"
+Homepage = "https://asad.github.io/SMSD/"
 Repository = "https://github.com/asad/SMSD"
+Documentation = "https://asad.github.io/SMSD/guide/"
 
 [tool.scikit-build]
 cmake.build-type = "Release"

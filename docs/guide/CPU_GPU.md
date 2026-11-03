@@ -15,7 +15,7 @@ CPU-only machine; the GPU branches run only where a device is ready.
 | --- | --- | --- | --- | --- |
 | Substructure, SMARTS and MCS matching | Always | Never | Never | Not applicable |
 | Fingerprints, `batch_similarity` and similarity coefficients | Always | Never | Never | Not applicable |
-| `screen_targets`, `TargetCorpus.screen_targets_many`, and `Substructure.match_many` on a `TargetCorpus` | Always | Never in 8.2.0 | Never in 8.2.0 | Not applicable |
+| `screen_targets`, `TargetCorpus.screen_targets_many`, and `Substructure.match_many` on a `TargetCorpus` | Always | Never | Never | Not applicable |
 | ECFP4 screens of a prepared `TargetCorpus`: `screen`, `screen_many`, `warm_start`, `stream_screen_smiles` and `stream_screen_many_smiles` | Below the device rule, without a usable device, or after a device failure | A Tesla T4 for 100,000 targets or more, or any supported device from `SMSD_CUDA_MIN_TARGETS` targets | An Apple M5 for 100,000 targets or more, or any Apple GPU from `SMSD_METAL_MIN_TARGETS` targets | Automatically, for each screen |
 | Pre-screen of `Substructure.match_corpus` and `MCS.match_corpus` | `gpu_prefilter=False` (the default), or without a usable device | `gpu_prefilter=True` with an attached device | `gpu_prefilter=True` with an attached device | By the caller, with CPU fallback |
 | Packed `FingerprintCorpus` scans, `butina` and `maxmin` | `backend="cpu"` (the default), or `"auto"` without a usable CUDA device | `backend="cuda"`, or `"auto"` with a usable device | Never | By the caller; `"cuda"` raises without a CUDA device |
@@ -109,14 +109,14 @@ The `smsd-cuda` package adds NVIDIA screening to `smsd` on Linux x86_64.
 Install it with the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"
 ```
 
 Packed indexes and clustering also need NumPy, which neither package
 installs:
 
 ```bash
-python -m pip install "smsd[numpy]==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd[numpy]==8.2.1" "smsd-cuda==8.2.1"
 ```
 
 - The package needs Linux x86_64 and CPython 3.12–3.15; the
@@ -125,7 +125,7 @@ python -m pip install "smsd[numpy]==8.2.0" "smsd-cuda==8.2.0"
 - The device must be an NVIDIA GPU of compute capability 7.5 or later, with a
   driver compatible with the CUDA 12 runtime. The runtime is installed as a
   dependency; the CUDA toolkit is not needed.
-- The versions must match exactly. `smsd-cuda` 8.2.0 requires `smsd` 8.2.0,
+- The versions must match exactly. `smsd-cuda` 8.2.1 requires `smsd` 8.2.1,
   and `smsd` does not attach a package built for another version.
 - No `smsd-cuda` wheel is published for Windows or macOS. On Windows, install
   the Linux wheel or run the GPU container under WSL2; see
@@ -140,7 +140,7 @@ The `smsd-metal` package adds Apple GPU screening to `smsd` on Apple silicon
 Macs. Install it with the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"
 ```
 
 - The package needs macOS 14 or later on Apple silicon and CPython 3.12–3.15.
@@ -577,7 +577,7 @@ raises `ValueError`.
 If the installed `smsd-cuda` or `smsd-metal` serves another version of
 `smsd`, the first call that looks for it issues one `RuntimeWarning`. The
 warning names both versions, asks for the matching package, such as
-`smsd-cuda==8.2.0`, and says that screening runs on the CPU; prepared screens
+`smsd-cuda==8.2.1`, and says that screening runs on the CPU; prepared screens
 and pre-screens then stay on the CPU.
 
 ## Prove that the GPU ran
@@ -706,7 +706,7 @@ in the same way: call `smsd_metal.preload()` first and set
 
 ## Containers
 
-The GPU image `smsd:8.2.0-cuda12.8` (linux/amd64) contains `smsd`, the
+The GPU image `smsd:8.2.1-cuda12.8` (linux/amd64) contains `smsd`, the
 matching `smsd-cuda` and the CUDA 12 runtime, with Python as its entry point.
 It has no Java command-line tool, no CUDA toolkit and no NumPy. As shipped,
 it supports prepared screens, `warm_start`, the stream functions and
@@ -718,7 +718,7 @@ described in [GPU screening on Windows](GPU_ON_WINDOWS.md).
 After loading the image archive from the release:
 
 ```bash
-docker run --rm --gpus all smsd:8.2.0-cuda12.8 \
+docker run --rm --gpus all smsd:8.2.1-cuda12.8 \
   -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 

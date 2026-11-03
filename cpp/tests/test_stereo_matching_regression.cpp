@@ -135,6 +135,49 @@ int main() {
         checkSmarts("C/C=C(/F)\\C(Cl)=C/C", "C\\C=C(\\F)/C(Cl)=C\\C", true);
         checkSmarts("C/C=C(/F)\\C(Cl)=C/C", "C/C=C(\\F)/C(Cl)=C/C", false);
     });
+    run("SMARTS aromatic directional carriers", [] {
+        // / and \ match single or aromatic bonds.
+        checkSmarts("c/c", "c1ccccc1", true);
+        checkSmarts("c\\c", "c1ccccc1", true);
+        checkSmarts("c/?c", "c1ccccc1", true);
+        checkSmarts("c/c", "C=C", false);
+        // An aromatic bond between two carriers has no configuration, so it needs /? or \?.
+        checkSmarts("c/c:c/c", "c1ccccc1", false);
+        checkSmarts("c/?c:c/c", "c1ccccc1", true);
+        // Aromatic carriers fix the configuration of an exocyclic double bond.
+        checkSmarts("C/N=c/c", "C/N=c1/cccc[nH]1", true);
+        checkSmarts("C/N=c\\c", "C/N=c1/cccc[nH]1", false);
+        checkSmarts("C/N=c\\[nH]", "C/N=c1/cccc[nH]1", true);
+        checkSmarts("C/N=c/[nH]", "C/N=c1/cccc[nH]1", false);
+        checkSmarts("C/N=c\\c", "C/N=c1\\cccc[nH]1", true);
+        checkSmarts("C/N=c/c", "C/N=c1\\cccc[nH]1", false);
+        checkSmarts("C/N=c/c", "CN=c1cccc[nH]1", false);
+        checkSmarts("C/?N=c/c", "CN=c1cccc[nH]1", true);
+        checkSmarts("C/N=c1/cccc[nH]1", "C/N=c1/cccc[nH]1", true);
+        checkSmarts("C/N=c1/cccc[nH]1", "C/N=c1\\cccc[nH]1", false);
+        // A substituent on an atom without a double bond takes no direction from an aromatic carrier.
+        checkSmarts("C/N=c(/c(/F):c)", "C/N=c1/c(F)ccc[nH]1", true);
+        checkSmarts("C/N=c(/c(\\F):c)", "C/N=c1/c(F)ccc[nH]1", true);
+        checkSmarts("C/N=c(/,:c(\\F):c)", "C/N=c1/c(F)ccc[nH]1", true);
+        // An aromatic bond the expression accepts without a direction stays free.
+        checkSmarts("*!/c:c!/*", "Cn1ccnc1", true);
+        checkSmarts("c!/&!\\c", "c1ccccc1", true);
+        // At a double bond, a negated direction on an aromatic bond keeps E/Z, as on a single bond.
+        checkSmarts("C/N=c(!/c)\\[nH]", "C/N=c1/cccc[nH]1", false);
+        checkSmarts("C/N=c(!\\c)\\[nH]", "C/N=c1/cccc[nH]1", true);
+        checkSmarts("C/N=c!/c", "C/N=c1/cccc[nH]1", false);
+        // A ring bond between an aromatic carrier and a substituent's double bond.
+        checkSmarts("C/N=c(\\[nH])c:c/C=C/C", "C/N=c1/cc(/C=C/C)cc[nH]1", true);
+        // Known limitation: an aromatic bond between two carriers fixed by double bonds.
+        checkSmarts("C/N=c1/cc(/C=C/C)cc[nH]1", "C/N=c1/cc(/C=C/C)cc[nH]1", false);
+        checkSmarts("C/N=c!\\c", "C/N=c1/cccc[nH]1", true);
+        checkSmarts("C/N=c!\\[nH]", "C/N=c1/cccc[nH]1", false);
+        checkSmarts("C/N=c!/&!\\c", "C/N=c1/cccc[nH]1", false);
+        checkSmarts("C/N=c!/c", "CN=c1cccc[nH]1", false);
+        // Between two double bonds, /,: links their configurations as /,- does.
+        checkSmarts("C/C=c1/,:c(=C/C)ccc[nH]1", "C/C=c1/c(=C/C)ccc[nH]1", true);
+        checkSmarts("C/C=c1/,:c(=C/C)ccc[nH]1", "C/C=c1/c(=C\\C)ccc[nH]1", false);
+    });
     run("recursive SMARTS stereo", [] {
         checkSmarts("[$([C@@H](F)(Cl)Br)]", "[C@H](Cl)(F)Br", true);
         checkSmarts("[$([C@@H](F)(Cl)Br)]", "[C@@H](Cl)(F)Br", false);

@@ -3587,7 +3587,8 @@ Example::
           },
           py::arg("mol"), py::arg("target_bond_length") = 1.5,
           "Generate 2D coordinates for a molecule.\n"
-          "Returns a list of (x, y) tuples, one per atom."
+          "Returns a list of (x, y) tuples, one per atom.\n"
+          "Raises ValueError if no layout showing the stored ring double-bond stereo is found."
           R"doc(
 
 Example::

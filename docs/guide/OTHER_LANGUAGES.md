@@ -11,7 +11,7 @@ it, and where the languages differ. The [C++ guide](../CPP.md) and the
 The C++ library is header-only and needs a C++17 compiler: include
 `smsd/smsd.hpp` and add `cpp/include` to the include path. An installed CMake
 package provides the target `smsd::smsd` through
-`find_package(smsd 8.2.0 CONFIG REQUIRED)`; the
+`find_package(smsd 8.2.1 CONFIG REQUIRED)`; the
 [C++ module README](../../cpp/README.md#install-and-use-with-cmake) shows the
 install and a minimal consumer project.
 
@@ -126,8 +126,9 @@ build and its options.
 ## Java
 
 The Java library is `com.bioinceptionlabs:smsd` and the command-line tool
-`com.bioinceptionlabs:smsd-cli`. From 8.2.0, both receive bug fixes only.
-Both are on Maven Central at 8.2.0; a source build with
+`com.bioinceptionlabs:smsd-cli`. SMSD is maintained at the 8.2.0 feature
+baseline across C++, Python and Java. Both are on Maven Central at 8.2.1; a
+source build with
 `mvn -f java/pom.xml install` from the repository root installs them in the
 local Maven repository instead (Gradle then needs `mavenLocal()`). The
 [Java module README](../../java/README.md#installation) gives the Maven and
@@ -195,8 +196,8 @@ against the self-contained JAR of the source build; on Windows, separate the
 class path entries with a semicolon:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar ScreenExample.java
-java -cp "java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:." ScreenExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar ScreenExample.java
+java -cp "java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar:." ScreenExample
 ```
 
 With JDK 25, `javac --release 8` warns that release 8 is obsolete; the class
@@ -219,6 +220,7 @@ fingerprint comparisons, as above.
 | NVIDIA CUDA screening | The `smsd-cuda` package | A CUDA source build | No |
 | Metal fingerprint screening | The `smsd-metal` package (prepared corpora; Apple silicon) | macOS, when requested explicitly | No |
 | Named SMARTS predicates (`$name`) | No | Yes | Yes |
+| Directional SMARTS bonds `/`, `\` | Single or aromatic bonds | Single or aromatic bonds | Single, non-aromatic bonds only |
 | Default chemistry | The defaults of [default chemistry](GETTING_STARTED.md#default-chemistry) | The same | The same |
 
 The [Java guide](../JAVA.md#results) describes the stopped-search difference,

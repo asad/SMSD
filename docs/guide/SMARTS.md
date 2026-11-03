@@ -307,7 +307,9 @@ Stereochemistry written in a pattern is always enforced; `use_chirality` and
 `use_bond_stereo` are not needed. A pattern with a configuration does not match
 a target that leaves it unspecified, unless the pattern uses `@?`, `@@?`, `/?`
 or `\?`, which also accept no configuration. A double bond with a direction
-written on one side only places no constraint.
+written on one side only places no constraint. `/` and `\` match single or
+aromatic bonds, so `c/c` matches benzene; an aromatic bond between two of them
+has no configuration, so it matches only when one is `/?` or `\?`.
 
 A tetrahedral tag is read relative to the written order of the neighbours, as
 in SMILES. To compare a pattern with a target, write both with the neighbours

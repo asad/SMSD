@@ -11,6 +11,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/mol_graph.hpp"
 #include "smsd/detail/search_graph_validation.hpp"
 #include "smsd/smarts_parser.hpp"
@@ -309,3 +314,6 @@ struct QueryView {
 
 } // namespace search_detail
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

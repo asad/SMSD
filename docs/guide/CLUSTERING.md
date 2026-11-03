@@ -16,7 +16,7 @@ All three tools read a `FingerprintCorpus`, so they need NumPy, from the
 `numpy` extra:
 
 ```bash
-python -m pip install "smsd[numpy]==8.2.0"
+python -m pip install "smsd[numpy]==8.2.1"
 ```
 
 ## Choose a method

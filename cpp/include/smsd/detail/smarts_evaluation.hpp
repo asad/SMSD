@@ -139,6 +139,12 @@ inline bool evalAtomExpr(const AtomExpr& expr, const MolGraph& g, int idx) {
     return false;
 }
 
+/** Whether a bond can carry / or \: Daylight reads directional bonds as single or aromatic. */
+inline bool isDirectionalCarrier(const MolGraph& graph, int first, int second) {
+    const int order = graph.bondOrder(first, second);
+    return order == 1 || order == 4 || graph.bondAromatic(first, second);
+}
+
 inline bool evalBondPrim(const BondExpr& expr, const MolGraph& g, int i, int j) {
     switch (expr.primType) {
         case BondPrimType::ANY:
@@ -163,7 +169,7 @@ inline bool evalBondPrim(const BondExpr& expr, const MolGraph& g, int i, int j) 
         case BondPrimType::DASH:
         case BondPrimType::WEDGE_OR_UNSPECIFIED:
         case BondPrimType::DASH_OR_UNSPECIFIED:
-            return g.bondOrder(i, j) == 1 && !g.bondAromatic(i, j);
+            return isDirectionalCarrier(g, i, j);
 
         case BondPrimType::DEFAULT_: {
             // Default SMARTS bond: matches single (1) or aromatic (4)
@@ -217,7 +223,7 @@ inline StereoTruth evalBondExprWithoutDirection(const BondExpr& expression, cons
     if (expression.op == ExprOp::PRIM) {
         if (!isDirectionalPrimitive(expression.primType))
             return evalBondPrim(expression, graph, first, second) ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
-        if (graph.bondOrder(first, second) != 1 || graph.bondAromatic(first, second)) return StereoTruth::FALSE_VALUE;
+        if (!isDirectionalCarrier(graph, first, second)) return StereoTruth::FALSE_VALUE;
         return expression.primType == BondPrimType::WEDGE_OR_UNSPECIFIED
                 || expression.primType == BondPrimType::DASH_OR_UNSPECIFIED
             ? StereoTruth::TRUE_VALUE : StereoTruth::UNKNOWN;
@@ -278,15 +284,17 @@ inline bool hasDirectionalPrimitive(const BondExpr& expression) {
     return false;
 }
 
-/** Evaluate a directional bond expression for one candidate slash direction, 1 up or -1 down. */
+/**
+ * Evaluate a directional bond expression for one candidate slash direction, 1 up or -1 down;
+ * 0 reads every directional primitive as false.
+ */
 inline bool evalBondExprWithDirection(const BondExpr& expression, const MolGraph& graph,
                                       int first, int second, int direction) {
     if (expression.op == ExprOp::PRIM) {
         if (isDirectionalPrimitive(expression.primType)) {
             const bool up = expression.primType == BondPrimType::WEDGE
                 || expression.primType == BondPrimType::WEDGE_OR_UNSPECIFIED;
-            return graph.bondOrder(first, second) == 1 && !graph.bondAromatic(first, second)
-                && direction == (up ? 1 : -1);
+            return isDirectionalCarrier(graph, first, second) && direction == (up ? 1 : -1);
         }
         return evalBondPrim(expression, graph, first, second);
     }

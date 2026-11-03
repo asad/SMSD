@@ -117,7 +117,7 @@ class StereoMatchingRegressionTest {
   @CsvSource({"C/C, CC, 2", "C/C, C=C, 0", "[#6]/[#6], c1ccccc1, 0", "[#6]\\[#6], C1CCCCC1, 12",
       "C/C, C/C=C\\C, 4", "F/C=C/F, F/C=C/F, 2", "F/C=C/F, F/C=C\\F, 0", "F/C=C/F, FC=CF, 0"})
   void directionalBondsAreSingleAliphaticBonds(String smarts, String smiles, int embeddings) throws Exception {
-    // A directional bond is a single, non-aromatic bond, as in Daylight SMARTS and the native core.
+    // In Java a directional bond is a single, non-aromatic bond; the native core also accepts an aromatic bond.
     assertEquals(embeddings, Substructure.smarts(smarts).matchAll(new MolGraph(rawMolecule(smiles))).matches().size());
   }
 

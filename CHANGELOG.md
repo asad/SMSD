@@ -3,6 +3,45 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [8.2.1] - 2026-11-03
+
+### Changed
+
+- The Python package page has clearer installation, search-configuration and
+  screening examples, and links the homepage and user guide.
+- The documentation states that C++, Python and Java are maintained at the 8.2.0
+  feature baseline.
+- Python, CUDA, Metal, conda and Maven package metadata link to the
+  documentation site.
+
+### Fixed
+
+- Elemental-hydrogen SMARTS keep their meaning with large isotope, charge or
+  atom-map values.
+- C++ headers compile when Windows defines `STRICT` and `IGNORE`, while retaining
+  the application's macro definitions.
+- In C++ and Python, coordinate generation and automatic SVG drawing preserve
+  stored stereo on non-aromatic ring double bonds, or raise an error when a
+  matching layout cannot be found. This includes a stored E/Z that the ring
+  cannot take, such as trans in cyclohexene; 8.2.0 drew such molecules
+  without that E/Z.
+- The release guide gives the correct Maven Central version.
+- In C++ and Python, the directional SMARTS bonds `/` and `\` also match
+  aromatic bonds, so `c/c` matches benzene and `C/N=c1/cccc[nH]1`, with a
+  direction on an aromatic ring bond, matches itself as SMARTS. At a double
+  bond, a negated or alternative direction on such a bond now follows the E/Z
+  of that double bond, as it already did on a single bond, so a few patterns,
+  such as `C/N=c!/c`, match fewer molecules.
+
+### Limitations
+
+- In Java, a directional SMARTS bond matches only single, non-aromatic bonds,
+  so `c/c` does not match benzene. Write a bond that may be aromatic without a
+  direction, as in `cc` or `c-,:c`.
+- A SMARTS taken from a molecule with stereo double bonds on two neighbouring
+  atoms of an aromatic ring, such as `C/C=C/c1ccccc1/C=C/C`, does not match
+  that molecule.
+
 ## [8.2.0] - 2026-11-01
 
 Apple GPU screening, cleaner structure drawings, clearer tool refusals and an

@@ -1,7 +1,7 @@
-# SMSD Pro 8.2.0
+# SMSD Pro 8.2.1
 
 > Molecular graph searches, fingerprints, screening and depiction through Python,
-> Java and C++. This is the 8.2.0 source documentation; use a matching wheel or
+> Java and C++. This is the 8.2.1 source documentation; use a matching wheel or
 > source build.
 
 ## Documentation

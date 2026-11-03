@@ -1,312 +1,267 @@
-<p align="center">
-  <a href="https://github.com/asad/SMSD" aria-label="SMSD Pro">
-    <img src="https://raw.githubusercontent.com/asad/SMSD/master/icons/icon.svg" alt="SMSD Pro" width="140"/>
-  </a>
-</p>
-
 # SMSD Pro™ for Python
 
-[![PyPI](https://img.shields.io/pypi/v/smsd?label=pypi)](https://pypi.org/project/smsd/)
+[![PyPI](https://img.shields.io/pypi/v/smsd?label=PyPI)](https://pypi.org/project/smsd/)
 [![Conda](https://img.shields.io/conda/vn/bioinception/smsd?label=conda)](https://anaconda.org/bioinception/smsd)
-[![Documentation](https://img.shields.io/badge/docs-asad.github.io%2FSMSD-0d3330)](https://asad.github.io/SMSD/)
-[![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.15-3776ab)](https://asad.github.io/SMSD/HOWTO-INSTALL/)
+[![Documentation](https://img.shields.io/badge/docs-user%20guide-0d3330)](https://asad.github.io/SMSD/guide/)
+[![Licence](https://img.shields.io/badge/licence-Apache%202.0-blue)](https://github.com/asad/SMSD/blob/master/LICENSE)
+[![Software DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23639199-007ec6)](https://doi.org/10.5281/zenodo.23639199)
 
-SMSD Pro provides substructure search, maximum common substructure (MCS)
-search, fingerprints and similarity screening for chemical graphs. Core matching
-needs no RDKit, CDK or Java; RDKit is optional, for RDKit molecules and the
-RDKit image helpers.
+Find chemical motifs, compare molecular structures and screen collections
+with substructure search, maximum common substructure (MCS) and molecular
+fingerprints. The Python package uses SMSD's native C++ engine. The examples
+below need only `smsd`.
 
-## Installation
+**[User guide](https://asad.github.io/SMSD/guide/)** ·
+[Getting started](https://asad.github.io/SMSD/guide/GETTING_STARTED/) ·
+[Notebooks](https://asad.github.io/SMSD/notebooks/) ·
+[Source](https://github.com/asad/SMSD) ·
+[Report a bug](https://github.com/asad/SMSD/issues)
 
-```bash
-python -m pip install "smsd==8.2.0"
-```
+## Install
 
-To include RDKit, install the `rdkit` extra:
-
-```bash
-python -m pip install "smsd[rdkit]==8.2.0"
-```
-
-The CPU/OpenMP wheels cover CPython 3.12–3.15 on macOS arm64 (macOS 14 or
-later), Linux x86_64 and aarch64, and Windows x86_64. See the
-[supported-platforms table](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md#supported-platforms)
-for operating-system requirements. Free-threaded CPython and Intel macOS need a
-source build.
-
-The [conda guide](https://github.com/asad/SMSD/blob/master/packaging/conda/README.md)
-describes the CPU, CUDA and Metal recipes and the conda, mamba and Pixi install
-routes. Like the wheels, the conda packages use OpenMP for batch work.
-
-### Optional GPU packages
-
-`smsd-cuda` provides optional NVIDIA CUDA screening on Linux x86_64 and needs
-the same version of `smsd`:
+### pip
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1"
 ```
 
-The GPU computes integer overlaps; scores use the CPU expressions and hits
-keep target order. Exact graph matching runs on the CPU. See the
-[CUDA section](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#optional-cuda-screening)
-for native-corpus dispatch and CPU fallback behaviour. Explicit packed-corpus
-CUDA calls have their own error contract, described below.
-
-The [`smsd-cuda` package](https://github.com/asad/SMSD/blob/master/packaging/smsd-cuda/README.md)
-provides preload, retained workspace, opt-in CUDA Graph replay and on-device
-top-k filtering.
-
-`smsd-metal` provides optional Apple GPU screening on Apple silicon Macs with
-macOS 14 or later, and also needs the same version of `smsd`:
+### conda or mamba
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+conda install -c bioinception -c conda-forge smsd=8.2.1
 ```
 
-Prepared corpus screens and requested pre-screens can use the Apple GPU, with
-the same hits as on the CPU; packed fingerprint corpora do not use Metal. See
-the [`smsd-metal` package](https://github.com/asad/SMSD/blob/master/packaging/smsd-metal/README.md)
-and [CPU and GPU screening](https://github.com/asad/SMSD/blob/master/docs/guide/CPU_GPU.md).
-Native Windows CUDA is not provided; on Windows, use the Linux CUDA package
-under WSL2, as described in
-[GPU screening on Windows](https://github.com/asad/SMSD/blob/master/docs/guide/GPU_ON_WINDOWS.md).
+Use the same channels and package name with `mamba`.
 
-## Quick start
+Python wheels are available for CPython 3.12–3.15:
+
+| Operating system | Wheel architecture |
+|---|---|
+| Windows | x86_64 |
+| Linux | x86_64, aarch64 |
+| macOS 14 or later | arm64 (Apple silicon) |
+
+See the [installation guide](https://asad.github.io/SMSD/HOWTO-INSTALL/)
+for Linux and Windows requirements, conda packages and source builds. Intel
+macOS and free-threaded CPython require a source build. Batch calls use OpenMP when available and otherwise run
+sequentially.
+
+### Optional GPU screening
+
+Install the add-on for your hardware, keeping its version equal to `smsd`:
+
+| Hardware | pip command |
+|---|---|
+| NVIDIA GPU, Linux x86_64 | `python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"` |
+| Apple silicon GPU, macOS 14+ | `python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"` |
+
+These add-ons run supported screening operations on the GPU. Exact graph
+matching runs on the CPU. The [CPU and GPU guide](https://asad.github.io/SMSD/guide/CPU_GPU/)
+explains requirements and fallback behaviour; the
+[Windows GPU guide](https://asad.github.io/SMSD/guide/GPU_ON_WINDOWS/)
+covers NVIDIA screening through WSL2.
+
+## Find a chemical motif
+
+Search for a carboxylic acid with a SMARTS pattern. Batch results follow the
+input order:
 
 ```python
 import smsd
 
-assert smsd.Substructure.find("c1ccccc1").match("c1ccc(O)cc1").found  # benzene in phenol
+library = {
+    "aspirin": "CC(=O)Oc1ccccc1C(=O)O",
+    "paracetamol": "CC(=O)Nc1ccc(O)cc1",
+    "ethanol": "CCO",
+}
+acid = smsd.Substructure.smarts("C(=O)[OX2H1]")
+results = acid.match_many(list(library.values()), num_threads=1)
 
-query = "CC(=O)NC"    # N-methylacetamide
-target = "CCC(=O)N"   # propanamide
+for name, hit in zip(library, results):
+    print(name, hit.found)
+# aspirin True
+# paracetamol False
+# ethanol False
+```
+
+For molecule queries, use `Substructure.find(query)`. See
+[substructure search](https://asad.github.io/SMSD/guide/SUBSTRUCTURE/) and
+[SMARTS patterns](https://asad.github.io/SMSD/guide/SMARTS/) for chemistry options.
+
+## Compare two molecules
+
+Find the common carbon skeleton of ethanol and ethylamine:
+
+```python
+import smsd
+
+query, target = "CCO", "CCN"
 result = smsd.MCS.find(query).with_timeout(1000).match(target)
-print(f"MCS: {result.best.atom_count} atoms")  # MCS: 4 atoms
+
+if result.found:
+    print(result.best.atom_count, result.best.bond_count)  # 2 1
+    print(result.best.atom_mapping)  # query atom index -> target atom index
+print(result.status.name, result.optimal, result.complete)
 ```
 
-`Substructure` and `MCS` prepare a query once and provide `match`,
-`match_all` and `match_many`. Each match maps query to target atom indices and
-records the selected bonds and fragments. A search that stops early can return
-a valid but unproved answer, so check `result.optimal`, `result.complete` and
-`result.status`; an empty incomplete result does not prove absence.
+The timeout is in milliseconds per target. A stopped search may return a
+valid match without proving it is the largest. Check `optimal`, `complete`
+and `status`; an empty unfinished result does not prove that no match exists.
+The default is a connected maximum common induced subgraph (MCIS), ranked by
+atoms, then bonds. The [MCS guide](https://asad.github.io/SMSD/guide/MCS/)
+covers edge-based MCES, disconnected fragments and matching rules.
 
-`MCS` defaults to a connected maximum common induced subgraph (MCIS), ranked by
-atoms and then bonds. `MCS.Objective.MCES` selects the maximum common edge
-subgraph (MCES), which maximises common bonds, then their atoms, and adds no
-isolated atoms. `with_fragments()` allows disconnected common graphs.
+### Draw the match
 
-## Batch search
+Draw the match as a native SVG. `mcs_svg` reuses the result's mapping, so it
+runs no second search and needs no optional drawing package:
 
-Parse molecules once when you reuse them. Results follow the target order, and
-each target has its own search budget:
+```python
+from pathlib import Path
+
+import smsd
+from smsd.highlight import mcs_svg
+
+query, target = "CCO", "CCN"
+result = smsd.MCS.find(query).with_timeout(1000).match(target)
+svg = mcs_svg(query, target, result)
+Path("common-substructure.svg").write_text(svg, encoding="utf-8")
+```
+
+The SVG retains search status and highlights the mapped region. See
+[drawing a result](https://asad.github.io/SMSD/guide/MCS/#draw-the-result)
+for notebook display and selected-bond rendering limits.
+
+## Configure a search
+
+Set the time and node limits and the chemistry rules before preparing a query:
 
 ```python
 import smsd
 
-query = smsd.parse_smiles("c1ccccc1")
-targets = [smsd.parse_smiles(s) for s in ["c1ccc(O)cc1", "CCO"]]
-results = smsd.Substructure.find(query).match_many(targets, num_threads=2)
-assert [result.found for result in results] == [True, False]
-assert [result.best.atom_count if result.found else 0 for result in results] == [6, 0]
-results = smsd.MCS.find(query).with_timeout(1000).match_many(targets)
-assert [result.best.atom_count for result in results] == [6, 2]
+options = smsd.MCS.Options()
+options.timeout_ms = 1000
+options.node_limit = 100000
+options.chemistry.match_bond_order = smsd.BondOrderMode.STRICT
+options.chemistry.ring_matches_ring_only = True
+options.chemistry.use_chirality = True
+options.chemistry.use_bond_stereo = True
+
+prepared = smsd.MCS.find("c1ccc(O)cc1").with_options(options)
+configured = prepared.match("c1ccc(N)cc1")
+atoms = configured.best.atom_count if configured.found else 0
+print(atoms, configured.status.name, configured.optimal, configured.complete)  # 6 COMPLETED True True
 ```
 
-`match_all` returns up to 1,000 matches by default, symmetry-related mappings
-included; check `complete` before treating an enumeration as exhaustive.
-`TargetCorpus` holds targets for repeated queries. Batch calls use OpenMP, or
-run sequentially without it.
+| Setting | Controls |
+|---|---|
+| `timeout_ms`, `node_limit` | Time per target and search-node allowance |
+| `chemistry.match_bond_order` | Equal bond orders (`STRICT`) or relaxed matching |
+| `chemistry.aromaticity_mode` | Flexible or strict aromaticity matching |
+| `chemistry.ring_matches_ring_only` | Ring atoms and bonds map only to rings |
+| `chemistry.complete_rings_only` | Matched ring atoms and bonds lie in fully matched rings of both molecules |
+| `chemistry.use_chirality`, `chemistry.use_bond_stereo` | Tagged atom and double-bond stereochemistry |
+| `chemistry.match_formal_charge`, `chemistry.match_isotope` | Charge agreement; isotope agreement where both atoms specify a mass |
+| `chemistry.tautomer_aware` | Recognised tautomeric relaxations; usually also needs a relaxed `match_bond_order` |
+| `.with_objective(smsd.MCS.Objective.MCES)` | Maximise common bonds instead of common atoms |
+| `.with_fragments()` | Allow a disconnected common graph |
 
-For repeated screening, `TargetCorpus.screen_many` returns ECFP4 Tanimoto hit
-indices for each query, and `screen_targets_many` returns similarity-bound hit
-indices. See the
-[corpus API](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#smarts-and-target-collections)
-for preparation and return order.
+`with_options` copies the settings into a new prepared query. Molecule-based
+substructure searches use `Substructure.Options()` in the same way. SMARTS
+patterns state their own atom and bond rules; among these chemistry settings,
+only `complete_rings_only` applies to SMARTS. See the
+[full configuration table](https://asad.github.io/SMSD/guide/SUBSTRUCTURE/#chemistry-options).
 
-## Fingerprints
+## Compare molecular fingerprints
 
-Radius 2 gives ECFP4; `mode="fcfp"` gives functional-class fingerprints
-([Rogers and Hahn, 2010](https://doi.org/10.1021/ci100050t)). `similarity()` is
-a screening bound, not a fingerprint metric; use the coefficients below for
-fingerprint similarity:
+Compute ECFP4 fingerprints and their Tanimoto similarity:
 
 ```python
 import smsd
 
-query_fp = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
-target_fp = smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2, fp_size=2048)
-score = smsd.tanimoto_coefficient(query_fp, target_fp)
-assert 0.0 <= score <= 1.0
+benzene = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
+phenol = smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2, fp_size=2048)
+score = smsd.tanimoto_coefficient(benzene, phenol)
+print(f"Tanimoto: {score:.3f}")
 ```
 
-`FingerprintOptions` configures circular, path, torsion and structural-key
-fingerprints, including the 166 MACCS keys, with the same bits as C++ and Java
-of the same version:
+The [fingerprint guide](https://asad.github.io/SMSD/guide/FINGERPRINTS/)
+covers families and options; the [screening guide](https://asad.github.io/SMSD/guide/SCREENING/)
+covers searching a collection. `smsd.similarity()` is a separate screening
+bound; use `tanimoto_coefficient()` for the fingerprint comparison above.
+
+## Screen a library, then compute the MCS
+
+Rank a library by fingerprint similarity, or prepare a corpus for repeated
+MCS-bound screening before graph search:
 
 ```python
 import smsd
 
-options = smsd.FingerprintOptions(family="ecfp", ring_size=True, cip_atoms=True)
-fp = smsd.fingerprint("CC(=O)Oc1ccccc1C(=O)O", options=options)
-keys = smsd.fingerprint("CC(=O)Oc1ccccc1C(=O)O", options=smsd.FingerprintOptions.maccs())
-assert fp and keys
-```
-
-### Screening
-
-Rank a library by ECFP4 similarity, then search it by substructure as a
-prepared corpus:
-
-```python
-import smsd
-
-library = ["CC(=O)Oc1ccccc1", "OC(=O)c1ccccc1O", "CC(=O)Nc1ccc(O)cc1", "c1ccccc1"]
-ranked = smsd.batch_similarity("CC(=O)Oc1ccccc1C(=O)O", library)  # (index, Tanimoto), most similar first
+query = "CC(=O)Oc1ccccc1C(=O)O"  # aspirin
+library = [query, "OC(=O)c1ccccc1O", "CCO"]
 corpus = smsd.TargetCorpus.from_smiles(library)
-corpus.prewarm()
-acids = smsd.Substructure.smarts("C(=O)[OX2H1]").match_many(corpus, num_threads=0)
-assert library[ranked[0][0]] == "CC(=O)Oc1ccccc1" and sum(r.found for r in acids) == 1
+
+for index, score in smsd.batch_similarity(query, library):
+    print(index, f"ECFP4 Tanimoto: {score:.3f}")
+
+candidates = smsd.screen_targets(query, corpus, 0.7)
+matches = smsd.MCS.find(query).with_timeout(1000).match_many(
+    [library[index] for index in candidates], num_threads=1
+)
+for index, match in zip(candidates, matches):
+    atoms = match.best.atom_count if match.found else 0
+    print(index, atoms, match.status.name, match.optimal, match.complete)
 ```
 
-With OpenMP, as in the published wheels, `num_threads=0` uses every core
-unless `OMP_NUM_THREADS` sets fewer. The
-[Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#screening)
-screen a library of 2,744 molecules and set aside targets that cannot reach an
-MCS similarity threshold before computing the MCS; they also cover count
-fingerprints and the other coefficients.
+The `0.7` threshold applies to an **upper bound on atom-count MCS Tanimoto**,
+under the same chemistry rules as the default search above. It is separate
+from ECFP4 Tanimoto and is not a confirmed MCS score. A surviving candidate
+still needs graph search and inspection of its result status.
+The [screening examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#screening)
+extend this workflow to larger libraries and substructure confirmation.
 
-## Adapters, corpora and SMARTS export
+## Guides and examples
 
-The optional [data and ML adapters](https://github.com/asad/SMSD/blob/master/docs/PYTHON_ADAPTERS.md)
-provide NumPy arrays, SciPy CSR matrices, pandas and Polars molecule/fingerprint
-columns, Arrow feature tables, PyTorch tensors, scikit-learn fingerprint and
-similarity transformers, and PyTorch Geometric graphs. Arrow can share a
-compatible NumPy buffer with explicit ownership/copy metadata; other inputs
-need a copy. Native molecule indices and recorded graph features are retained;
-coordinates or stereochemical features are not invented for graph export.
-Known conflicts between separate bundled OpenMP runtimes are rejected before
-the PyTorch adapters run; a shared runtime or an OpenMP-free SMSD build is needed.
+| Task | Documentation |
+|---|---|
+| Work through complete examples | [Jupyter and Colab notebooks](https://asad.github.io/SMSD/notebooks/) |
+| Reuse a target library | [Corpus screening](https://asad.github.io/SMSD/guide/SCREENING/) |
+| Store fingerprints and select top-k hits | [Packed fingerprint index](https://asad.github.io/SMSD/guide/PACKED_INDEX/) |
+| Cluster molecules or select a diverse subset | [Clustering and diversity](https://asad.github.io/SMSD/guide/CLUSTERING/) |
+| Use data frames, arrays and learning libraries | [Data adapters](https://asad.github.io/SMSD/guide/MACHINE_LEARNING/) |
+| Look up Python methods and options | [Python reference](https://asad.github.io/SMSD/PYTHON/) |
+| Use C++ or Java | [Other languages](https://asad.github.io/SMSD/guide/OTHER_LANGUAGES/) |
 
-The [local molecular tools](https://github.com/asad/SMSD/blob/master/docs/MCP_SERVER.md)
-cover MCS, substructure and SMARTS search, fingerprints, similarity, screening,
-standardisation and MCS depiction. They return limits and native proof/status
-fields where applicable. One registry supplies MCP and function-calling schemas
-plus optional LangChain and LlamaIndex adapters. Tools run locally; exporting
-definitions does not contact a model provider. The
-[MCP container recipe](https://github.com/asad/SMSD/blob/master/packaging/mcp/README.md)
-and [Hugging Face demonstration source](https://github.com/asad/SMSD/blob/master/examples/huggingface/README.md)
-install supplied wheels offline; neither is a deployed service or published image.
-Native SVG highlighting is also available for existing MCS results.
+The [installation guide](https://asad.github.io/SMSD/HOWTO-INSTALL/) also
+covers optional integrations and source-build dependencies. See the
+[release notes](https://asad.github.io/SMSD/RELEASE_NOTES/) when upgrading.
+Existing deprecated APIs remain supported throughout the 8.x line.
 
-[Packed corpora](https://github.com/asad/SMSD/blob/master/docs/PACKED_CORPORA.md)
-stream binary fingerprints into a read-only memory-mapped file. Packed searches
-default to CPU and accept explicit `backend="cuda"` or `"auto"` for exact
-integer intersections, threshold and top-k selection. CUDA execution errors
-propagate rather than silently retrying on CPU. Butina and MaxMin retain
-deterministic CPU bookkeeping and linear auxiliary arrays; `cuda_calls` counts
-completed packed CUDA calls. All-against-all scans take quadratic time, and
-keeping every result can need quadratic memory.
+SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and documentation corrections.
 
-`MCS.match_with_smarts` returns the result and a query pattern under the prepared
-chemistry. [SMARTS export](https://github.com/asad/SMSD/blob/master/docs/SMARTS_EXPORT.md)
-rejects stereo, tautomer-aware, complete-ring and strict ring-fusion constraints
-that the portable pattern cannot represent. The search result retains its
-completion and optimality flags.
+## Cite SMSD Pro
 
-The deprecated 8.x APIs remain available and supported throughout the 8.x line.
+If you use SMSD Pro in research, cite the paper and software release:
 
-## RDKit molecules
+> Rahman SA. *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common
+> Substructure Search.* ChemRxiv, 2026.
+> [doi:10.26434/chemrxiv.15001534/v1](https://doi.org/10.26434/chemrxiv.15001534/v1)
 
-With RDKit installed, pass its molecules directly. Mappings use the original
-RDKit atom indices:
+Software: [doi:10.5281/zenodo.23639199](https://doi.org/10.5281/zenodo.23639199).
+This DOI covers all releases; cite the version you used.
 
-```python
-from rdkit import Chem
-import smsd
-
-query = Chem.MolFromSmiles("CC(=O)NC")   # N-methylacetamide
-target = Chem.MolFromSmiles("CCC(=O)N")  # propanamide
-result = smsd.MCS.find(query).with_timeout(1000).match(target)
-assert result.best.atom_count == 4
-```
-
-Conversion passes through SMILES, so coordinates, data fields and query
-predicates are not transferred. `from_openbabel` and `to_openbabel` do the same
-for Open Babel, without its atom numbering. See
-[input atom numbering](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#input-atom-numbering).
-
-## Documentation
-
-The documentation site, [asad.github.io/SMSD](https://asad.github.io/SMSD/),
-brings the user guide, notebooks and reference together.
-
-- [Python guide](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md):
-  searches, chemistry options, timeouts and the full API reference.
-- [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md):
-  fingerprints, drawing, layout, stereo, MOL and SDF files, R-groups and
-  scaffolds.
-- [API reference](https://github.com/asad/SMSD/blob/master/docs/API_REFERENCE.md):
-  public functions and classes, options and proof status.
-- [Adapters and MCP tools](https://github.com/asad/SMSD/blob/master/docs/PYTHON_ADAPTERS.md):
-  NumPy, SciPy, pandas, Polars, Arrow, PyTorch and scikit-learn adapters and the
-  local MCP tools.
-- [Packed corpora](https://github.com/asad/SMSD/blob/master/docs/PACKED_CORPORA.md):
-  memory-mapped fingerprint corpora, CPU and CUDA scans, Butina and MaxMin.
-- [Connecting AI assistants](https://github.com/asad/SMSD/blob/master/docs/AI_ASSISTANTS.md):
-  MCP set-up and tool definitions.
-- [Installation guide](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md):
-  platform requirements and source builds.
-- [Benchmark guide](https://github.com/asad/SMSD/blob/master/benchmarks/README.md):
-  workloads and mapping validation.
-- [Changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md): what the
-  release provides.
-- [Upgrading from 8.1.0](https://github.com/asad/SMSD/blob/v8.2.0/docs/RELEASE_NOTES.md#upgrading-from-810):
-  refusal messages, paired add-on versions and Java availability; the notes on
-  [upgrading from 8.0.3](https://github.com/asad/SMSD/blob/v8.2.0/docs/RELEASE_NOTES.md#upgrading-from-803)
-  cover ring refusals, the changed MCIS search and other behaviour changes.
-
-## Build from source
-
-From the repository root, with Python 3.12 or later, a C++17 compiler and CMake
-3.18 or later:
-
-```bash
-python -m pip install build
-python -m pip install -e ".[dev]"
-python -m build
-```
-
-The standard wheels use CPU/OpenMP. The optional `smsd-cuda` package needs a
-compatible NVIDIA driver, and the optional `smsd-metal` package needs an Apple
-silicon Mac. `gpu_device_info()` reports an available backend, not the one a
-particular call used.
-
-## Other languages
-
-SMSD Pro is also available for
-[Java](https://github.com/asad/SMSD/blob/master/docs/JAVA.md), with CDK
-integration, and as a header-only
-[C++17 library](https://github.com/asad/SMSD/blob/master/docs/CPP.md).
-
-## Citation
-
-If you use SMSD Pro in your research, please cite:
-
-> Rahman SA.
-> *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search.*
-> ChemRxiv, 2026.
-> DOI: [10.26434/chemrxiv.15001534/v1](https://doi.org/10.26434/chemrxiv.15001534/v1)
-
-For the original SMSD toolkit, please also cite:
+For the original toolkit:
 
 > Rahman SA, Bashton M, Holliday GL, Schrader R, Thornton JM.
 > *Small Molecule Subgraph Detector (SMSD) toolkit.*
 > Journal of Cheminformatics, 1:12, 2009.
-> DOI: [10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
+> [doi:10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
 
-A machine-readable [CITATION.cff](https://github.com/asad/SMSD/blob/master/CITATION.cff)
-is provided for citation software.
+[CITATION.cff](https://github.com/asad/SMSD/blob/master/CITATION.cff)
+provides machine-readable citation details.
 
 ## Licence
 

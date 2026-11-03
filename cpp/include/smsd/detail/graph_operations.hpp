@@ -12,6 +12,11 @@
  */
 #pragma once
 
+#pragma push_macro("STRICT")
+#pragma push_macro("IGNORE")
+#undef STRICT
+#undef IGNORE
+
 #include "smsd/mol_graph.hpp"
 
 namespace smsd {
@@ -490,3 +495,6 @@ inline std::map<int,int> translateToAtomIds(
 }
 
 } // namespace smsd
+
+#pragma pop_macro("IGNORE")
+#pragma pop_macro("STRICT")

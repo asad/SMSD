@@ -73,11 +73,11 @@ sudo apt update
 sudo apt install -y python3-venv
 python3 -m venv ~/smsd-gpu
 source ~/smsd-gpu/bin/activate
-python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"
 ```
 
-For packed indexes and clustering, install `"smsd[numpy]==8.2.0"` in place of
-`"smsd==8.2.0"`. Then check the device and the backend:
+For packed indexes and clustering, install `"smsd[numpy]==8.2.1"` in place of
+`"smsd==8.2.1"`. Then check the device and the backend:
 
 ```bash
 python -c "import smsd_cuda; print(smsd_cuda.unavailable_reason() or smsd_cuda.device_info())"
@@ -85,7 +85,7 @@ python -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 
 The first command prints the device name, its compute capability and its
-memory, or the reason no device can be used. The second prints `8.2.0` and a
+memory, or the reason no device can be used. The second prints `8.2.1` and a
 backend string that starts with `GPU:` once `smsd` has attached the device.
 Both report what is available, not which device a call used.
 
@@ -109,8 +109,8 @@ read from there, but more slowly.
 
 ## Run the GPU Docker image
 
-The [8.2.0 release](https://github.com/asad/SMSD/releases/tag/v8.2.0) has the
-GPU image `smsd-8.2.0-cuda-linux-amd64.tar.xz`, with Python, `smsd`, the
+The [8.2.1 release](https://github.com/asad/SMSD/releases/tag/v8.2.1) has the
+GPU image `smsd-8.2.1-cuda-linux-amd64.tar.xz`, with Python, `smsd`, the
 matching `smsd-cuda` and the CUDA 12 runtime. Python is its entry point and
 `/work` its working directory. Docker needs GPU access in WSL2, which either
 of two set-ups provides:
@@ -125,19 +125,19 @@ In the Ubuntu shell, in the directory that holds the downloaded files, check
 the archive, load it and run the image:
 
 ```bash
-grep ' smsd-8.2.0-cuda-linux-amd64.tar.xz$' SHA256SUMS | shasum -a 256 -c
-docker load --input smsd-8.2.0-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.2.0-cuda12.8 \
+grep ' smsd-8.2.1-cuda-linux-amd64.tar.xz$' SHA256SUMS | shasum -a 256 -c
+docker load --input smsd-8.2.1-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.2.1-cuda12.8 \
   -c "import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"
 ```
 
-The last command prints `8.2.0` and a backend string that starts with `GPU:`.
+The last command prints `8.2.1` and a backend string that starts with `GPU:`.
 To run a script from the current directory, mount the directory read-only at
 `/work` and pass settings with `-e`:
 
 ```bash
 docker run --rm --gpus all -v "$PWD:/work:ro" \
-  -e SMSD_CUDA_MIN_TARGETS=100000 smsd:8.2.0-cuda12.8 screen.py
+  -e SMSD_CUDA_MIN_TARGETS=100000 smsd:8.2.1-cuda12.8 screen.py
 ```
 
 The image runs as an unprivileged user, so the script should write its results

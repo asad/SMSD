@@ -6,10 +6,10 @@ clients and optional LangChain and LlamaIndex adapters. Exporting a definition
 or calling a tool does not make a model request, need an API key or contact a
 network service.
 
-Install SMSD 8.2.0 with the optional MCP SDK, then start the server:
+Install SMSD 8.2.1 with the optional MCP SDK, then start the server:
 
 ```sh
-python -m pip install 'smsd[mcp]==8.2.0'
+python -m pip install 'smsd[mcp]==8.2.1'
 smsd-mcp
 # Equivalent: python -m smsd.mcp_server
 ```

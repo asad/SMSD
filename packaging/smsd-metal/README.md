@@ -4,7 +4,7 @@
 needs the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.2.0" "smsd-metal==8.2.0"
+python -m pip install "smsd==8.2.1" "smsd-metal==8.2.1"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -47,6 +47,11 @@ MCS scores. ECFP similarity is not a substructure test.
 
 Packed fingerprint corpora do not use Metal: `backend="auto"` runs on the CPU,
 and `backend="cuda"` needs `smsd-cuda`.
+
+## Documentation
+
+The [SMSD documentation](https://asad.github.io/SMSD/) covers installation, supported platforms
+and CPU and GPU screening.
 
 ## Requirements
 

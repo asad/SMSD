@@ -14,9 +14,9 @@ import ctypes
 import os
 import sys
 
-__version__ = "8.2.0"
+__version__ = "8.2.1"
 # The smsd version this package serves; smsd attaches it only when the two are equal.
-__smsd_version__ = "8.2.0"
+__smsd_version__ = "8.2.1"
 
 __all__ = ["capsule", "device_info", "is_available", "preload", "unavailable_reason"]
 
