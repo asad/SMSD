@@ -52,7 +52,8 @@ Highlights of **8.2.0**:
 
 Search results are the same as in 8.1.0, and existing APIs are unchanged. The
 [release notes](docs/RELEASE_NOTES.md) and [changelog](CHANGELOG.md) have the
-details.
+details, and [known issues](docs/KNOWN_ISSUES.md) lists current limitations
+with workarounds.
 
 ## Also included
 
