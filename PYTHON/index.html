@@ -1313,6 +1313,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1351,6 +1362,67 @@
     <span class="md-ellipsis">
       
         Optional Metal screening
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#find-a-chemical-motif" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find a chemical motif
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare-two-molecules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare two molecules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-a-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure a search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-a-molecular-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen a molecular library
       
     </span>
   </a>
@@ -2028,6 +2100,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        At a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2066,6 +2149,67 @@
     <span class="md-ellipsis">
       
         Optional Metal screening
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#find-a-chemical-motif" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Find a chemical motif
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compare-two-molecules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare two molecules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-a-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure a search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#screen-a-molecular-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screen a molecular library
       
     </span>
   </a>
@@ -2415,12 +2559,62 @@
 
 
 <h1 id="smsd-pro-python-guide">SMSD Pro Python guide<a class="headerlink" href="#smsd-pro-python-guide" title="Permanent link">&para;</a></h1>
-<p>Reference for the <code>smsd</code> Python package, version 8.2.0. The
-<a href="../EXAMPLES/">Python examples</a> cover fingerprints, drawing, layout, stereo,
-files, R-groups and scaffolds.</p>
+<p><a href="https://pypi.org/project/smsd/"><img alt="PyPI" src="https://img.shields.io/pypi/v/smsd?label=PyPI" /></a>
+<a href="https://anaconda.org/bioinception/smsd"><img alt="Conda" src="https://img.shields.io/conda/vn/bioinception/smsd?label=conda" /></a>
+<a href="../HOWTO-INSTALL/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12%E2%80%933.15-3776ab" /></a>
+<a href="https://asad.github.io/SMSD/guide/"><img alt="Documentation" src="https://img.shields.io/badge/docs-user%20guide-0d3330" /></a></p>
+<p>Find chemical motifs, compare molecular structures and screen collections
+with substructure search, maximum common substructure (MCS) and molecular
+fingerprints. This page provides the Python 8.2.1 quickstart and API reference.
+The package uses SMSD's native C++ engine.</p>
+<p><strong><a href="https://asad.github.io/SMSD/guide/">User guide</a></strong> ·
+<a href="../EXAMPLES/">Examples</a> · <a href="https://asad.github.io/SMSD/notebooks/">Notebooks</a> ·
+<a href="#api-reference">API reference</a> · <a href="https://asad.github.io/SMSD/">Project website</a></p>
+<h2 id="at-a-glance">At a glance<a class="headerlink" href="#at-a-glance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Start here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Find a SMILES or SMARTS query in molecules</td>
+<td><a href="#searches">Substructure searches</a></td>
+</tr>
+<tr>
+<td>Find a common structure and its atom/bond mapping</td>
+<td><a href="#mcis-mces-and-fragments">MCS objectives and fragments</a></td>
+</tr>
+<tr>
+<td>Reuse a target library and confirm screened candidates</td>
+<td><a href="#smarts-and-target-collections">Target collections</a> and <a href="../EXAMPLES/#screening">screening examples</a></td>
+</tr>
+<tr>
+<td>Compare fingerprints or retrieve top-k hits</td>
+<td><a href="#fingerprints">Fingerprints</a> and <a href="../PACKED_CORPORA/">packed corpora</a></td>
+</tr>
+<tr>
+<td>Highlight a matched core as SVG</td>
+<td><a href="../EXAMPLES/#svg-drawing">Drawing examples</a></td>
+</tr>
+<tr>
+<td>Read files, lay out molecules or work with stereo</td>
+<td><a href="../EXAMPLES/">Python examples</a></td>
+</tr>
+</tbody>
+</table>
+<p>SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and documentation corrections.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
+<p>With pip:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span>
 </code></pre></div>
+<p>With conda or mamba:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>bioinception<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">smsd</span><span class="o">=</span><span class="m">8</span>.2.1
+</code></pre></div>
+<p>Use the same channels and package name with <code>mamba</code>.</p>
 <p>The CPU/OpenMP wheels cover CPython 3.12–3.15; the <a href="../HOWTO-INSTALL/#supported-platforms">supported-platforms
 table</a> lists the operating systems and
 architectures. <code>smsd.__version__</code> gives the installed version. Core matching
@@ -2432,7 +2626,7 @@ current replacement names in new code.</p>
 <h3 id="build-from-source">Build from source<a class="headerlink" href="#build-from-source" title="Permanent link">&para;</a></h3>
 <p>With Python 3.12 or later, a C++17 compiler and CMake 3.18 or later, from the
 repository root:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
 </code></pre></div>
 <p>This builds the CPU/OpenMP package. Metal and CUDA are left out unless
 <code>-Ccmake.define.SMSD_BUILD_METAL=ON</code> or <code>-Ccmake.define.SMSD_BUILD_CUDA=ON</code> is
@@ -2442,7 +2636,7 @@ search do not run on them, so they change only what <code>gpu_is_available()</co
 <h3 id="optional-cuda-screening">Optional CUDA screening<a class="headerlink" href="#optional-cuda-screening" title="Permanent link">&para;</a></h3>
 <p><code>smsd-cuda</code> provides optional NVIDIA CUDA screening on Linux x86_64 and needs
 the same version of <code>smsd</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.1"</span>
 </code></pre></div>
 <p>The GPU computes integer overlaps; scores use the CPU expressions and hits
 keep target order. Matching runs on the CPU. The backend keeps prepared
@@ -2474,7 +2668,7 @@ requirements of both GPU packages.</p>
 <h3 id="optional-metal-screening">Optional Metal screening<a class="headerlink" href="#optional-metal-screening" title="Permanent link">&para;</a></h3>
 <p><code>smsd-metal</code> adds Apple GPU screening on Apple silicon Macs with macOS 14 or
 later, and needs the same version of <code>smsd</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.1"</span>
 </code></pre></div>
 <p>Prepared ECFP4 screens of a <code>TargetCorpus</code> and
 <code>match_corpus(..., gpu_prefilter=True)</code> can then use the Apple GPU, with the
@@ -2485,6 +2679,115 @@ Packed <code>FingerprintCorpus</code> scans run on the CPU. <code>SMSD_DISABLE_G
 off as it does CUDA, and <code>smsd_metal.preload()</code> readies the device before the
 first screen. See
 <a href="../guide/CPU_GPU/#install-the-metal-package">CPU and GPU screening</a>.</p>
+<h2 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h2>
+<p>These examples need only <code>smsd</code>.</p>
+<h3 id="find-a-chemical-motif">Find a chemical motif<a class="headerlink" href="#find-a-chemical-motif" title="Permanent link">&para;</a></h3>
+<p>Search for a carboxylic acid with a SMARTS pattern. Batch results follow the
+input order:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">library</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="s2">"ethanol"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">acid</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"C(=O)[OX2H1]"</span><span class="p">)</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">results</span> <span class="o">=</span> <span class="n">acid</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">library</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">hit</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">library</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">hit</span><span class="o">.</span><span class="n">found</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># aspirin True</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="c1"># paracetamol False</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1"># ethanol False</span>
+</code></pre></div>
+<p>For molecule queries, use <code>Substructure.find(query)</code>. The
+<a href="../guide/SUBSTRUCTURE/">substructure guide</a> and <a href="../guide/SMARTS/">SMARTS guide</a>
+explain the matching rules.</p>
+<h3 id="compare-two-molecules">Compare two molecules<a class="headerlink" href="#compare-two-molecules" title="Permanent link">&para;</a></h3>
+<p>Find the common carbon skeleton of ethanol and ethylamine:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">found</span><span class="p">:</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span><span class="p">)</span>  <span class="c1"># 2 1</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="p">)</span>  <span class="c1"># query atom index -&gt; target atom index</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+</code></pre></div>
+<p>The timeout is in milliseconds per target. A stopped search may return a
+valid match without proving it is the largest. Check <code>optimal</code>, <code>complete</code>
+and <code>status</code>; an empty unfinished result does not prove that no match exists.
+The default is a connected maximum common induced subgraph (MCIS), ranked by
+atoms, then bonds. See <a href="#results">results</a> and <a href="#mcis-mces-and-fragments">MCS objectives</a>.</p>
+<h3 id="configure-a-search">Configure a search<a class="headerlink" href="#configure-a-search" title="Permanent link">&para;</a></h3>
+<p>Set limits and chemistry rules before preparing a query:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">options</span><span class="o">.</span><span class="n">node_limit</span> <span class="o">=</span> <span class="mi">100000</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_bond_order</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span><span class="o">.</span><span class="n">STRICT</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">ring_matches_ring_only</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_chirality</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_bond_stereo</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">prepared</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccc(O)cc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">configured</span> <span class="o">=</span> <span class="n">prepared</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"c1ccc(N)cc1"</span><span class="p">)</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">atoms</span> <span class="o">=</span> <span class="n">configured</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="k">if</span> <span class="n">configured</span><span class="o">.</span><span class="n">found</span> <span class="k">else</span> <span class="mi">0</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">configured</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">configured</span><span class="o">.</span><span class="n">optimal</span><span class="p">,</span> <span class="n">configured</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>  <span class="c1"># 6 COMPLETED True True</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timeout_ms</code>, <code>node_limit</code></td>
+<td>Time per target and search-node allowance</td>
+</tr>
+<tr>
+<td><code>chemistry.match_bond_order</code></td>
+<td>Equal bond orders (<code>STRICT</code>) or relaxed matching</td>
+</tr>
+<tr>
+<td><code>chemistry.ring_matches_ring_only</code></td>
+<td>Ring atoms and bonds map only to rings</td>
+</tr>
+<tr>
+<td><code>chemistry.complete_rings_only</code></td>
+<td>Restrict matches to complete rings; see <a href="#chemistry-options">chemistry options</a></td>
+</tr>
+<tr>
+<td><code>chemistry.use_chirality</code>, <code>chemistry.use_bond_stereo</code></td>
+<td>Tagged atom and double-bond stereochemistry</td>
+</tr>
+<tr>
+<td><code>.with_objective(smsd.MCS.Objective.MCES)</code></td>
+<td>Maximise common bonds instead of common atoms</td>
+</tr>
+<tr>
+<td><code>.with_fragments()</code></td>
+<td>Allow a disconnected common graph</td>
+</tr>
+</tbody>
+</table>
+<p><code>with_options</code> copies the settings into a new prepared query. Molecule-based
+substructure searches use <code>Substructure.Options()</code> in the same way. SMARTS
+patterns state their own atom and bond rules; among these chemistry settings,
+only <code>complete_rings_only</code> applies to SMARTS. See the full
+<a href="#chemistry-options">chemistry options</a> and <a href="#timeouts-node-limits-and-cancellation">search limits</a>.</p>
+<h3 id="screen-a-molecular-library">Screen a molecular library<a class="headerlink" href="#screen-a-molecular-library" title="Permanent link">&para;</a></h3>
+<p>The <a href="../EXAMPLES/#screening">screening examples</a> show fingerprint ranking,
+substructure confirmation and MCS-bound screening followed by graph search.
+ECFP4 Tanimoto coefficients and the atom-count MCS Tanimoto upper bound are
+distinct quantities. A surviving MCS-bound candidate still needs graph search
+and inspection of <code>status</code>, <code>optimal</code> and <code>complete</code>. See
+<a href="#smarts-and-target-collections">target collections</a> for reusable corpora and
+<a href="#explicit-corpus-prefilters">explicit corpus prefilters</a> for threshold decisions.</p>
 <h2 id="additions-in-810">Additions in 8.1.0<a class="headerlink" href="#additions-in-810" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../PYTHON_ADAPTERS/">Python adapters and MCP</a>: NumPy/PyTorch arrays,
@@ -2554,17 +2857,17 @@ OpenMP runtime.</p>
 <p><code>limit</code> must be a positive integer and <code>num_threads</code> a non-negative integer,
 or <code>ValueError</code> is raised. Searches release the global interpreter lock, so a
 prepared query can serve several threads; do not modify a target during a call.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CO"</span><span class="p">)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">assert</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">embeddings</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"OCO"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">embeddings</span><span class="o">.</span><span class="n">complete</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccc(O)cc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"c1ccc(N)cc1"</span><span class="p">)</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CO"</span><span class="p">)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">assert</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCO"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">query</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCN"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">embeddings</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"OCO"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">embeddings</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">embeddings</span><span class="o">.</span><span class="n">complete</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccc(O)cc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_timeout</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"c1ccc(N)cc1"</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h3>
 <table>
@@ -2616,11 +2919,11 @@ incomplete result does not prove absence, so check <code>status</code>, <code>op
 <code>complete=False</code>. Tied matches are not ranked chemically. A stopped MCIS search
 can return a result or atom mapping that differs from 8.0.3 or Java; see the
 <a href="../RELEASE_NOTES/#upgrading-from-803">upgrade notes</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC"</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"CCC"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">LIMIT_REACHED</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC"</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="s2">"CCC"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">complete</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">SearchStatus</span><span class="o">.</span><span class="n">LIMIT_REACHED</span>
 </code></pre></div>
 <p>Each <code>Match</code> has:</p>
 <ul>
@@ -2646,18 +2949,18 @@ match, and <code>optimal</code> and <code>complete</code> both <code>False</code
 <p>MCIS searches are never declined; the time and node limits bound them. C++
 and Java use the same limits.</p>
 <h2 id="mcis-mces-and-fragments">MCIS, MCES and fragments<a class="headerlink" href="#mcis-mces-and-fragments" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"C1CC1"</span><span class="p">,</span> <span class="s2">"CC(C)C"</span>  <span class="c1"># cyclopropane, isobutane</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">induced</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">edges</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_objective</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Objective</span><span class="o">.</span><span class="n">MCES</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">assert</span> <span class="p">(</span><span class="n">induced</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">induced</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">assert</span> <span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">query</span><span class="p">))</span><span class="o">.</span><span class="n">bonds</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">fragments</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCOCC"</span><span class="p">)</span><span class="o">.</span><span class="n">with_fragments</span><span class="p">()</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCNCC"</span><span class="p">)</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="k">assert</span> <span class="n">fragments</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">fragments</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">fragments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="n">all_matches</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">assert</span> <span class="n">all_matches</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="n">all_matches</span><span class="o">.</span><span class="n">complete</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"C1CC1"</span><span class="p">,</span> <span class="s2">"CC(C)C"</span>  <span class="c1"># cyclopropane, isobutane</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">induced</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">edges</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_objective</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Objective</span><span class="o">.</span><span class="n">MCES</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">assert</span> <span class="p">(</span><span class="n">induced</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">induced</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="k">assert</span> <span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span><span class="p">,</span> <span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">edges</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">query</span><span class="p">))</span><span class="o">.</span><span class="n">bonds</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">fragments</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCOCC"</span><span class="p">)</span><span class="o">.</span><span class="n">with_fragments</span><span class="p">()</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CCNCC"</span><span class="p">)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="k">assert</span> <span class="n">fragments</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">fragments</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">fragments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">all_matches</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match_all</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="k">assert</span> <span class="n">all_matches</span><span class="o">.</span><span class="n">optimal</span> <span class="ow">and</span> <span class="n">all_matches</span><span class="o">.</span><span class="n">complete</span>
 </code></pre></div>
 <ul>
 <li><code>MCS</code> defaults to a connected maximum common induced subgraph (MCIS): most
@@ -2671,20 +2974,20 @@ and Java use the same limits.</p>
   <code>Substructure.Options.induced</code> is set.</li>
 </ul>
 <h2 id="chemistry-options">Chemistry options<a class="headerlink" href="#chemistry-options" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_formal_charge</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_chirality</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_bond_stereo</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">complete_rings_only</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">search</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="k">assert</span> <span class="n">search</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"Cc1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">sub_options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">sub_options</span><span class="o">.</span><span class="n">induced</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCC"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">sub_options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"C1CC1"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_formal_charge</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_chirality</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">use_bond_stereo</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">complete_rings_only</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="n">search</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="k">assert</span> <span class="n">search</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"Cc1ccccc1"</span><span class="p">)</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">sub_options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="n">sub_options</span><span class="o">.</span><span class="n">induced</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CCC"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">sub_options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"C1CC1"</span><span class="p">)</span><span class="o">.</span><span class="n">found</span>
 </code></pre></div>
 <p><code>ChemOptions</code>, as <code>options.chemistry</code>, decides which atoms and bonds match:</p>
 <table>
@@ -2768,17 +3071,17 @@ subgraph whose mapped stereo agrees, so it can be smaller than the MCIS found
 without these options, and an MCES leaves out the fewest common bonds that
 resolve each disagreement.</p>
 <p>Tautomer matching usually also needs a relaxed bond order:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">tautomer_aware</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_bond_order</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span><span class="o">.</span><span class="n">ANY</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)C"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(O)=C"</span><span class="p">)</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_bond_order</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span><span class="o">.</span><span class="n">STRICT</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="n">strict</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)C"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(O)=C"</span><span class="p">)</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="k">assert</span> <span class="n">strict</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">2</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">tautomer_aware</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_bond_order</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span><span class="o">.</span><span class="n">ANY</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">options</span><span class="o">.</span><span class="n">timeout_ms</span> <span class="o">=</span> <span class="mi">1000</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)C"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(O)=C"</span><span class="p">)</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span><span class="o">.</span><span class="n">match_bond_order</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">BondOrderMode</span><span class="o">.</span><span class="n">STRICT</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="n">strict</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC(=O)C"</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">"CC(O)=C"</span><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">assert</span> <span class="n">strict</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">2</span>
 </code></pre></div>
 <p><code>ChemOptions.profile(name="default")</code> returns a preset; names are not
 case-sensitive, and an unknown name raises <code>ValueError</code>:</p>
@@ -2846,27 +3149,27 @@ tautomeric relaxations a <code>Match</code> uses, in the <code>pH</code> and <co
 <code>chemistry</code>; identical selected chemistry scores 1. The score is a heuristic,
 not a probability, and changes neither molecules nor search. A plain atom
 mapping raises <code>TypeError</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"ONC(C)=O"</span><span class="p">),</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"ON=C(C)O"</span><span class="p">)</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">tautomer_profile</span><span class="p">()</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">match</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">best</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="k">for</span> <span class="n">pH</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">7.4</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">):</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="n">chemistry</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">tautomer_profile</span><span class="p">()</span><span class="o">.</span><span class="n">with_ph</span><span class="p">(</span><span class="n">pH</span><span class="p">)</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">pH</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">compute_tautomer_confidence</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">match</span><span class="p">,</span> <span class="n">chemistry</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"ONC(C)=O"</span><span class="p">),</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="s2">"ON=C(C)O"</span><span class="p">)</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">Options</span><span class="p">()</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">options</span><span class="o">.</span><span class="n">chemistry</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">tautomer_profile</span><span class="p">()</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="n">match</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">best</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="k">for</span> <span class="n">pH</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">7.4</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">):</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="n">chemistry</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">ChemOptions</span><span class="o">.</span><span class="n">tautomer_profile</span><span class="p">()</span><span class="o">.</span><span class="n">with_ph</span><span class="p">(</span><span class="n">pH</span><span class="p">)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">pH</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">compute_tautomer_confidence</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">match</span><span class="p">,</span> <span class="n">chemistry</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
 </code></pre></div>
 <p><code>MCS.validate_tautomer_consistency(query, target, match)</code> reports whether a
 <code>Match</code> or atom mapping conserves the mobile N–H, O–H and S–H protons of each
 mapped tautomeric group.</p>
 <h2 id="smarts-and-target-collections">SMARTS and target collections<a class="headerlink" href="#smarts-and-target-collections" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"[#6]-[#8]"</span><span class="p">)</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">match_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">])]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">])</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">query</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">smarts</span><span class="p">(</span><span class="s2">"[#6]-[#8]"</span><span class="p">)</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">match_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">])]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">])</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">found</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">match_many</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">2</span><span class="p">)]</span> <span class="o">==</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
 </code></pre></div>
 <p>SMARTS queries follow the result, timeout and enumeration rules of molecule
 queries. <code>TargetCorpus</code> holds targets for repeated queries:</p>
@@ -2890,25 +3193,25 @@ queries. <code>TargetCorpus</code> holds targets for repeated queries:</p>
   setting for the batch. No <code>prewarm()</code> is needed. Each hit list keeps target
   order, as <code>screen_targets(query, corpus, threshold, chemistry)</code> does.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"CCC"</span><span class="p">])</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_targets_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"CCC"</span><span class="p">])</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="n">corpus</span><span class="o">.</span><span class="n">prewarm</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">screen_targets_many</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
 </code></pre></div>
 <h3 id="explicit-corpus-prefilters">Explicit corpus prefilters<a class="headerlink" href="#explicit-corpus-prefilters" title="Permanent link">&para;</a></h3>
 <p>The additive <code>Substructure.match_corpus(corpus, *, gpu_prefilter=False,
 num_threads=0)</code> and <code>MCS.match_corpus(corpus, minimum_atoms, *,
 gpu_prefilter=False, num_threads=0)</code> return <code>CorpusSearchResult</code> objects in
 original target order, preserving each target's input atom numbers.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">])</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">embeddings</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CO"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">assert</span> <span class="n">embeddings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">threshold_reached</span> <span class="ow">and</span> <span class="n">embeddings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">found</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">decisions</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">atom_upper_bound</span> <span class="o">==</span> <span class="mi">0</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">proven_below_threshold</span> <span class="ow">and</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">corpus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">TargetCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">])</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">embeddings</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">Substructure</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CO"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">assert</span> <span class="n">embeddings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">threshold_reached</span> <span class="ow">and</span> <span class="n">embeddings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">found</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">decisions</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"CC"</span><span class="p">)</span><span class="o">.</span><span class="n">match_corpus</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">atom_upper_bound</span> <span class="o">==</span> <span class="mi">0</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="k">assert</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">proven_below_threshold</span> <span class="ow">and</span> <span class="n">decisions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span>
 </code></pre></div>
 <p><code>result</code> is an actual CPU search result, or <code>None</code> only for a proved filter
 rejection. <code>threshold_reached</code> requires a real witness. Both decision flags
@@ -2930,18 +3233,18 @@ before CPU matching. With SMARTS queries, untyped queries or a finite node
 limit, every target is searched. Target results keep their original slots, atom
 numbering and search status.</p>
 <h2 id="constrained-and-consensus-searches">Constrained and consensus searches<a class="headerlink" href="#constrained-and-consensus-searches" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">results</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">match_constrained</span><span class="p">([</span><span class="s2">"CO"</span><span class="p">,</span> <span class="s2">"CN"</span><span class="p">],</span> <span class="s2">"CO.CN"</span><span class="p">)</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">)</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="n">consensus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">consensus</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">consensus</span><span class="o">.</span><span class="n">support_count</span> <span class="o">==</span> <span class="mi">2</span>
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">consensus</span><span class="o">.</span><span class="n">optimal</span>
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"CC"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">results</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">match_constrained</span><span class="p">([</span><span class="s2">"CO"</span><span class="p">,</span> <span class="s2">"CN"</span><span class="p">],</span> <span class="s2">"CO.CN"</span><span class="p">)</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">assert</span> <span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">())</span><span class="o">.</span><span class="n">isdisjoint</span><span class="p">(</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="p">)</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="n">consensus</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">consensus</span><span class="p">([</span><span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">],</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">found</span> <span class="ow">and</span> <span class="n">consensus</span><span class="o">.</span><span class="n">support_count</span> <span class="o">==</span> <span class="mi">2</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">consensus</span><span class="o">.</span><span class="n">optimal</span>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a><span class="k">assert</span> <span class="n">consensus</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"CC"</span>
 </code></pre></div>
 <ul>
 <li><code>MCS.match_constrained(queries, target, options=None)</code>: one <code>SearchResult</code>
@@ -2965,15 +3268,15 @@ numbering and search status.</p>
   <code>complete</code>, <code>nodes_visited</code> and <code>elapsed_ms</code>.</li>
 </ul>
 <h2 id="validation-and-symmetry">Validation and symmetry<a class="headerlink" href="#validation-and-symmetry" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"c1ccc(O)cc1"</span><span class="p">,</span> <span class="s2">"c1ccc(N)cc1"</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span> <span class="o">==</span> <span class="mi">6</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">validate_mapping</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="p">)</span> <span class="o">==</span> <span class="p">[]</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="n">fragment</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">fragment</span><span class="p">)</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">6</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s2">"c1ccc(O)cc1"</span><span class="p">,</span> <span class="s2">"c1ccc(N)cc1"</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">bond_count</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">validate_mapping</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="p">)</span> <span class="o">==</span> <span class="p">[]</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="n">fragment</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">to_smiles</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">fragment</span><span class="p">)</span><span class="o">.</span><span class="n">n</span> <span class="o">==</span> <span class="mi">6</span>
 </code></pre></div>
 <ul>
 <li><code>MCS.validate_mapping(query, target, match, options=None)</code>: a list of errors,
@@ -2998,15 +3301,15 @@ their own order, separately on each side; search results and atom weights use
 these indices. Other functions number an RDKit molecule as <code>from_rdkit</code> does;
 <code>get_index_map(from_rdkit(mol))</code> gives the RDKit index of each atom. Explicit
 hydrogen atoms are vertices; bracket hydrogen counts are not.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chem</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="n">query</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">RenumberAtoms</span><span class="p">(</span><span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"NCCO"</span><span class="p">),</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="n">target</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"CC(O)CN"</span><span class="p">)</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="k">for</span> <span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="k">assert</span> <span class="n">query</span><span class="o">.</span><span class="n">GetAtomWithIdx</span><span class="p">(</span><span class="n">first</span><span class="p">)</span><span class="o">.</span><span class="n">GetAtomicNum</span><span class="p">()</span> <span class="o">==</span> <span class="n">target</span><span class="o">.</span><span class="n">GetAtomWithIdx</span><span class="p">(</span><span class="n">second</span><span class="p">)</span><span class="o">.</span><span class="n">GetAtomicNum</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdkit</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chem</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">query</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">RenumberAtoms</span><span class="p">(</span><span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"NCCO"</span><span class="p">),</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="n">target</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">MolFromSmiles</span><span class="p">(</span><span class="s2">"CC(O)CN"</span><span class="p">)</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="n">result</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MCS</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_count</span> <span class="o">==</span> <span class="mi">4</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="k">for</span> <span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">best</span><span class="o">.</span><span class="n">atom_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>    <span class="k">assert</span> <span class="n">query</span><span class="o">.</span><span class="n">GetAtomWithIdx</span><span class="p">(</span><span class="n">first</span><span class="p">)</span><span class="o">.</span><span class="n">GetAtomicNum</span><span class="p">()</span> <span class="o">==</span> <span class="n">target</span><span class="o">.</span><span class="n">GetAtomWithIdx</span><span class="p">(</span><span class="n">second</span><span class="p">)</span><span class="o">.</span><span class="n">GetAtomicNum</span><span class="p">()</span>
 </code></pre></div>
 <p>Conversion passes through SMILES, so coordinates, data fields and query
 predicates are lost. For C++, see the
@@ -3278,22 +3581,22 @@ reproduces <code>circular_fingerprint</code>, <code>path_fingerprint</code> and 
 <code>torsion(size=2048)</code> and <code>maccs()</code> build the same configurations. Pass the
 value as <code>options</code> to <code>fingerprint</code>, <code>fingerprints</code> or
 <code>fingerprint_from_smiles</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">chiral</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">cip_atoms</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ring_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">left</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">chiral</span><span class="p">)</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">right</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">chiral</span><span class="p">)</span>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">assert</span> <span class="n">left</span> <span class="o">!=</span> <span class="n">right</span>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span>
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="s2">"C[C@@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span>
-<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="n">framework</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">scaffold</span><span class="o">=</span><span class="s2">"murcko"</span><span class="p">)</span>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"Cc1ccccc1"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">framework</span><span class="p">)</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span>
-<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
-<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="n">keys</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">maccs</span><span class="p">())</span>
-<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="k">assert</span> <span class="mi">162</span> <span class="ow">in</span> <span class="n">keys</span>  <span class="c1"># MACCS key 163, a six-membered ring, is position 162</span>
-<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="s2">"keys"</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s2">"[#8]"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">counts</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="k">assert</span> <span class="n">counts</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="n">chiral</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">cip_atoms</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ring_size</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="n">left</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">chiral</span><span class="p">)</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="n">right</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">chiral</span><span class="p">)</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="k">assert</span> <span class="n">left</span> <span class="o">!=</span> <span class="n">right</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"C[C@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="s2">"C[C@@H](N)C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="n">framework</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="n">scaffold</span><span class="o">=</span><span class="s2">"murcko"</span><span class="p">)</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"Cc1ccccc1"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">framework</span><span class="p">)</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">())</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="n">keys</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint_from_smiles</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">maccs</span><span class="p">())</span>
+<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="k">assert</span> <span class="mi">162</span> <span class="ow">in</span> <span class="n">keys</span>  <span class="c1"># MACCS key 163, a six-membered ring, is position 162</span>
+<a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="p">(</span><span class="s2">"keys"</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">[</span><span class="s2">"[#8]"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"c1ccccc1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)],</span> <span class="n">counts</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="k">assert</span> <span class="n">counts</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
 </code></pre></div>
 <p>Keywords, with their defaults for ecfp, fcfp, path and torsion:</p>
 <ul>
@@ -3446,7 +3749,12 @@ accepts a molecule.</p>
   <code>depict_svg</code>.</li>
 </ul>
 <p>The native SVG functions need no RDKit; keyword arguments set <code>DepictOptions</code>
-attributes, on <code>opts</code> when given. Defaults: <code>bond_length</code> and <code>padding</code> 30 px;
+attributes, on <code>opts</code> when given. Native coordinate generation and SVG drawing
+preserve stored stereo on non-aromatic ring double bonds. If a matching ring
+layout cannot be found, including for a stored E/Z that the ring cannot take,
+they raise <code>ValueError</code> rather than show the other isomer. Stored E/Z on
+aromatic rings, such as annulenes, may not be reflected in the layout.</p>
+<p>Defaults: <code>bond_length</code> and <code>padding</code> 30 px;
 <code>line_width</code>, <code>bold_width</code>, <code>font_size</code> and <code>match_width</code> 0 (automatic);
 <code>width</code> and <code>height</code> 0 (fitted to the molecule); <code>bond_spacing</code> and
 <code>highlight_radius</code> 0 (18% and 32% of <code>bond_length</code>); <code>highlight_opacity</code> 0.30

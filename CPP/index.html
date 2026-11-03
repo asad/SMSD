@@ -1444,6 +1444,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Headers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#windows-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1903,6 +1920,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Headers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#windows-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2177,6 +2211,16 @@ implementation code.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="windows-headers">Windows headers<a class="headerlink" href="#windows-headers" title="Permanent link">&para;</a></h3>
+<p>SMSD headers preserve the Windows <code>STRICT</code> and <code>IGNORE</code> macros while protecting
+their enum declarations and inline definitions from expansion. In application
+code, temporarily suppress these macros with <code>push_macro</code>, <code>#undef</code> and
+<code>pop_macro</code> around <code>ChemOptions</code> expressions that name the <code>STRICT</code> or <code>IGNORE</code>
+enumerators. A qualified C++ name still undergoes macro expansion. Named
+profiles such as <code>ChemOptions::profile("strict")</code> can be selected while these
+macros are defined.
+Define <code>NOMINMAX</code> before including <code>&lt;windows.h&gt;</code> to suppress its separate
+<code>min</code> and <code>max</code> macros.</p>
 <h2 id="prepared-queries">Prepared queries<a class="headerlink" href="#prepared-queries" title="Permanent link">&para;</a></h2>
 <p><code>MCS::find</code> and <code>Substructure::find</code> take a <code>MolGraph</code> or SMILES;
 <code>Substructure::smarts</code> takes SMARTS text or a <code>SmartsQuery</code>. A prepared query
@@ -2217,12 +2261,14 @@ which must not change during a search.</p>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="smarts">SMARTS<a class="headerlink" href="#smarts" title="Permanent link">&para;</a></h2>
-<p>SMARTS follows Daylight semantics, as in Java: <code>[H]</code>, <code>[2H]</code> and <code>[H+]</code> are
-hydrogen atoms, <code>[CH]</code> and <code>[H1]</code> count hydrogens, <code>r&lt;n&gt;</code> is the smallest ring
-size, <code>(C.C)</code> requires one target component and <code>(C).(C)</code> different ones. <code>/</code>
-and <code>\</code> are single, non-aromatic bonds; a double bond between them must have
-the written configuration unless one is <code>/?</code> or <code>\?</code>, and an unpaired one
-matches either way.</p>
+<p>SMARTS follows Daylight semantics: <code>[H]</code>, <code>[2H]</code> and <code>[H+]</code> are hydrogen atoms,
+<code>[CH]</code> and <code>[H1]</code> count hydrogens, <code>r&lt;n&gt;</code> is the smallest ring size, <code>(C.C)</code>
+requires one target component and <code>(C).(C)</code> different ones. <code>/</code> and <code>\</code> are
+single or aromatic bonds; a double bond between them must have the written
+configuration unless one is <code>/?</code> or <code>\?</code>, an aromatic bond between them matches
+only when one is <code>/?</code> or <code>\?</code>, and an unpaired one matches either way. Java
+matches <code>/</code> and <code>\</code> only on single, non-aromatic bonds; see the
+<a href="../JAVA/">Java guide</a>.</p>
 <p><code>parseSMARTS(text, maxRecursionDepth = 20)</code> throws <code>std::invalid_argument</code> for
 malformed SMARTS, including a pattern that ends with a bond such as <code>CC-</code>, and
 for input over the <code>parser_utils.hpp</code> limits
@@ -2803,9 +2849,15 @@ could compute from incomplete rings.</p>
 <li>Drawings follow journal practice: a near-black skeleton in ACS proportions,
   regular-weight labels and aromatic rings with alternating double bonds;
   <code>aromaticStyle = AromaticStyle::CIRCLE</code> draws circles, and a molecule
-  without a Kekulé structure keeps them. Double bonds outside rings follow the
-  stored E/Z. Inside rings of eight or more atoms a drawing may not yet,
-  though the coordinates <code>writeMolBlock</code> writes do.</li>
+  without a Kekulé structure keeps them. Automatically generated layouts
+  follow stored double-bond stereo, including non-aromatic ring bonds. If a
+  matching ring layout cannot be found, including for a stored E/Z that the
+  ring cannot take, coordinate generation and drawing throw
+  <code>std::invalid_argument</code> rather than show the other isomer. Constrained
+  layouts retain fixed coordinates and throw the same exception when a
+  matching layout cannot be found under those constraints. Stored E/Z on
+  aromatic rings, such as annulenes, may not be reflected in the layout.
+  MOL export is unaffected and keeps its own coordinate and stereo checks.</li>
 <li>A matched region sits on a gold halo, <code>palette::MATCH_FILL</code>, with a fine
   edge in a deeper shade of the same hue. Set <code>matchFill</code> to
   <code>palette::MINT_HALO</code> for the equally light mint used for substructure hits;

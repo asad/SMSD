@@ -2024,7 +2024,7 @@ be stored, compared and turned into arrays without any further package.</p>
 fingerprints, configurable specifications, substructure keys, batch
 generation, the similarity coefficients, encodings and NumPy arrays. The
 Options section lists every signature with its defaults. Each Python block is a
-complete program: run it as it stands with SMSD 8.2.0 and it prints the output
+complete program: run it as it stands with SMSD 8.2.1 and it prints the output
 shown below it. The block under NumPy arrays also needs NumPy.</p>
 <p>Compare fingerprints only when they were made with the same family, radius or
 path length, size and switches. Nothing in a fingerprint records how it was
@@ -2819,7 +2819,7 @@ outside the width.</p>
 natively: one row per molecule, <code>uint8</code> for bits and <code>int64</code> for counts. Like
 <code>fingerprints</code>, it defaults to <code>kind="mcs"</code>, so pass the kind or the options.
 A Tanimoto matrix then follows from one matrix product. These functions need
-NumPy (<code>python -m pip install "smsd[numpy]==8.2.0"</code>).</p>
+NumPy (<code>python -m pip install "smsd[numpy]==8.2.1"</code>).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span>

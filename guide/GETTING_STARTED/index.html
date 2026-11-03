@@ -1861,19 +1861,19 @@
 
 
 <h1 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
-<p>This chapter installs SMSD Pro 8.2.0, runs a first substructure search and a
+<p>This chapter installs SMSD Pro 8.2.1, runs a first substructure search and a
 first maximum common substructure (MCS) search, and sets out the conventions
 that every other chapter relies on: what a result proves, how molecules are
 given and numbered, the default chemistry, and time limits and threads.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <p>Install the Python package from PyPI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"</span>
 </code></pre></div>
 <p>The package has no required dependencies. Searches, fingerprints, prepared
 target corpora, streamed screens and corpus searches all work without the
 optional packages. Extras add the packages that particular features need, for
-example <code>python -m pip install "smsd[rdkit,numpy]==8.2.0"</code>:</p>
+example <code>python -m pip install "smsd[rdkit,numpy]==8.2.1"</code>:</p>
 <table>
 <thead>
 <tr>
@@ -1936,8 +1936,8 @@ example <code>python -m pip install "smsd[rdkit,numpy]==8.2.0"</code>:</p>
 </tbody>
 </table>
 <p>For NVIDIA GPU screening on Linux x86_64, add the optional CUDA package of the
-same version, <code>python -m pip install "smsd==8.2.0" "smsd-cuda==8.2.0"</code>; on an
-Apple silicon Mac, add <code>"smsd-metal==8.2.0"</code> instead for Apple GPU screening.
+same version, <code>python -m pip install "smsd==8.2.1" "smsd-cuda==8.2.1"</code>; on an
+Apple silicon Mac, add <code>"smsd-metal==8.2.1"</code> instead for Apple GPU screening.
 The <a href="../CPU_GPU/">CPU and GPU screening</a> chapter covers both. Interpreters and
 platforms are listed in the
 <a href="../../HOWTO-INSTALL/#supported-platforms">supported-platforms table</a>, which also

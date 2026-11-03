@@ -2096,8 +2096,8 @@ CPU-only machine; the GPU branches run only where a device is ready.</p>
 <tr>
 <td><code>screen_targets</code>, <code>TargetCorpus.screen_targets_many</code>, and <code>Substructure.match_many</code> on a <code>TargetCorpus</code></td>
 <td>Always</td>
-<td>Never in 8.2.0</td>
-<td>Never in 8.2.0</td>
+<td>Never</td>
+<td>Never</td>
 <td>Not applicable</td>
 </tr>
 <tr>
@@ -2198,11 +2198,11 @@ capability 7.5.</p>
 <h2 id="install-the-cuda-package">Install the CUDA package<a class="headerlink" href="#install-the-cuda-package" title="Permanent link">&para;</a></h2>
 <p>The <code>smsd-cuda</code> package adds NVIDIA screening to <code>smsd</code> on Linux x86_64.
 Install it with the same version of <code>smsd</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.1"</span>
 </code></pre></div>
 <p>Packed indexes and clustering also need NumPy, which neither package
 installs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.1"</span>
 </code></pre></div>
 <ul>
 <li>The package needs Linux x86_64 and CPython 3.12–3.15; the
@@ -2211,7 +2211,7 @@ installs:</p>
 <li>The device must be an NVIDIA GPU of compute capability 7.5 or later, with a
   driver compatible with the CUDA 12 runtime. The runtime is installed as a
   dependency; the CUDA toolkit is not needed.</li>
-<li>The versions must match exactly. <code>smsd-cuda</code> 8.2.0 requires <code>smsd</code> 8.2.0,
+<li>The versions must match exactly. <code>smsd-cuda</code> 8.2.1 requires <code>smsd</code> 8.2.1,
   and <code>smsd</code> does not attach a package built for another version.</li>
 <li>No <code>smsd-cuda</code> wheel is published for Windows or macOS. On Windows, install
   the Linux wheel or run the GPU container under WSL2; see
@@ -2222,7 +2222,7 @@ installs:</p>
 <h2 id="install-the-metal-package">Install the Metal package<a class="headerlink" href="#install-the-metal-package" title="Permanent link">&para;</a></h2>
 <p>The <code>smsd-metal</code> package adds Apple GPU screening to <code>smsd</code> on Apple silicon
 Macs. Install it with the same version of <code>smsd</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.0"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-metal==8.2.1"</span>
 </code></pre></div>
 <ul>
 <li>The package needs macOS 14 or later on Apple silicon and CPython 3.12–3.15.
@@ -2656,7 +2656,7 @@ raises <code>ValueError</code>.</p>
 <p>If the installed <code>smsd-cuda</code> or <code>smsd-metal</code> serves another version of
 <code>smsd</code>, the first call that looks for it issues one <code>RuntimeWarning</code>. The
 warning names both versions, asks for the matching package, such as
-<code>smsd-cuda==8.2.0</code>, and says that screening runs on the CPU; prepared screens
+<code>smsd-cuda==8.2.1</code>, and says that screening runs on the CPU; prepared screens
 and pre-screens then stay on the CPU.</p>
 <h2 id="prove-that-the-gpu-ran">Prove that the GPU ran<a class="headerlink" href="#prove-that-the-gpu-ran" title="Permanent link">&para;</a></h2>
 <p><code>gpu_is_available()</code> and <code>gpu_device_info()</code> report what is available, not
@@ -2772,7 +2772,7 @@ the <code>cuda_calls</code> assertion. On a Mac with <code>smsd-metal</code>, ti
 in the same way: call <code>smsd_metal.preload()</code> first and set
 <code>SMSD_METAL_MIN_TARGETS</code> in place of <code>SMSD_CUDA_MIN_TARGETS</code>.</p>
 <h2 id="containers">Containers<a class="headerlink" href="#containers" title="Permanent link">&para;</a></h2>
-<p>The GPU image <code>smsd:8.2.0-cuda12.8</code> (linux/amd64) contains <code>smsd</code>, the
+<p>The GPU image <code>smsd:8.2.1-cuda12.8</code> (linux/amd64) contains <code>smsd</code>, the
 matching <code>smsd-cuda</code> and the CUDA 12 runtime, with Python as its entry point.
 It has no Java command-line tool, no CUDA toolkit and no NumPy. As shipped,
 it supports prepared screens, <code>warm_start</code>, the stream functions and
@@ -2781,7 +2781,7 @@ NumPy added in an image built from it. The image needs the NVIDIA Container
 Toolkit and a compatible host driver; on Windows it runs under WSL2, as
 described in <a href="../GPU_ON_WINDOWS/">GPU screening on Windows</a>.</p>
 <p>After loading the image archive from the release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.1-cuda12.8<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
 </code></pre></div>
 <p>As elsewhere, the backend string shows availability, not use.

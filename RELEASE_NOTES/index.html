@@ -98,7 +98,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#smsd-pro-820" class="md-skip">
+        <a href="#smsd-pro-821" class="md-skip">
           Skip to content
         </a>
       
@@ -1568,24 +1568,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Release notes
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1602,69 +1584,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#whats-new" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's new
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#built-for" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Built for
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#upgrading-from-810" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upgrading from 8.1.0
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -1698,58 +1617,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#whats-new" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's new
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#built-for" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Built for
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#upgrading-from-810" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upgrading from 8.1.0
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1770,6 +1637,43 @@
   
 
 
+<h1 id="smsd-pro-821">SMSD Pro 8.2.1<a class="headerlink" href="#smsd-pro-821" title="Permanent link">&para;</a></h1>
+<p>This maintenance update fixes C++ header compilation on Windows, ring
+double-bond stereo in drawings, elemental-hydrogen SMARTS with large atom-map
+labels and directional SMARTS bonds on aromatic rings. The Python package page
+has clearer installation, search-configuration and screening examples, with
+links to the
+<a href="https://asad.github.io/SMSD/">website</a> and <a href="https://asad.github.io/SMSD/guide/">user guide</a>.
+Package documentation links and the Maven Central version in the release guide
+are also corrected.</p>
+<p>C++ headers preserve the Windows <code>STRICT</code> and <code>IGNORE</code> macros without expanding
+them in their own declarations. Application code that names the corresponding
+enum values still needs the <a href="../CPP/#windows-headers">documented macro suppression</a>.</p>
+<p>In C++ and Python, non-aromatic ring double bonds retain their stored stereo
+in generated coordinates and automatic SVG drawings; constrained layouts keep
+their fixed coordinates. If no matching layout can be found, coordinate
+generation and drawing raise an error (<code>ValueError</code> in Python,
+<code>std::invalid_argument</code> in C++) instead of showing the other isomer. This
+includes a stored E/Z that the ring cannot take, such as trans in cyclohexene;
+8.2.0 drew such molecules without that E/Z. Stored E/Z on aromatic rings, such
+as annulenes, may not be reflected in the layout. In the MCP server,
+<code>depict_mcs</code> reports such a drawing failure as an error.</p>
+<p>In C++ and Python, elemental-hydrogen SMARTS no longer match the oxygen in
+methanol when their atom-map label is large. Numeric overflow still reports an
+invalid input.</p>
+<p>In C++ and Python, the directional SMARTS bonds <code>/</code> and <code>\</code> also match aromatic
+bonds: <code>c/c</code> matches benzene, and <code>C/N=c1/cccc[nH]1</code>, with a direction on an
+aromatic ring bond, matches itself as SMARTS. At a double bond, a negated or
+alternative direction on such a bond now follows the E/Z of that double bond,
+as it already did on a single bond, so a few patterns, such as <code>C/N=c!/c</code>, match
+fewer molecules. In Java directional bonds still match only single,
+non-aromatic bonds; write a bond that may be aromatic without a direction, as
+in <code>cc</code> or <code>c-,:c</code>. A SMARTS taken from a molecule with stereo double bonds on
+two neighbouring atoms of an aromatic ring, such as <code>C/C=C/c1ccccc1/C=C/C</code>,
+does not match that molecule.</p>
+<p>SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
+Updates cover bug fixes, security, compatibility and
+documentation corrections.</p>
 <h1 id="smsd-pro-820">SMSD Pro 8.2.0<a class="headerlink" href="#smsd-pro-820" title="Permanent link">&para;</a></h1>
 <p><strong>Exact search on the hardware you already own.</strong></p>
 <p>SMSD Pro 8.2.0 brings GPU screening to Apple silicon, publication-ready structure figures and clearer guidance for AI assistants. Exact, provable substructure and maximum common substructure (MCS) search now runs on even more of the hardware researchers already own, from an Apple silicon laptop to a GPU server. Completed searches return the same results as in 8.1.0, so existing pipelines upgrade with confidence.</p>

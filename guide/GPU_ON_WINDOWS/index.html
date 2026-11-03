@@ -1910,15 +1910,15 @@ install the two packages at the same version:</p>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3-venv
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>~/smsd-gpu
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">source</span><span class="w"> </span>~/smsd-gpu/bin/activate
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.0"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.0"</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd==8.2.1"</span><span class="w"> </span><span class="s2">"smsd-cuda==8.2.1"</span>
 </code></pre></div>
-<p>For packed indexes and clustering, install <code>"smsd[numpy]==8.2.0"</code> in place of
-<code>"smsd==8.2.0"</code>. Then check the device and the backend:</p>
+<p>For packed indexes and clustering, install <code>"smsd[numpy]==8.2.1"</code> in place of
+<code>"smsd==8.2.1"</code>. Then check the device and the backend:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd_cuda; print(smsd_cuda.unavailable_reason() or smsd_cuda.device_info())"</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
 </code></pre></div>
 <p>The first command prints the device name, its compute capability and its
-memory, or the reason no device can be used. The second prints <code>8.2.0</code> and a
+memory, or the reason no device can be used. The second prints <code>8.2.1</code> and a
 backend string that starts with <code>GPU:</code> once <code>smsd</code> has attached the device.
 Both report what is available, not which device a call used.</p>
 <p>Automatic screens of a prepared <code>TargetCorpus</code> use the GPU by default only on a
@@ -1935,8 +1935,8 @@ backend <code>"cuda"</code>, use any supported device without the variable.</p>
 directory in the distribution. Windows drives appear under <code>/mnt/c</code> and can be
 read from there, but more slowly.</p>
 <h2 id="run-the-gpu-docker-image">Run the GPU Docker image<a class="headerlink" href="#run-the-gpu-docker-image" title="Permanent link">&para;</a></h2>
-<p>The <a href="https://github.com/asad/SMSD/releases/tag/v8.2.0">8.2.0 release</a> has the
-GPU image <code>smsd-8.2.0-cuda-linux-amd64.tar.xz</code>, with Python, <code>smsd</code>, the
+<p>The <a href="https://github.com/asad/SMSD/releases/tag/v8.2.1">8.2.1 release</a> has the
+GPU image <code>smsd-8.2.1-cuda-linux-amd64.tar.xz</code>, with Python, <code>smsd</code>, the
 matching <code>smsd-cuda</code> and the CUDA 12 runtime. Python is its entry point and
 <code>/work</code> its working directory. Docker needs GPU access in WSL2, which either
 of two set-ups provides:</p>
@@ -1949,16 +1949,16 @@ of two set-ups provides:</p>
 </ul>
 <p>In the Ubuntu shell, in the directory that holds the downloaded files, check
 the archive, load it and run the image:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>grep<span class="w"> </span><span class="s1">' smsd-8.2.0-cuda-linux-amd64.tar.xz$'</span><span class="w"> </span>SHA256SUMS<span class="w"> </span><span class="p">|</span><span class="w"> </span>shasum<span class="w"> </span>-a<span class="w"> </span><span class="m">256</span><span class="w"> </span>-c
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>grep<span class="w"> </span><span class="s1">' smsd-8.2.1-cuda-linux-amd64.tar.xz$'</span><span class="w"> </span>SHA256SUMS<span class="w"> </span><span class="p">|</span><span class="w"> </span>shasum<span class="w"> </span>-a<span class="w"> </span><span class="m">256</span><span class="w"> </span>-c
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.1-cuda-linux-amd64.tar.xz
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.1-cuda12.8<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
 </code></pre></div>
-<p>The last command prints <code>8.2.0</code> and a backend string that starts with <code>GPU:</code>.
+<p>The last command prints <code>8.2.1</code> and a backend string that starts with <code>GPU:</code>.
 To run a script from the current directory, mount the directory read-only at
 <code>/work</code> and pass settings with <code>-e</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">:/work:ro"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">SMSD_CUDA_MIN_TARGETS</span><span class="o">=</span><span class="m">100000</span><span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span>screen.py
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">SMSD_CUDA_MIN_TARGETS</span><span class="o">=</span><span class="m">100000</span><span class="w"> </span>smsd:8.2.1-cuda12.8<span class="w"> </span>screen.py
 </code></pre></div>
 <p>The image runs as an unprivileged user, so the script should write its results
 to standard output, or to a separately mounted directory that this user can

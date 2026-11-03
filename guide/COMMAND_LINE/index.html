@@ -2023,11 +2023,11 @@ images that carry it, and the local molecular tools server. Fingerprints and
 similarity screening are not available on the command line; the
 <a href="#limitations">limitations</a> section says where to find them.</p>
 <h2 id="get-the-command-line-tool">Get the command-line tool<a class="headerlink" href="#get-the-command-line-tool" title="Permanent link">&para;</a></h2>
-<p>The 8.2.0 tool is on Maven Central as <code>com.bioinceptionlabs:smsd-cli:8.2.0</code>;
+<p>The 8.2.1 tool is on Maven Central as <code>com.bioinceptionlabs:smsd-cli:8.2.1</code>;
 the <a href="../../HOWTO-INSTALL/#portable-java-cli">installation guide</a> shows how to
 download and run it. The CPU <a href="#docker-images">Docker images</a> and a Java source
-build also provide it. From
-8.2.0, the tool and the Java library receive bug fixes only. To build 8.2.0,
+build also provide it. SMSD is maintained at the 8.2.0 feature baseline
+across C++, Python and Java. To build 8.2.1,
 use a JDK (Java 25 LTS preferred) and Maven 3.9 or later, and from the
 repository root run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mvn<span class="w"> </span>-f<span class="w"> </span>java/pom.xml<span class="w"> </span>clean<span class="w"> </span>package
@@ -2035,9 +2035,9 @@ repository root run:</p>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>smsd<span class="w"> </span>--version
 </code></pre></div>
 <p>The build runs the default tests and writes
-<code>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar</code>, which holds the
+<code>java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar</code>, which holds the
 tool and all its dependencies and runs on Java 8 or later, also as
-<code>java -jar smsd-cli-8.2.0-jar-with-dependencies.jar</code>. The launcher script
+<code>java -jar smsd-cli-8.2.1-jar-with-dependencies.jar</code>. The launcher script
 <code>java/cli/src/scripts/smsd</code> runs the newest such JAR in <code>java/cli/target</code>, or
 one next to the script; <code>smsd.bat</code> and <code>smsd.ps1</code> in the same folder do the
 same on Windows. The examples in this chapter call the tool as <code>smsd</code>.</p>
@@ -2722,22 +2722,22 @@ standard output.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>smsd:8.2.0-cpu-amd64</code></td>
-<td><code>smsd-8.2.0-cpu-linux-amd64.tar.xz</code></td>
+<td><code>smsd:8.2.1-cpu-amd64</code></td>
+<td><code>smsd-8.2.1-cpu-linux-amd64.tar.xz</code></td>
 <td>linux/amd64</td>
 <td>The command-line tool</td>
 <td>Java 25 runtime, CPython 3.14.9 and the <code>smsd</code> package</td>
 </tr>
 <tr>
-<td><code>smsd:8.2.0-cpu-arm64</code></td>
-<td><code>smsd-8.2.0-cpu-linux-arm64.tar.xz</code></td>
+<td><code>smsd:8.2.1-cpu-arm64</code></td>
+<td><code>smsd-8.2.1-cpu-linux-arm64.tar.xz</code></td>
 <td>linux/arm64</td>
 <td>The command-line tool</td>
 <td>As for amd64</td>
 </tr>
 <tr>
-<td><code>smsd:8.2.0-cuda12.8</code></td>
-<td><code>smsd-8.2.0-cuda-linux-amd64.tar.xz</code></td>
+<td><code>smsd:8.2.1-cuda12.8</code></td>
+<td><code>smsd-8.2.1-cuda-linux-amd64.tar.xz</code></td>
 <td>linux/amd64</td>
 <td><code>python</code></td>
 <td>CPython 3.14.9, <code>smsd</code>, <code>smsd-cuda</code> and the CUDA 12 runtime; no Java</td>
@@ -2746,23 +2746,23 @@ standard output.</p>
 </table>
 <p>Load a CPU image and pass the tool's options after the image name; use
 <code>--entrypoint python</code> for Python:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz
-<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span>--version
-<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.1-cpu-linux-amd64.tar.xz
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.1-cpu-amd64<span class="w"> </span>--version
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>smsd:8.2.1-cpu-amd64<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"c1ccccc1"</span><span class="w"> </span>--T<span class="w"> </span>SMI<span class="w"> </span>--t<span class="w"> </span><span class="s2">"Oc1ccccc1"</span><span class="w"> </span>--json<span class="w"> </span>-
-<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span>smsd:8.2.1-cpu-amd64<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; assert smsd.Substructure.find('CC').match('CCC').found"</span>
 </code></pre></div>
 <p>Without options, the CPU image prints the tool's help. The container runs as
 the user <code>smsd</code> in the working directory <code>/work</code>. If <code>docker load</code> stops with
 <code>exec: "xz": executable file not found in $PATH</code>, the engine cannot
 decompress the archive; decompress it on the host instead:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>xz<span class="w"> </span>--decompress<span class="w"> </span>--stdout<span class="w"> </span>smsd-8.2.0-cpu-linux-amd64.tar.xz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>load
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>xz<span class="w"> </span>--decompress<span class="w"> </span>--stdout<span class="w"> </span>smsd-8.2.1-cpu-linux-amd64.tar.xz<span class="w"> </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span>load
 </code></pre></div>
 <p>The tool in the container reads only the files it is given. To search the
 file of the <a href="#sdf-batch-search">SDF batch search</a>, mount the current directory
 on <code>/work</code> and run as yourself, so the report belongs to you:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--user<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>id<span class="w"> </span>-u<span class="k">)</span><span class="s2">:</span><span class="k">$(</span>id<span class="w"> </span>-g<span class="k">)</span><span class="s2">"</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">:/work"</span><span class="w"> </span>smsd:8.2.0-cpu-amd64<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--user<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>id<span class="w"> </span>-u<span class="k">)</span><span class="s2">:</span><span class="k">$(</span>id<span class="w"> </span>-g<span class="k">)</span><span class="s2">"</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">"</span><span class="nv">$PWD</span><span class="s2">:/work"</span><span class="w"> </span>smsd:8.2.1-cpu-amd64<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="w">  </span>--Q<span class="w"> </span>SMI<span class="w"> </span>--q<span class="w"> </span><span class="s2">"c1ccccc1"</span><span class="w"> </span>--T<span class="w"> </span>SDF<span class="w"> </span>--t<span class="w"> </span>targets.sdf<span class="w"> </span>--threads<span class="w"> </span><span class="m">2</span><span class="w"> </span>--json<span class="w"> </span>benzene.json
 </code></pre></div>
 <p>The Python in each image holds only the SMSD packages, and in the GPU image the
@@ -2772,8 +2772,8 @@ and the molecular tools server therefore need an image built on top that adds
 those packages.</p>
 <p>The GPU image runs Python on an NVIDIA host with the NVIDIA Container Toolkit
 and a compatible driver:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.0-cuda-linux-amd64.tar.xz
-<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.0-cuda12.8<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>docker<span class="w"> </span>load<span class="w"> </span>--input<span class="w"> </span>smsd-8.2.1-cuda-linux-amd64.tar.xz
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>smsd:8.2.1-cuda12.8<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"import smsd; print(smsd.__version__); print(smsd.gpu_device_info())"</span>
 </code></pre></div>
 <p>As shipped, it serves prepared <code>TargetCorpus</code> screens, streamed screens and
@@ -2783,7 +2783,7 @@ the <a href="../CPU_GPU/#containers">CPU and GPU screening</a> chapter explains 
 check. The <a href="../../HOWTO-INSTALL/#docker">installation guide</a> describes building
 the images from source.</p>
 <h2 id="molecular-tools-server">Molecular tools server<a class="headerlink" href="#molecular-tools-server" title="Permanent link">&para;</a></h2>
-<p><code>smsd-mcp</code>, installed with <code>python -m pip install "smsd[mcp]==8.2.0"</code>, serves
+<p><code>smsd-mcp</code>, installed with <code>python -m pip install "smsd[mcp]==8.2.1"</code>, serves
 eight molecular tools over standard input and output, with no network
 listener. Without the extra it exits with status 1 after a Python traceback
 that ends with

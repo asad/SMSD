@@ -1782,7 +1782,7 @@ it, and where the languages differ. The <a href="../../CPP/">C++ guide</a> and t
 <p>The C++ library is header-only and needs a C++17 compiler: include
 <code>smsd/smsd.hpp</code> and add <code>cpp/include</code> to the include path. An installed CMake
 package provides the target <code>smsd::smsd</code> through
-<code>find_package(smsd 8.2.0 CONFIG REQUIRED)</code>; the
+<code>find_package(smsd 8.2.1 CONFIG REQUIRED)</code>; the
 <a href="https://github.com/asad/SMSD/blob/master/cpp/README.md#install-and-use-with-cmake">C++ module README</a> shows the
 install and a minimal consumer project.</p>
 <p>This program computes ECFP4 similarities of phenol to five molecules, screens a
@@ -1885,8 +1885,9 @@ OpenMP when the compiler enables it; the
 build and its options.</p>
 <h2 id="java">Java<a class="headerlink" href="#java" title="Permanent link">&para;</a></h2>
 <p>The Java library is <code>com.bioinceptionlabs:smsd</code> and the command-line tool
-<code>com.bioinceptionlabs:smsd-cli</code>. From 8.2.0, both receive bug fixes only.
-Both are on Maven Central at 8.2.0; a source build with
+<code>com.bioinceptionlabs:smsd-cli</code>. SMSD is maintained at the 8.2.0 feature
+baseline across C++, Python and Java. Both are on Maven Central at 8.2.1; a
+source build with
 <code>mvn -f java/pom.xml install</code> from the repository root installs them in the
 local Maven repository instead (Gradle then needs <code>mavenLocal()</code>). The
 <a href="https://github.com/asad/SMSD/blob/master/java/README.md#installation">Java module README</a> gives the Maven and
@@ -1945,8 +1946,8 @@ and MCS searches over the list on two threads:</p>
 <p>Save it as <code>ScreenExample.java</code> and compile it from the repository root
 against the self-contained JAR of the source build; on Windows, separate the
 class path entries with a semicolon:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar<span class="w"> </span>ScreenExample.java
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.2.0-jar-with-dependencies.jar:."</span><span class="w"> </span>ScreenExample
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>javac<span class="w"> </span>--release<span class="w"> </span><span class="m">8</span><span class="w"> </span>-cp<span class="w"> </span>java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar<span class="w"> </span>ScreenExample.java
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>java<span class="w"> </span>-cp<span class="w"> </span><span class="s2">"java/cli/target/smsd-cli-8.2.1-jar-with-dependencies.jar:."</span><span class="w"> </span>ScreenExample
 </code></pre></div>
 <p>With JDK 25, <code>javac --release 8</code> warns that release 8 is obsolete; the class
 still compiles and runs on Java 8 or later.</p>
@@ -2012,6 +2013,12 @@ fingerprint comparisons, as above.</p>
 <td>No</td>
 <td>Yes</td>
 <td>Yes</td>
+</tr>
+<tr>
+<td>Directional SMARTS bonds <code>/</code>, <code>\</code></td>
+<td>Single or aromatic bonds</td>
+<td>Single or aromatic bonds</td>
+<td>Single, non-aromatic bonds only</td>
 </tr>
 <tr>
 <td>Default chemistry</td>
