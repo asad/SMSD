@@ -29,6 +29,14 @@ and maps atoms by their zero-based indices in the input molecules.
 - **Python**: a binding to the native library that accepts RDKit molecules when
   RDKit is installed and converts Open Babel molecules.
 
+## What's new in 8.2.1
+
+A maintenance update. C++ headers compile when Windows defines `STRICT` and
+`IGNORE`; drawings keep the stored E/Z of non-aromatic ring double bonds; in
+C++ and Python, the directional SMARTS bonds `/` and `\` also match aromatic
+bonds, and elemental-hydrogen SMARTS hold with large atom-map labels. The
+[release notes](docs/RELEASE_NOTES.md) give the details.
+
 ## What's new in 8.2.0
 
 - **GPU screening on Apple silicon.** The optional `smsd-metal` package lets
