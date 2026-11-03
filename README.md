@@ -39,22 +39,32 @@ and maps atoms by their zero-based indices in the input molecules.
   aromatic bonds.
 - In C++ and Python, elemental-hydrogen SMARTS hold with large atom-map labels.
 
-**8.2.0** added the `smsd-metal` package for GPU screening on Apple silicon, a
-[guide to GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md) through WSL2,
-improved drawings, clearer tool errors for AI assistants, time limits that hold
-on very large molecules, and seven notebooks, such as the
-[MCS notebook](https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/mcs_search.ipynb)
-for Colab. Searches give the same results as in 8.1.0, and every 8.x API
-remains supported; the [release notes](docs/RELEASE_NOTES.md) and
-[changelog](CHANGELOG.md) give the details.
+Highlights of **8.2.0**:
 
-Beyond search, the 8.x line brings [Python data and ML adapters](docs/PYTHON_ADAPTERS.md),
-[local molecular tools and MCP](docs/MCP_SERVER.md),
-[packed fingerprint corpora and clustering](docs/PACKED_CORPORA.md) and
-[SMARTS export](docs/SMARTS_EXPORT.md); optional dependencies load only when
-used. [Conda recipes](packaging/conda/README.md) build `smsd` and `smsd-cuda`
-for conda, mamba and Pixi, and an [MCP container recipe](packaging/mcp/README.md)
-and [Hugging Face demonstration](examples/huggingface/README.md) are included.
+- GPU screening on Apple silicon with the `smsd-metal` package.
+- A [guide to NVIDIA GPU screening on Windows](docs/guide/GPU_ON_WINDOWS.md)
+  through WSL2.
+- Cleaner molecule drawings.
+- Clearer error messages from the MCP tools.
+- Time limits that hold on very large molecules.
+- Seven example notebooks that open in Colab, such as the
+  [MCS notebook](https://colab.research.google.com/github/asad/SMSD/blob/master/python/examples/mcs_search.ipynb).
+
+Search results are the same as in 8.1.0, and existing APIs are unchanged. The
+[release notes](docs/RELEASE_NOTES.md) and [changelog](CHANGELOG.md) have the
+details.
+
+## Also included
+
+- [Python adapters](docs/PYTHON_ADAPTERS.md) for data-frame and machine-learning
+  libraries, loaded only when you use them.
+- An [MCP server](docs/MCP_SERVER.md) with local molecular tools for AI
+  assistants, plus a [container recipe](packaging/mcp/README.md).
+- [Packed fingerprint corpora with clustering](docs/PACKED_CORPORA.md).
+- [SMARTS export](docs/SMARTS_EXPORT.md).
+- [Conda recipes](packaging/conda/README.md) for `smsd`, `smsd-cuda` and `smsd-metal` that
+  work with conda, mamba and Pixi.
+- A [Hugging Face demonstration](examples/huggingface/README.md).
 
 ## Installation
 
