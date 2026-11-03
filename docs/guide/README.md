@@ -138,7 +138,7 @@ gives the command.
 | [MCS to a small library search](../../python/examples/feature_search.ipynb) | A common graph turned into a SMARTS query, a library search, SVG highlighting, NumPy features, packed-index neighbours, Butina clustering and MaxMin selection |
 
 Open a notebook in Jupyter or Colab and run its setup cell first. Each notebook
-installs SMSD 8.2.0 or later into the current kernel when it is missing or older,
+installs SMSD 8.2.1 or later into the current kernel when it is missing or older,
 then attempts to install the optional packages used by its examples. Installation
 needs internet access; no wheel upload or copied setup cell is needed. Select
 Python 3.12 or later. If an older SMSD is already imported, restart the kernel

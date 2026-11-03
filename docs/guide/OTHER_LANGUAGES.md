@@ -126,8 +126,7 @@ build and its options.
 ## Java
 
 The Java library is `com.bioinceptionlabs:smsd` and the command-line tool
-`com.bioinceptionlabs:smsd-cli`. SMSD is maintained at the 8.2.0 feature
-baseline across C++, Python and Java. Both are on Maven Central at 8.2.1; a
+`com.bioinceptionlabs:smsd-cli`. Both are on Maven Central at 8.2.1; a
 source build with
 `mvn -f java/pom.xml install` from the repository root installs them in the
 local Maven repository instead (Gradle then needs `mavenLocal()`). The

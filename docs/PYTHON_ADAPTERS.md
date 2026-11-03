@@ -292,7 +292,7 @@ scikit-learn pipeline and a temporary packed corpus. Its example labels are
 illustrative, not a predictive-performance evaluation.
 
 Open the notebook in Jupyter or Colab and run its setup cell first. It installs
-SMSD 8.2.0 or later into the current kernel when it is missing or older, then
+SMSD 8.2.1 or later into the current kernel when it is missing or older, then
 attempts to install NumPy and scikit-learn if they are missing, from binary
 wheels only. Installation needs internet access; no wheel upload is needed.
 Select Python 3.12 or later, and restart the kernel first if an older SMSD is
