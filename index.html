@@ -446,21 +446,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#new-in-821" class="md-nav__link">
+  <a href="#whats-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New in 8.2.1
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#new-in-820" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        New in 8.2.0
+        What's new
       
     </span>
   </a>
@@ -1755,21 +1744,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#new-in-821" class="md-nav__link">
+  <a href="#whats-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New in 8.2.1
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#new-in-820" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        New in 8.2.0
+        What's new
       
     </span>
   </a>
@@ -1937,32 +1915,23 @@ you can rely on.</p>
 Macs, and the Java library and command-line tool are on Maven Central. The
 <a href="HOWTO-INSTALL/">installation guide</a> covers every platform, conda and
 source builds.</p>
-<h2 id="new-in-821">New in 8.2.1<a class="headerlink" href="#new-in-821" title="Permanent link">&para;</a></h2>
-<p>A maintenance update. C++ headers compile when Windows defines <code>STRICT</code> and
-<code>IGNORE</code>; drawings keep the stored E/Z of non-aromatic ring double bonds; in
-C++ and Python, the directional SMARTS bonds <code>/</code> and <code>\</code> also match aromatic
-bonds, and elemental-hydrogen SMARTS hold with large atom-map labels. The
-<a href="RELEASE_NOTES/">release notes</a> give the details.</p>
-<h2 id="new-in-820">New in 8.2.0<a class="headerlink" href="#new-in-820" title="Permanent link">&para;</a></h2>
+<h2 id="whats-new">What's new<a class="headerlink" href="#whats-new" title="Permanent link">&para;</a></h2>
+<p><strong>8.2.1</strong> is a maintenance release:</p>
 <ul>
-<li><strong><a href="guide/CPU_GPU/">Apple GPU screening</a>.</strong> With <code>smsd-metal</code>, prepared
-  ECFP4 screens run on the GPU of Apple silicon Macs and return the hits and
-  scores of the CPU.</li>
-<li><strong><a href="guide/MCS/#draw-the-result">Drawings fit for papers and slides</a>.</strong>
-  Rings stay regular, atoms no longer overlap in drug-sized molecules, double
-  bonds outside rings show their stored E/Z isomer, and the match sits on one
-  even halo: gold for MCS, mint for substructure hits.</li>
-<li><strong><a href="guide/AI_TOOLS/#read-a-tool-result">Clearer tool refusals</a>.</strong> A refused
-  tool call names the argument and, where useful, what it accepts.</li>
-<li><strong>Time limits that hold on very large molecules.</strong> In C++ and Python, an
-  MCS time limit now also bounds the preparation of the search, so even a
-  limit of a few milliseconds holds.</li>
-<li><strong><a href="guide/GPU_ON_WINDOWS/">GPU screening on Windows</a>.</strong> NVIDIA screening
-  through WSL2, with the Linux CUDA package or the GPU Docker image.</li>
+<li>C++ headers compile when Windows defines <code>STRICT</code> and <code>IGNORE</code>.</li>
+<li>Drawings keep the stored E/Z of non-aromatic ring double bonds.</li>
+<li>In C++ and Python, the directional SMARTS bonds <code>/</code> and <code>\</code> also match
+  aromatic bonds.</li>
+<li>In C++ and Python, elemental-hydrogen SMARTS hold with large atom-map labels.</li>
 </ul>
-<p>Completed searches return the same results as in 8.1.0, and the 8.x APIs are
-unchanged. The <a href="RELEASE_NOTES/">release notes</a> list what to check when
-upgrading.</p>
+<p><strong>8.2.0</strong> added the <code>smsd-metal</code> package for
+<a href="guide/CPU_GPU/">GPU screening on Apple silicon</a>, a
+<a href="guide/GPU_ON_WINDOWS/">guide to GPU screening on Windows</a> through WSL2,
+<a href="guide/MCS/#draw-the-result">improved drawings</a>,
+<a href="guide/AI_TOOLS/#read-a-tool-result">clearer tool errors for AI assistants</a>,
+time limits that hold on very large molecules, and seven notebooks. Searches
+give the same results as in 8.1.0, and every 8.x API remains supported; the
+<a href="RELEASE_NOTES/">release notes</a> give the details.</p>
 <h2 id="see-it-on-real-molecules">See it on real molecules<a class="headerlink" href="#see-it-on-real-molecules" title="Permanent link">&para;</a></h2>
 <div class="smsd-mols">
 <figure><img src="assets/img/mcs-query.svg" alt="Sildenafil with its maximum common substructure highlighted"><figcaption>Sildenafil: the 28-atom maximum common substructure, proved optimal</figcaption></figure>

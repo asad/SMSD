@@ -1641,11 +1641,10 @@
 <p>This maintenance update fixes C++ header compilation on Windows, ring
 double-bond stereo in drawings, elemental-hydrogen SMARTS with large atom-map
 labels and directional SMARTS bonds on aromatic rings. The Python package page
-has clearer installation, search-configuration and screening examples, with
-links to the
-<a href="https://asad.github.io/SMSD/">website</a> and <a href="https://asad.github.io/SMSD/guide/">user guide</a>.
-Package documentation links and the Maven Central version in the release guide
-are also corrected.</p>
+now has clearer installation, search-configuration and screening examples, and
+links to the <a href="https://asad.github.io/SMSD/">website</a> and
+<a href="https://asad.github.io/SMSD/guide/">user guide</a>. Package documentation links
+and the Maven Central version in the release guide are also corrected.</p>
 <p>C++ headers preserve the Windows <code>STRICT</code> and <code>IGNORE</code> macros without expanding
 them in their own declarations. Application code that names the corresponding
 enum values still needs the <a href="../CPP/#windows-headers">documented macro suppression</a>.</p>
@@ -1671,9 +1670,6 @@ non-aromatic bonds; write a bond that may be aromatic without a direction, as
 in <code>cc</code> or <code>c-,:c</code>. A SMARTS taken from a molecule with stereo double bonds on
 two neighbouring atoms of an aromatic ring, such as <code>C/C=C/c1ccccc1/C=C/C</code>,
 does not match that molecule.</p>
-<p>SMSD is maintained at the 8.2.0 feature baseline across C++, Python and Java.
-Updates cover bug fixes, security, compatibility and
-documentation corrections.</p>
 <h1 id="smsd-pro-820">SMSD Pro 8.2.0<a class="headerlink" href="#smsd-pro-820" title="Permanent link">&para;</a></h1>
 <p><strong>Exact search on the hardware you already own.</strong></p>
 <p>SMSD Pro 8.2.0 brings GPU screening to Apple silicon, publication-ready structure figures and clearer guidance for AI assistants. Exact, provable substructure and maximum common substructure (MCS) search now runs on even more of the hardware researchers already own, from an Apple silicon laptop to a GPU server. Completed searches return the same results as in 8.1.0, so existing pipelines upgrade with confidence.</p>
