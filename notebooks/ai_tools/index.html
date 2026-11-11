@@ -2186,19 +2186,6 @@ setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>
          <span class="o">*</span><span class="n">_requirements</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
-<span class="n">_optional_packages</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="n">_optional_requirements</span> <span class="o">=</span> <span class="p">[</span><span class="n">_package</span> <span class="k">for</span> <span class="n">_module</span><span class="p">,</span> <span class="n">_package</span> <span class="ow">in</span> <span class="n">_optional_packages</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                          <span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">_module</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
-<span class="k">if</span> <span class="n">_optional_requirements</span><span class="p">:</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--only-binary=:all:"</span><span class="p">,</span>
-             <span class="o">*</span><span class="n">_optional_requirements</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"Some optional packages have no compatible wheel or could not be downloaded. "</span>
-              <span class="s2">"The affected cells will report what is missing; SMSD remains available."</span><span class="p">)</span>
-    <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Using SMSD"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 
@@ -2231,19 +2218,6 @@ if _requirements:
         [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
          *_requirements], check=True,
     )
-    importlib.invalidate_caches()
-_optional_packages = {}
-_optional_requirements = [_package for _module, _package in _optional_packages.items()
-                          if importlib.util.find_spec(_module) is None]
-if _optional_requirements:
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
-             *_optional_requirements], check=True,
-        )
-    except subprocess.CalledProcessError:
-        print("Some optional packages have no compatible wheel or could not be downloaded. "
-              "The affected cells will report what is missing; SMSD remains available.")
     importlib.invalidate_caches()
 import smsd
 print("Using SMSD", smsd.__version__)
@@ -2384,6 +2358,7 @@ def show_table(frame):
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_spec</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_REGISTRY</span><span class="p">,</span> <span class="n">call_tool</span><span class="p">,</span> <span class="n">get_tool_definitions</span>
@@ -2404,6 +2379,7 @@ def show_table(frame):
 import json
 import os
 import re
+from importlib.util import find_spec
 
 import smsd
 from smsd.tool_definitions import TOOL_REGISTRY, call_tool, get_tool_definitions
@@ -3136,11 +3112,6 @@ results, which the cell prints after the answer.</p>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlsplit</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.request</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlopen</span>
 
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIError</span><span class="p">,</span> <span class="n">OpenAI</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="n">OpenAI</span> <span class="o">=</span> <span class="kc">None</span>
-
 <span class="n">LOCAL_BASE_URL</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_LOCAL_BASE_URL"</span><span class="p">,</span> <span class="s2">"http://localhost:11434/v1"</span><span class="p">)</span>
 <span class="n">LOCAL_MODEL</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_LOCAL_MODEL"</span><span class="p">,</span> <span class="s2">"qwen3:8b"</span><span class="p">)</span>
 
@@ -3160,13 +3131,15 @@ results, which the cell prints after the answer.</p>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Local model requests are disabled; set RUN_LOCAL_MODEL=True to enable them."</span><span class="p">)</span>
 <span class="k">elif</span> <span class="ow">not</span> <span class="n">web_address</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"SMSD_LOCAL_BASE_URL must be an http or https address; skipping the local model."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">OpenAI</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">elif</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"openai"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"The openai package is not installed; skipping the local model."</span><span class="p">)</span>
 <span class="k">elif</span> <span class="n">available</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No model server answered at </span><span class="si">{</span><span class="n">LOCAL_BASE_URL</span><span class="si">}</span><span class="s2">; skipping the local model."</span><span class="p">)</span>
 <span class="k">elif</span> <span class="n">LOCAL_MODEL</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">LOCAL_MODEL</span><span class="si">}</span><span class="s2"> is not served at </span><span class="si">{</span><span class="n">LOCAL_BASE_URL</span><span class="si">}</span><span class="s2">; available: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">available</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIError</span><span class="p">,</span> <span class="n">OpenAI</span>
+
     <span class="c1"># A local server needs no key, but the client needs a value.</span>
     <span class="n">local</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="n">LOCAL_BASE_URL</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"local"</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">600</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -3182,11 +3155,6 @@ results, which the cell prints after the answer.</p>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10">from urllib.parse import urlsplit
 from urllib.request import urlopen
-
-try:
-    from openai import APIError, OpenAI
-except ImportError:
-    OpenAI = None
 
 LOCAL_BASE_URL = os.environ.get("SMSD_LOCAL_BASE_URL", "http://localhost:11434/v1")
 LOCAL_MODEL = os.environ.get("SMSD_LOCAL_MODEL", "qwen3:8b")
@@ -3207,13 +3175,15 @@ if not RUN_LOCAL_MODEL:
     print("Local model requests are disabled; set RUN_LOCAL_MODEL=True to enable them.")
 elif not web_address:
     print("SMSD_LOCAL_BASE_URL must be an http or https address; skipping the local model.")
-elif OpenAI is None:
+elif find_spec("openai") is None:
     print("The openai package is not installed; skipping the local model.")
 elif available is None:
     print(f"No model server answered at {LOCAL_BASE_URL}; skipping the local model.")
 elif LOCAL_MODEL not in available:
     print(f"{LOCAL_MODEL} is not served at {LOCAL_BASE_URL}; available: {', '.join(available)}")
 else:
+    from openai import APIError, OpenAI
+
     # A local server needs no key, but the client needs a value.
     local = OpenAI(base_url=LOCAL_BASE_URL, api_key="local", timeout=600)
     try:
@@ -3253,8 +3223,9 @@ else:
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="hosted-models">Hosted models<a class="anchor-link" href="#hosted-models">¶</a></h2><p>Each cell below sends the question, every tool argument and every tool result,
 structures included, to the vendor's API, and runs only when <code>RUN_HOSTED_APIS</code>
-is <code>True</code> in the setup cell and its key variable is set. Set the key in your
-shell before you start Jupyter, never in the notebook. A failed request prints
+is <code>True</code> in the setup cell and its key is set. Set the key in your shell
+before you start Jupyter or, in Colab, save it in Secrets under the name the
+cell reads and allow this notebook access; never type a key into the notebook. A failed request prints
 only the error type and HTTP status. Install the client first: <code>anthropic</code> for
 the Claude Messages API, <code>openai</code> for the DeepSeek and OpenAI APIs, and
 <code>google-genai</code> 2.33.0 or later for the Gemini API. The vendors are in
@@ -3283,13 +3254,53 @@ vendor's model list before you rely on one.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">report_failure</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">api_key</span><span class="p">(</span><span class="o">*</span><span class="n">names</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The first named key set in the environment or, in Colab, in Secrets."""</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">google.colab</span><span class="w"> </span><span class="kn">import</span> <span class="n">userdata</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">userdata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">userdata</span><span class="o">.</span><span class="n">SecretNotFoundError</span><span class="p">,</span> <span class="n">userdata</span><span class="o">.</span><span class="n">NotebookAccessError</span><span class="p">,</span>
+                <span class="n">userdata</span><span class="o">.</span><span class="n">TimeoutException</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">report_failure</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Name a failed hosted request without repeating the service's error text."""</span>
     <span class="n">status</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"status_code"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="n">service</span><span class="si">}</span><span class="s2"> request failed: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
           <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">", HTTP status </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">status</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span><span class="p">))</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-11">def report_failure(service, error):
+<div class="clipboard-copy-txt" id="cell-11">def api_key(*names):
+    """The first named key set in the environment or, in Colab, in Secrets."""
+    for name in names:
+        if os.environ.get(name):
+            return os.environ[name]
+    try:
+        from google.colab import userdata
+    except ImportError:
+        return None
+    for name in names:
+        try:
+            value = userdata.get(name)
+        except (userdata.SecretNotFoundError, userdata.NotebookAccessError,
+                userdata.TimeoutException):
+            continue
+        if value:
+            return value
+    return None
+
+
+def report_failure(service, error):
     """Name a failed hosted request without repeating the service's error text."""
     status = getattr(error, "status_code", None) or getattr(error, "code", None)
     print(f"The {service} request failed: {type(error).__name__}"
@@ -3319,14 +3330,7 @@ vendor's model list before you rely on one.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Claude Messages API: input-schema definitions; reads ANTHROPIC_API_KEY.</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="n">anthropic</span> <span class="o">=</span> <span class="kc">None</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">ask_claude</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
-    <span class="n">client</span> <span class="o">=</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ask_claude</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">question</span><span class="p">):</span>
     <span class="n">messages</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="n">question</span><span class="p">}],</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">messages</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
@@ -3349,29 +3353,32 @@ vendor's model list before you rely on one.</p>
     <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">calls</span>
 
 
-<span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ANTHROPIC_API_KEY"</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"ANTHROPIC_API_KEY is not set; skipping the Claude Messages API."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">anthropic</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"The anthropic package is not installed; skipping the Claude Messages API."</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_claude</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ask Claude when hosted requests are on; the key stays inside this call."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">api_key</span><span class="p">(</span><span class="s2">"ANTHROPIC_API_KEY"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"ANTHROPIC_API_KEY is not set; skipping the Claude Messages API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"anthropic"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"The anthropic package is not installed; skipping the Claude Messages API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">anthropic</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_claude</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
+        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_claude</span><span class="p">(</span><span class="n">anthropic</span><span class="o">.</span><span class="n">Anthropic</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">key</span><span class="p">),</span> <span class="n">question</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">anthropic</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">report_failure</span><span class="p">(</span><span class="s2">"Claude Messages API"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">show</span><span class="p">(</span><span class="n">calls</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span>
+
+
+<span class="n">run_claude</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-12"># Claude Messages API: input-schema definitions; reads ANTHROPIC_API_KEY.
-try:
-    import anthropic
-except ImportError:
-    anthropic = None
-
-
-def ask_claude(question):
-    client = anthropic.Anthropic()
+def ask_claude(client, question):
     messages, calls = [{"role": "user", "content": question}], []
     for _ in range(12):
         response = client.messages.create(
@@ -3394,19 +3401,29 @@ def ask_claude(question):
     return None, calls
 
 
-if not RUN_HOSTED_APIS:
-    print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
-elif not os.environ.get("ANTHROPIC_API_KEY"):
-    print("ANTHROPIC_API_KEY is not set; skipping the Claude Messages API.")
-elif anthropic is None:
-    print("The anthropic package is not installed; skipping the Claude Messages API.")
-else:
+def run_claude(question):
+    """Ask Claude when hosted requests are on; the key stays inside this call."""
+    if not RUN_HOSTED_APIS:
+        print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
+        return
+    key = api_key("ANTHROPIC_API_KEY")
+    if not key:
+        print("ANTHROPIC_API_KEY is not set; skipping the Claude Messages API.")
+        return
+    if find_spec("anthropic") is None:
+        print("The anthropic package is not installed; skipping the Claude Messages API.")
+        return
+    import anthropic
+
     try:
-        answer, calls = ask_claude(QUESTION)
+        answer, calls = ask_claude(anthropic.Anthropic(api_key=key), question)
     except anthropic.APIError as error:
         report_failure("Claude Messages API", error)
     else:
-        show(calls, answer)</div>
+        show(calls, answer)
+
+
+run_claude(QUESTION)</div>
 </div>
 </div>
 </div>
@@ -3445,38 +3462,58 @@ else:
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># DeepSeek API: the Chat Completions loop above; reads DEEPSEEK_API_KEY.</span>
-<span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DEEPSEEK_API_KEY"</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"DEEPSEEK_API_KEY is not set; skipping the DeepSeek API."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">OpenAI</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"The openai package is not installed; skipping the DeepSeek API."</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_deepseek</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ask DeepSeek when hosted requests are on; the key stays inside this call."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">api_key</span><span class="p">(</span><span class="s2">"DEEPSEEK_API_KEY"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"DEEPSEEK_API_KEY is not set; skipping the DeepSeek API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"openai"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"The openai package is not installed; skipping the DeepSeek API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIError</span><span class="p">,</span> <span class="n">OpenAI</span>
+
     <span class="c1"># The DeepSeek key is sent only to the DeepSeek API.</span>
-    <span class="n">deepseek</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">"https://api.deepseek.com"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"DEEPSEEK_API_KEY"</span><span class="p">])</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">"https://api.deepseek.com"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">tool_loop</span><span class="p">(</span><span class="n">deepseek</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">,</span> <span class="s2">"deepseek-flash"</span><span class="p">,</span> <span class="n">QUESTION</span><span class="p">)</span>
+        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">tool_loop</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">,</span> <span class="s2">"deepseek-flash"</span><span class="p">,</span> <span class="n">question</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">APIError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">report_failure</span><span class="p">(</span><span class="s2">"DeepSeek API"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">show</span><span class="p">(</span><span class="n">calls</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span>
+
+
+<span class="n">run_deepseek</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-13"># DeepSeek API: the Chat Completions loop above; reads DEEPSEEK_API_KEY.
-if not RUN_HOSTED_APIS:
-    print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
-elif not os.environ.get("DEEPSEEK_API_KEY"):
-    print("DEEPSEEK_API_KEY is not set; skipping the DeepSeek API.")
-elif OpenAI is None:
-    print("The openai package is not installed; skipping the DeepSeek API.")
-else:
+def run_deepseek(question):
+    """Ask DeepSeek when hosted requests are on; the key stays inside this call."""
+    if not RUN_HOSTED_APIS:
+        print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
+        return
+    key = api_key("DEEPSEEK_API_KEY")
+    if not key:
+        print("DEEPSEEK_API_KEY is not set; skipping the DeepSeek API.")
+        return
+    if find_spec("openai") is None:
+        print("The openai package is not installed; skipping the DeepSeek API.")
+        return
+    from openai import APIError, OpenAI
+
     # The DeepSeek key is sent only to the DeepSeek API.
-    deepseek = OpenAI(base_url="https://api.deepseek.com", api_key=os.environ["DEEPSEEK_API_KEY"])
+    client = OpenAI(base_url="https://api.deepseek.com", api_key=key)
     try:
-        answer, calls = tool_loop(deepseek.chat.completions.create, "deepseek-flash", QUESTION)
+        answer, calls = tool_loop(client.chat.completions.create, "deepseek-flash", question)
     except APIError as error:
         report_failure("DeepSeek API", error)
     else:
-        show(calls, answer)</div>
+        show(calls, answer)
+
+
+run_deepseek(QUESTION)</div>
 </div>
 </div>
 </div>
@@ -3514,22 +3551,17 @@ else:
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Gemini API: function definitions without additionalProperties; reads GEMINI_API_KEY.</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">google</span><span class="w"> </span><span class="kn">import</span> <span class="n">genai</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">google.genai</span><span class="w"> </span><span class="kn">import</span> <span class="n">errors</span><span class="p">,</span> <span class="n">types</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="n">genai</span> <span class="o">=</span> <span class="kc">None</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># Gemini API: function definitions without additionalProperties;</span>
+<span class="c1"># reads GEMINI_API_KEY or GOOGLE_API_KEY.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ask_gemini</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">question</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">google.genai</span><span class="w"> </span><span class="kn">import</span> <span class="n">types</span>
 
-
-<span class="k">def</span><span class="w"> </span><span class="nf">ask_gemini</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
     <span class="c1"># call_tool still rejects unknown arguments.</span>
     <span class="n">declarations</span> <span class="o">=</span> <span class="p">[</span>
         <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">tool</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span> <span class="s2">"description"</span><span class="p">:</span> <span class="n">tool</span><span class="p">[</span><span class="s2">"description"</span><span class="p">],</span>
-         <span class="s2">"parameters"</span><span class="p">:</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">tool</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">"additionalProperties"</span><span class="p">}}</span>
+         <span class="s2">"parameters"</span><span class="p">:</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">tool</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">field</span> <span class="o">!=</span> <span class="s2">"additionalProperties"</span><span class="p">}}</span>
         <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">get_tool_definitions</span><span class="p">(</span><span class="s2">"function"</span><span class="p">)]</span>
-    <span class="n">client</span> <span class="o">=</span> <span class="n">genai</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">GenerateContentConfig</span><span class="p">(</span>
         <span class="n">system_instruction</span><span class="o">=</span><span class="n">INSTRUCTIONS</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">tools</span><span class="o">=</span><span class="p">[</span><span class="n">types</span><span class="o">.</span><span class="n">Tool</span><span class="p">(</span><span class="n">function_declarations</span><span class="o">=</span><span class="n">declarations</span><span class="p">)])</span>
@@ -3554,36 +3586,42 @@ else:
     <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">calls</span>
 
 
-<span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"GEMINI_API_KEY"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"GOOGLE_API_KEY"</span><span class="p">)):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set; skipping the Gemini API."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">genai</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"The google-genai package is not installed; skipping the Gemini API."</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_gemini</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ask Gemini when hosted requests are on; the key stays inside this call."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">api_key</span><span class="p">(</span><span class="s2">"GEMINI_API_KEY"</span><span class="p">,</span> <span class="s2">"GOOGLE_API_KEY"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set; skipping the Gemini API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"google"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"google.genai"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"The google-genai package is not installed; skipping the Gemini API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">google</span><span class="w"> </span><span class="kn">import</span> <span class="n">genai</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">google.genai</span><span class="w"> </span><span class="kn">import</span> <span class="n">errors</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_gemini</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
+        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_gemini</span><span class="p">(</span><span class="n">genai</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">key</span><span class="p">),</span> <span class="n">question</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">report_failure</span><span class="p">(</span><span class="s2">"Gemini API"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">show</span><span class="p">(</span><span class="n">calls</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span>
+
+
+<span class="n">run_gemini</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-14"># Gemini API: function definitions without additionalProperties; reads GEMINI_API_KEY.
-try:
-    from google import genai
-    from google.genai import errors, types
-except ImportError:
-    genai = None
+<div class="clipboard-copy-txt" id="cell-14"># Gemini API: function definitions without additionalProperties;
+# reads GEMINI_API_KEY or GOOGLE_API_KEY.
+def ask_gemini(client, question):
+    from google.genai import types
 
-
-def ask_gemini(question):
     # call_tool still rejects unknown arguments.
     declarations = [
         {"name": tool["name"], "description": tool["description"],
-         "parameters": {key: value for key, value in tool["parameters"].items()
-                        if key != "additionalProperties"}}
+         "parameters": {field: value for field, value in tool["parameters"].items()
+                        if field != "additionalProperties"}}
         for tool in get_tool_definitions("function")]
-    client = genai.Client()
     config = types.GenerateContentConfig(
         system_instruction=INSTRUCTIONS, store=False,
         tools=[types.Tool(function_declarations=declarations)])
@@ -3608,19 +3646,30 @@ def ask_gemini(question):
     return None, calls
 
 
-if not RUN_HOSTED_APIS:
-    print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
-elif not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
-    print("Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set; skipping the Gemini API.")
-elif genai is None:
-    print("The google-genai package is not installed; skipping the Gemini API.")
-else:
+def run_gemini(question):
+    """Ask Gemini when hosted requests are on; the key stays inside this call."""
+    if not RUN_HOSTED_APIS:
+        print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
+        return
+    key = api_key("GEMINI_API_KEY", "GOOGLE_API_KEY")
+    if not key:
+        print("Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set; skipping the Gemini API.")
+        return
+    if find_spec("google") is None or find_spec("google.genai") is None:
+        print("The google-genai package is not installed; skipping the Gemini API.")
+        return
+    from google import genai
+    from google.genai import errors
+
     try:
-        answer, calls = ask_gemini(QUESTION)
+        answer, calls = ask_gemini(genai.Client(api_key=key), question)
     except errors.APIError as error:
         report_failure("Gemini API", error)
     else:
-        show(calls, answer)</div>
+        show(calls, answer)
+
+
+run_gemini(QUESTION)</div>
 </div>
 </div>
 </div>
@@ -3659,8 +3708,7 @@ else:
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># OpenAI Responses API: function definitions; reads OPENAI_API_KEY.</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">ask_openai</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
-    <span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ask_openai</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">question</span><span class="p">):</span>
     <span class="n">input_list</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="n">question</span><span class="p">}],</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">responses</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
@@ -3678,23 +3726,32 @@ else:
     <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">calls</span>
 
 
-<span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"OPENAI_API_KEY"</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"OPENAI_API_KEY is not set; skipping the OpenAI Responses API."</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">OpenAI</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"The openai package is not installed; skipping the OpenAI Responses API."</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_openai</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ask OpenAI when hosted requests are on; the key stays inside this call."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">RUN_HOSTED_APIS</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">api_key</span><span class="p">(</span><span class="s2">"OPENAI_API_KEY"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"OPENAI_API_KEY is not set; skipping the OpenAI Responses API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">find_spec</span><span class="p">(</span><span class="s2">"openai"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"The openai package is not installed; skipping the OpenAI Responses API."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIError</span><span class="p">,</span> <span class="n">OpenAI</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_openai</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
+        <span class="n">answer</span><span class="p">,</span> <span class="n">calls</span> <span class="o">=</span> <span class="n">ask_openai</span><span class="p">(</span><span class="n">OpenAI</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">key</span><span class="p">),</span> <span class="n">question</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">APIError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="n">report_failure</span><span class="p">(</span><span class="s2">"OpenAI Responses API"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">show</span><span class="p">(</span><span class="n">calls</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span>
+
+
+<span class="n">run_openai</span><span class="p">(</span><span class="n">QUESTION</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-15"># OpenAI Responses API: function definitions; reads OPENAI_API_KEY.
-def ask_openai(question):
-    client = OpenAI()
+def ask_openai(client, question):
     input_list, calls = [{"role": "user", "content": question}], []
     for _ in range(12):
         response = client.responses.create(
@@ -3712,19 +3769,29 @@ def ask_openai(question):
     return None, calls
 
 
-if not RUN_HOSTED_APIS:
-    print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
-elif not os.environ.get("OPENAI_API_KEY"):
-    print("OPENAI_API_KEY is not set; skipping the OpenAI Responses API.")
-elif OpenAI is None:
-    print("The openai package is not installed; skipping the OpenAI Responses API.")
-else:
+def run_openai(question):
+    """Ask OpenAI when hosted requests are on; the key stays inside this call."""
+    if not RUN_HOSTED_APIS:
+        print("Hosted requests are disabled; set RUN_HOSTED_APIS=True to enable them.")
+        return
+    key = api_key("OPENAI_API_KEY")
+    if not key:
+        print("OPENAI_API_KEY is not set; skipping the OpenAI Responses API.")
+        return
+    if find_spec("openai") is None:
+        print("The openai package is not installed; skipping the OpenAI Responses API.")
+        return
+    from openai import APIError, OpenAI
+
     try:
-        answer, calls = ask_openai(QUESTION)
+        answer, calls = ask_openai(OpenAI(api_key=key), question)
     except APIError as error:
         report_failure("OpenAI Responses API", error)
     else:
-        show(calls, answer)</div>
+        show(calls, answer)
+
+
+run_openai(QUESTION)</div>
 </div>
 </div>
 </div>
