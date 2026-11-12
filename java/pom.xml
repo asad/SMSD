@@ -70,15 +70,15 @@
     <smsd.root>${project.basedir}/../..</smsd.root>
 
     <!-- Libraries -->
-    <cdk.version>2.13</cdk.version>
-    <beam.version>1.3.10</beam.version>
+    <cdk.version>2.14.1</cdk.version>
+    <beam.version>1.4</beam.version>
     <vecmath.version>1.5.2</vecmath.version>
     <picocli.version>4.7.7</picocli.version>
-    <jackson.version>2.21.7</jackson.version>
-    <jackson.annotations.version>2.21</jackson.annotations.version>
+    <jackson.version>2.23.0</jackson.version>
+    <jackson.annotations.version>2.23</jackson.annotations.version>
 
     <!-- Test -->
-    <junit.version>5.13.4</junit.version>
+    <junit.version>5.14.4</junit.version>
     <maven.surefire.version>3.5.4</maven.surefire.version>
     <!-- JUnit tags left out of the default run: SlowTest marks the slowest tests and the
          benchmark suites. -Dslow.tests.exclude=nothing names no tag and runs every test.
@@ -144,6 +144,9 @@
       </dependency>
       <dependency>
         <groupId>uk.ac.ebi.beam</groupId><artifactId>beam-core</artifactId><version>${beam.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>uk.ac.ebi.beam</groupId><artifactId>beam-func</artifactId><version>${beam.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.vecmath</groupId><artifactId>vecmath</artifactId><version>${vecmath.version}</version>

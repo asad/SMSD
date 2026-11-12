@@ -26,7 +26,7 @@ import org.openscience.cdk.isomorphism.DfPattern;
  * CDK DfPattern and SMSD Substructure queries.
  *
  * <p>Both engines operate within the same JVM, same JIT, and receive
- * identical standardised {@link IAtomContainer} objects from CDK 2.13.
+ * identical standardised {@link IAtomContainer} objects from CDK.
  * Protocol is configured with smsd.benchmark.warmup, rounds and timeoutMs;
  * defaults are no warmup, one measured trial and a one-second SMSD budget.
  *

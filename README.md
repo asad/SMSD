@@ -24,7 +24,7 @@ Every result reports completion, proved optimality and the reason it stopped,
 and maps atoms by their zero-based indices in the input molecules.
 
 - **C++**: a header-only C++17 library.
-- **Java**: a library and command-line tool for CDK 2.13 molecules, running on
+- **Java**: a library and command-line tool for CDK 2.14.1 molecules, running on
   Java 8 or later.
 - **Python**: a binding to the native library that accepts RDKit molecules when
   RDKit is installed and converts Open Babel molecules.
@@ -74,7 +74,7 @@ with workarounds.
 | Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.12–3.15; RDKit optional |
 | Python, NVIDIA GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
 | Python, Apple GPU (optional) | `smsd-metal` on [PyPI](https://pypi.org/project/smsd-metal/) | macOS 14 or later on Apple silicon; the same version as `smsd` |
-| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.2.1 | Java 8 or later; CDK 2.13 |
+| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd), at 8.2.1 | Java 8 or later; CDK 2.14.1 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
@@ -141,7 +141,7 @@ the CDK modules it needs:
 ```
 
 In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.2.1")`. The
-example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
+example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.14.1`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
 

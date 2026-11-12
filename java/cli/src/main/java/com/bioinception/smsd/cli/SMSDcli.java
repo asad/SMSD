@@ -65,6 +65,7 @@ import org.openscience.cdk.stereo.DoubleBondStereochemistry;
 import uk.ac.ebi.beam.Bond;
 import uk.ac.ebi.beam.Edge;
 import uk.ac.ebi.beam.Graph;
+import uk.ac.ebi.beam.Mode;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -723,7 +724,7 @@ public class SMSDcli implements Callable<Integer> {
       } catch (InvalidSmilesException rejected) {
         if (value.indexOf('/') < 0 && value.indexOf('\\') < 0) throw rejected;
         try {
-          graph = Graph.parse(value, false, new HashSet<String>());
+          graph = Graph.parse(value, Mode.Default, new HashSet<String>());
         } catch (IOException invalid) {
           throw rejected;
         }
@@ -747,7 +748,7 @@ public class SMSDcli implements Callable<Integer> {
         }
       if (!hasAromaticBond) return molecule;
       if (graph == null)
-        graph = Graph.parse(value, false, new HashSet<String>()).kekule();
+        graph = Graph.parse(value, Mode.Default, new HashSet<String>()).kekule();
       Set<IBond> existing = new HashSet<>();
       for (IStereoElement<?, ?> element : molecule.stereoElements())
         if (element instanceof IDoubleBondStereochemistry)

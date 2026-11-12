@@ -3,6 +3,25 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The Java library and command-line tool use CDK 2.14.1 and Beam 1.4; the
+  command-line tool bundles Jackson 2.23.0.
+- The `polars` extra accepts polars 2.
+- The AI tools notebook reads hosted-model keys from Colab Secrets as well as
+  the environment, and imports each model client only when its section runs.
+- On Linux x86_64 with an NVIDIA driver, such as a Colab GPU runtime, the CPU
+  and GPU screening notebook also installs the `smsd-cuda` release that matches
+  SMSD, so its GPU steps run on the GPU.
+
+### Fixed
+
+- The conda packaging notes link to the current conda-forge CUDA guide.
+- The notebook overview in `python/examples/README.md` gives SMSD 8.2.1, not
+  8.2.0, as the minimum version.
+
 ## [8.2.1] - 2026-11-03
 
 ### Changed

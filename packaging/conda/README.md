@@ -187,6 +187,6 @@ launcher. The workflow's artefact holds the packages, `SHA256SUMS`, the variant 
 and the build logs.
 
 References: [conda-build metadata](https://docs.conda.io/projects/conda-build/en/stable/resources/define-metadata.html),
-[CUDA component/version selection](https://github.com/conda-forge/cuda-feedstock/blob/main/recipe/doc/end_user_run_guide.md),
+[CUDA component/version selection](https://conda-forge.org/docs/user/cuda/),
 [cuda-version scheme](https://github.com/conda-forge/cuda-version-feedstock/blob/main/recipe/README.md),
 and [Pixi CLI](https://pixi.prefix.dev/latest/reference/cli/pixi/init/).

@@ -1,6 +1,6 @@
 # SMSD Pro for Java
 
-SMSD Pro for Java searches CDK 2.13 molecules for substructures and maximum
+SMSD Pro for Java searches CDK 2.14.1 molecules for substructures and maximum
 common substructures (MCS). It has two Maven modules, so an application takes
 only what it uses:
 
@@ -47,11 +47,11 @@ needs besides:
 
 | To | Add |
 | --- | --- |
-| Parse SMILES, as the quick start does | `org.openscience.cdk:cdk-smiles:2.13` |
-| Read MOL and SDF files | `org.openscience.cdk:cdk-ctab:2.13` |
-| Read CML or Mol2 files | `org.openscience.cdk:cdk-io:2.13` |
-| Read PDB files | `org.openscience.cdk:cdk-pdb:2.13` |
-| Call `Standardiser.PredicateRegistry.loadJsonFile`, or read and write `SearchResult` as JSON | `com.fasterxml.jackson.core:jackson-databind:2.21.7` |
+| Parse SMILES, as the quick start does | `org.openscience.cdk:cdk-smiles:2.14.1` |
+| Read MOL and SDF files | `org.openscience.cdk:cdk-ctab:2.14.1` |
+| Read CML or Mol2 files | `org.openscience.cdk:cdk-io:2.14.1` |
+| Read PDB files | `org.openscience.cdk:cdk-pdb:2.14.1` |
+| Call `Standardiser.PredicateRegistry.loadJsonFile`, or read and write `SearchResult` as JSON | `com.fasterxml.jackson.core:jackson-databind:2.23.0` |
 
 Without `jackson-databind`, `loadJsonFile` throws `IllegalStateException`; the
 rest of the library does not need it. On the module path, the library is the

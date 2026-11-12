@@ -3,7 +3,7 @@
 The package `com.bioinception.smsd.core` (artefact `com.bioinceptionlabs:smsd`)
 provides substructure, maximum common substructure (MCS) and SMARTS search,
 fingerprints, stereo descriptors, standardisation and R-group decomposition
-for CDK 2.13 `IAtomContainer` molecules and `MolGraph` graphs. The
+for CDK 2.14.1 `IAtomContainer` molecules and `MolGraph` graphs. The
 command-line interface (CLI) is `com.bioinception.smsd.cli.SMSDcli`
 (`com.bioinceptionlabs:smsd-cli`). The [Javadoc](#api-reference) lists every
 public member.
@@ -42,7 +42,7 @@ dependencies {
 }
 ```
 
-To parse SMILES, as the examples do, add `org.openscience.cdk:cdk-smiles:2.13`.
+To parse SMILES, as the examples do, add `org.openscience.cdk:cdk-smiles:2.14.1`.
 The [Java module README](../java/README.md) lists the other
 [optional dependencies](../java/README.md#library), such as `jackson-databind`
 for `Standardiser.PredicateRegistry.loadJsonFile`, and covers
@@ -640,7 +640,7 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
   go on single bonds wherever a configured double bond has one at an end; an
   end with only aromatic ring bonds carries them on an aromatic bond, as RDKit
   writes it, which strict OpenSMILES readers take as a single bond; the CDK
-  2.13 `SmilesParser` does not keep that configuration.
+  2.14.1 `SmilesParser` does not keep that configuration.
   For a graph of more than 200 atoms, or when canonical labelling reaches
   its search limit, the output can depend on the input atom order;
   `automorphismGeneratorsTruncated()` is then true.

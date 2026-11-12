@@ -121,7 +121,7 @@ Replace the file name to check another download.
 The standalone Java command-line tool,
 `smsd-cli-8.2.1-jar-with-dependencies.jar`, is on Maven Central as
 `com.bioinceptionlabs:smsd-cli:8.2.1` with the classifier
-`jar-with-dependencies`. It contains the SMSD library, CDK 2.13 and the other
+`jar-with-dependencies`. It contains the SMSD library, CDK 2.14.1 and the other
 CLI dependencies, and runs on Java 8 or later:
 
 ```bash
