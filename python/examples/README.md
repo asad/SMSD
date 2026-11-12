@@ -5,7 +5,7 @@ status, SVG highlighting, optional NumPy features and a scikit-learn
 pipeline, followed by a temporary mapped fingerprint corpus, top-k
 neighbours, Butina clustering and MaxMin selection.
 
-Run its setup cell first, in Jupyter or Colab. It installs SMSD 8.2.0 or
+Run its setup cell first, in Jupyter or Colab. It installs SMSD 8.2.1 or
 later into the current kernel when it is missing or older, then attempts to
 install NumPy for feature arrays and mapped storage and scikit-learn for the
 pipeline; installation needs internet access. Cells that use an
@@ -21,9 +21,12 @@ similarity, `fingerprints_similarity.ipynb` computes every fingerprint family
 and coefficient, `library_screening.ipynb` screens one library five ways and
 saves the hits, and `cpu_gpu_screening.ipynb` shows which screening steps can
 run on a GPU and runs every cell without one. They follow the same
-conventions: a setup cell that installs SMSD 8.2.0 or later and the optional
+conventions: a setup cell that installs SMSD 8.2.1 or later and the optional
 packages each notebook uses, empty saved outputs, no files left behind, and a
 notice when an optional package such as NumPy, pandas or IPython is missing.
+On Linux x86_64 with an NVIDIA driver, such as a Colab GPU runtime, the setup
+cell of `cpu_gpu_screening.ipynb` also installs the `smsd-cuda` release that
+matches SMSD.
 
 `ai_tools.ipynb` calls the molecular tools from Python with no model, prints
 their tool definitions and runs an assistant tool loop against a model served

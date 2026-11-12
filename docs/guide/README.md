@@ -143,6 +143,8 @@ then attempts to install the optional packages used by its examples. Installatio
 needs internet access; no wheel upload or copied setup cell is needed. Select
 Python 3.12 or later. If an older SMSD is already imported, restart the kernel
 before setup. A missing optional package is reported by the affected cells.
+On Linux x86_64 with an NVIDIA driver, such as a Colab GPU runtime, the CPU and
+GPU screening notebook also installs the `smsd-cuda` release that matches SMSD.
 
 Drawings scale to the notebook width and carry a caption and alternative text,
 with plain SVG for front ends that do not show HTML.
