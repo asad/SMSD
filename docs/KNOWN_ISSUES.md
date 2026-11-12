@@ -6,16 +6,12 @@ one exists. Each one has a GitHub issue you can follow; when a fix ships, the
 
 ## SMARTS
 
-**Directional bonds on aromatic rings in Java.** ([issue 28](https://github.com/asad/SMSD/issues/28)) In Java, `/` and `\` match
-only single, non-aromatic bonds, so `c/c` does not match benzene. C++ and
-Python also match aromatic bonds. In Java, write a bond that may be aromatic
-without a direction, such as `cc` or `c-,:c`.
-
-**Stereo double bonds on neighbouring aromatic ring atoms.** ([issue 29](https://github.com/asad/SMSD/issues/29)) A SMARTS taken from
-a molecule with stereo double bonds on two neighbouring atoms of an aromatic
-ring does not match that molecule. For example, `C/C=C/c1ccccc1/C=C/C` does not
-match itself. Leave the directions off one of the two double bonds, as in
-`C/C=C/c1ccccc1C=CC`; that double bond is then matched without its E/Z.
+**Directional bonds inside recursive SMARTS in Java.** ([issue 28](https://github.com/asad/SMSD/issues/28)) In Java, `/` and `\`
+inside a recursive SMARTS such as `[$(c/c)]` match only single, non-aromatic
+bonds, and `?` and negated directions are not supported there. Outside
+`$(...)`, and everywhere in C++ and Python, they also match aromatic bonds.
+Inside `$(...)` in Java, write a bond that may be aromatic without a direction,
+such as `cc` or `c-,:c`.
 
 ## Drawings
 

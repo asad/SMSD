@@ -18,6 +18,16 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- In Java, `/` and `\` also match aromatic bonds and follow the same E/Z rules
+  as C++ and Python, so `c/c` matches benzene and `C/N=c/c` matches
+  `C/N=C1/C=CC=CN1`. A few unusual Java queries change with this: `/,-`
+  matches aromatic bonds, `C!/C` matches a double bond and `C!/&!\C` no longer
+  matches a single bond. Inside a recursive SMARTS, `$(...)`, Java still reads
+  them as before ([issue 28](https://github.com/asad/SMSD/issues/28)).
+- A SMARTS with stereo double bonds on two neighbouring atoms of an aromatic
+  ring now matches the molecule it was written from, such as
+  `C/C=C/c1ccccc1/C=C/C`, in C++, Python and Java
+  ([issue 29](https://github.com/asad/SMSD/issues/29)).
 - The conda packaging notes link to the current conda-forge CUDA guide.
 - The notebook overview in `python/examples/README.md` gives SMSD 8.2.1, not
   8.2.0, as the minimum version.

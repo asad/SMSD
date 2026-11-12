@@ -20,6 +20,8 @@ import org.openscience.cdk.BondRef;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.interfaces.IDoubleBondStereochemistry;
+import org.openscience.cdk.interfaces.IStereoElement;
 import org.openscience.cdk.isomorphism.matchers.Expr;
 import org.openscience.cdk.isomorphism.matchers.QueryAtom;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
@@ -105,7 +107,52 @@ final class SmartsInput {
       if (nodes[0] > Substructure.MAX_SMARTS_EXPRESSION_NODES) throw tooManyNodes();
     }
     normalise(query);
+    BondDirections directions = BondDirections.read(query, expression, parsed);
+    if (directions != null) {
+      withoutDoubleBondStereo(query);
+      query.setProperty(BondDirections.class, directions);
+    }
     return query;
+  }
+
+  /**
+   * Drop the relations CDK derives from directional bonds, an expression on each double bond and
+   * its stereo element, since {@link BondDirections} checks the directions in their place. Those
+   * of recursive SMARTS are kept.
+   */
+  private static void withoutDoubleBondStereo(IAtomContainer query) {
+    List<IStereoElement> kept = new ArrayList<>();
+    for (IStereoElement<?, ?> element : query.stereoElements())
+      if (!(element instanceof IDoubleBondStereochemistry)) kept.add(element);
+    query.setStereoElements(kept);
+    for (IBond bond : query.bonds()) {
+      QueryBond source = (QueryBond) BondRef.deref(bond);
+      Expr expression = withoutStereo(source.getExpression());
+      // A relation is only ever joined to the double bond's own test, which remains.
+      if (expression != source.getExpression()) source.setExpression(expression);
+    }
+  }
+
+  /** The expression without its stereo tests, or null when it has nothing else. */
+  private static Expr withoutStereo(Expr expression) {
+    switch (expression.type()) {
+      case STEREOCHEMISTRY:
+        return null;
+      case AND:
+      case OR: {
+        Expr left = withoutStereo(expression.left()), right = withoutStereo(expression.right());
+        if (left == null || right == null) return left == null ? right : left;
+        return left == expression.left() && right == expression.right()
+            ? expression : new Expr(expression.type(), left, right);
+      }
+      case NOT: {
+        Expr operand = withoutStereo(expression.left());
+        if (operand == null) return null;
+        return operand == expression.left() ? expression : new Expr(Expr.Type.NOT, operand, null);
+      }
+      default:
+        return expression;
+    }
   }
 
   private static IllegalArgumentException tooManyAtoms() {
@@ -394,26 +441,35 @@ final class SmartsInput {
    * keeping the operands in order, so a long chain nests logarithmically; shorter chains are
    * left as parsed. Evaluation reads the operands in the same order, so matches are unchanged.
    *
-   * <p>Reads each directional bond, / or \, as a single, non-aromatic bond; the native parser also
-   * accepts an aromatic bond, a known difference. CDK parses it as a bond of order one, as for an
-   * aromatic bond of a Kekule structure; the direction is kept on the double bond's stereo element.
+   * <p>Reads each directional bond, / or \, as a single or aromatic bond, as the native parser does,
+   * and {@link BondDirections} then reads and tests it in full. CDK parses it as a bond of order
+   * one, as for an aromatic bond of a Kekulé structure. Inside a recursive SMARTS, where its
+   * directions are not tested, it remains a single, non-aromatic bond, a known difference.
    */
   private static void normalise(IAtomContainer query) {
+    // Each pending item with whether it lies inside a recursive SMARTS.
     Deque<Object> pending = new ArrayDeque<>();
+    Deque<Boolean> recursive = new ArrayDeque<>();
     pending.push(query);
+    recursive.push(false);
     while (!pending.isEmpty()) {
       Object item = pending.pop();
+      boolean inside = recursive.pop();
       if (item instanceof IAtomContainer) {
         IAtomContainer container = (IAtomContainer) item;
         for (IAtom atom : container.atoms()) {
           IAtom source = AtomRef.deref(atom);
-          if (source instanceof QueryAtom && ((QueryAtom) source).getExpression() != null)
+          if (source instanceof QueryAtom && ((QueryAtom) source).getExpression() != null) {
             pending.push(((QueryAtom) source).getExpression());
+            recursive.push(inside);
+          }
         }
         for (IBond bond : container.bonds()) {
           IBond source = BondRef.deref(bond);
-          if (source instanceof QueryBond && ((QueryBond) source).getExpression() != null)
+          if (source instanceof QueryBond && ((QueryBond) source).getExpression() != null) {
             pending.push(((QueryBond) source).getExpression());
+            recursive.push(inside);
+          }
         }
         continue;
       }
@@ -426,18 +482,30 @@ final class SmartsInput {
             Expr balanced = build(expression.type(), operands, 0, operands.size());
             expression.setLogical(expression.type(), balanced.left(), balanced.right());
           }
-          for (Expr operand : operands) pending.push(operand);
+          for (Expr operand : operands) {
+            pending.push(operand);
+            recursive.push(inside);
+          }
           break;
         }
         case NOT:
-          if (expression.left() != null) pending.push(expression.left());
+          if (expression.left() != null) {
+            pending.push(expression.left());
+            recursive.push(inside);
+          }
           break;
         case RECURSIVE:
-          if (expression.subquery() != null) pending.push(expression.subquery());
+          if (expression.subquery() != null) {
+            pending.push(expression.subquery());
+            recursive.push(true);
+          }
           break;
         case ORDER:
-          // Only a directional bond parses to a plain order test.
-          if (expression.value() == 1) expression.setPrimitive(Expr.Type.ALIPHATIC_ORDER, 1);
+          // Only a directional bond parses to a plain order test. Inside a recursive SMARTS its
+          // directions are not tested, so it stays a single, non-aromatic bond there.
+          if (expression.value() != 1) break;
+          if (inside) expression.setPrimitive(Expr.Type.ALIPHATIC_ORDER, 1);
+          else expression.setPrimitive(Expr.Type.SINGLE_OR_AROMATIC);
           break;
         default:
           break;

@@ -418,6 +418,7 @@ public final class Substructure {
           check(control);
           for (int[] embedding : call.pattern.matchAll(view.molecule)) {
             check(control);
+            if (call.directions != null && !call.directions.holds(embedding, view.molecule, target)) continue;
             if (induced != null && !induced.holds(embedding)) continue;
             if (options.chemistry.completeRingsOnly) {
               if (completeRings == null)
@@ -879,6 +880,8 @@ public final class Substructure {
     private static final int RECURSIVE_MEMO_TABLES = 1024;
     final Pattern pattern;
     private final IAtomContainer rootQuery;
+    /** The directional bonds of the query, tested here rather than by CDK, or null without any. */
+    final BondDirections directions;
     /** Predicate rejections already observed by this call, used only for ring-proof qualification. */
     private BitSet[] rejectedTargets;
     private int[] rejectionCounts;
@@ -895,6 +898,7 @@ public final class Substructure {
 
     SmartsCall(IAtomContainer query) {
       rootQuery = query;
+      directions = query.getProperty(BondDirections.class);
       pattern = VentoFoggia.findSubstructure(query(query));
     }
 
@@ -1038,8 +1042,15 @@ public final class Substructure {
       }
       for (IBond bond : original.bonds()) {
         QueryBond source = (QueryBond) BondRef.deref(bond);
-        QueryBond bounded = new QueryBond((IAtom) objects.get(bond.getBegin()),
-            (IAtom) objects.get(bond.getEnd()), expression(source.getExpression()));
+        final int queryBond = copy.getBondCount();
+        IAtom begin = (IAtom) objects.get(bond.getBegin()), end = (IAtom) objects.get(bond.getEnd());
+        QueryBond bounded = original == rootQuery && directions != null && directions.directional(queryBond)
+            ? new QueryBond(begin, end, expression(source.getExpression())) {
+                @Override public boolean matches(IBond target) {
+                  return directions.compatible(queryBond, target);
+                }
+              }
+            : new QueryBond(begin, end, expression(source.getExpression()));
         bounded.setProperties(new HashMap<>(bond.getProperties()));
         bounded.setFlags(bond.getFlags());
         copy.addBond(bounded);

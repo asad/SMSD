@@ -83,7 +83,9 @@ by `:` ring bonds, as in `C1:C:C:C:C:C:1`, the hydrogens of single bonds;
 native reader does, but the CDK molecule does not record which nitrogen a
 bracket hydrogen was written on, so where several could carry it, one that
 gives a Kekulé structure does, whatever the atom order. The CLI reads such
-SMILES as written.
+SMILES as written. The CDK `SmilesParser` does not keep an E/Z whose directional
+bonds are aromatic, as in `C/N=c1/cccc[nH]1`; give such a molecule in Kekulé
+form, `C/N=C1/C=CC=CN1`.
 
 `MolGraph.Builder` builds a graph without CDK from `atomCount`,
 `atomicNumbers` and `neighbors`, optionally with `formalCharges`,

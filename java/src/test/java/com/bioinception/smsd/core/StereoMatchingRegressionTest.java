@@ -114,11 +114,69 @@ class StereoMatchingRegressionTest {
   }
 
   @ParameterizedTest
-  @CsvSource({"C/C, CC, 2", "C/C, C=C, 0", "[#6]/[#6], c1ccccc1, 0", "[#6]\\[#6], C1CCCCC1, 12",
+  @CsvSource({"C/C, CC, 2", "C/C, C=C, 0", "[#6]/[#6], c1ccccc1, 12", "[#6]\\[#6], C1CCCCC1, 12",
       "C/C, C/C=C\\C, 4", "F/C=C/F, F/C=C/F, 2", "F/C=C/F, F/C=C\\F, 0", "F/C=C/F, FC=CF, 0"})
-  void directionalBondsAreSingleAliphaticBonds(String smarts, String smiles, int embeddings) throws Exception {
-    // In Java a directional bond is a single, non-aromatic bond; the native core also accepts an aromatic bond.
+  void directionalBondsAreSingleOrAromaticBonds(String smarts, String smiles, int embeddings) throws Exception {
     assertEquals(embeddings, Substructure.smarts(smarts).matchAll(new MolGraph(rawMolecule(smiles))).matches().size());
+  }
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "c/c | c1ccccc1 | true",
+      "c\\c | c1ccccc1 | true",
+      "c/?c | c1ccccc1 | true",
+      "c/c | C=C | false",
+      "c/c:c/c | c1ccccc1 | false",
+      "c/c:c(/F)c | Fc1ccccc1 | false",
+      "C/N=c1/c:c(/F)cc[nH]1 | C/N=C1/C=C(F)C=CN1 | true",
+      "C/?C=C/?c1ccccc1/C=C/C | CC=Cc1ccccc1/C=C/C | true",
+      "C/C=C/c1ccccc1/C=C/C | C/C=C/c1ccccc1/C=C/C | true",
+      "c/?c:c/c | c1ccccc1 | true",
+      "C/N=c/c | C/N=C1/C=CC=CN1 | true",
+      "C/N=c\\c | C/N=C1/C=CC=CN1 | false",
+      "C/N=c\\[nH] | C/N=C1/C=CC=CN1 | true",
+      "C/N=c/[nH] | C/N=C1/C=CC=CN1 | false",
+      "C/N=c\\c | C/N=C1\\C=CC=CN1 | true",
+      "C/N=c/c | C/N=C1\\C=CC=CN1 | false",
+      "C/N=c/c | CN=c1cccc[nH]1 | false",
+      "C/?N=c/c | CN=c1cccc[nH]1 | true",
+      "C/N=c1/cccc[nH]1 | C/N=C1/C=CC=CN1 | true",
+      "C/N=c1/cccc[nH]1 | C/N=C1\\C=CC=CN1 | false",
+      "C/N=c(/c(/F):c) | C/N=C1/C(F)=CC=CN1 | true",
+      "C/N=c(/c(\\F):c) | C/N=C1/C(F)=CC=CN1 | true",
+      "C/N=c(/,:c(\\F):c) | C/N=C1/C(F)=CC=CN1 | true",
+      "*!/c:c!/* | Cn1ccnc1 | true",
+      "c!/&!\\c | c1ccccc1 | true",
+      "C/N=c(!/c)\\[nH] | C/N=C1/C=CC=CN1 | false",
+      "C/N=c(!\\c)\\[nH] | C/N=C1/C=CC=CN1 | true",
+      "C/N=c!/c | C/N=C1/C=CC=CN1 | false",
+      "C/N=c(\\[nH])c:c/C=C/C | C/N=C1/C=C(/C=C/C)C=CN1 | true",
+      "C/N=c!\\c | C/N=C1/C=CC=CN1 | true",
+      "C/N=c!\\[nH] | C/N=C1/C=CC=CN1 | false",
+      "C/N=c!/&!\\c | C/N=C1/C=CC=CN1 | false"})
+  void directionalBondsOnAromaticCarriersMatchTheNativeCore(String smarts, String smiles, boolean found)
+      throws Exception {
+    // The same cases as the native stereo-matching regression suite. CDK's SMILES parser drops a
+    // configuration whose directional bonds are aromatic, so configured targets are written in
+    // Kekulé form; SMARTS reads their rings as aromatic.
+    assertEquals(found, !Substructure.smarts(smarts).matchAll(new MolGraph(rawMolecule(smiles))).matches().isEmpty(),
+        smarts + " against " + smiles);
+  }
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "[CH3]/[CH]=[CH]/[CH3] | C/C=C/C | true",
+      "[CH3]/[CH]=[CH]/[CH3] | C/C=C\\C | false",
+      "C/C=C/C trans-butene | C/C=C/C | true",
+      "C/C=C/C trans-butene | C/C=C\\C | false",
+      "[$(C/C=C/C)] | C/C=C/C | true",
+      // Inside a recursive SMARTS a directional bond is still a single, non-aromatic bond.
+      "[$(c/c)] | c1ccccc1 | false",
+      "[$(c/c:c/c)] | c1ccccc1 | false"})
+  void directionalBondsInBracketsNamesAndRecursiveSmarts(String smarts, String smiles, boolean found)
+      throws Exception {
+    assertEquals(found, !Substructure.smarts(smarts).matchAll(new MolGraph(rawMolecule(smiles))).matches().isEmpty(),
+        smarts + " against " + smiles);
   }
 
   @Test
