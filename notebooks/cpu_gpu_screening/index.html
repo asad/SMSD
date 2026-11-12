@@ -2018,9 +2018,11 @@ check for a usable device first. NumPy is optional and needed only for the
 packed-index steps, which report when it is missing.</p>
 <h2 id="setup">Setup<a class="anchor-link" href="#setup">¶</a></h2><p>Run the next cell first in Colab or local Jupyter. It installs SMSD Pro and
 the notebook's missing table or numerical dependencies into the current
-kernel, using that kernel's Python. An already installed SMSD 8.2.1 or later
-is kept. Installation needs internet access; the chemistry examples use inline
-inputs. No wheel upload or copied setup cell is needed.</p>
+kernel, using that kernel's Python. On Linux x86_64 with an NVIDIA driver, such
+as a Colab GPU runtime, it also installs the <code>smsd-cuda</code> release that matches
+SMSD. An already installed SMSD 8.2.1 or later is kept, as is any installed
+<code>smsd-cuda</code>. Installation needs internet access; the chemistry examples use
+inline inputs. No wheel upload or copied setup cell is needed.</p>
 <p>If an older SMSD is already imported, restart the kernel before running
 setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>.</p>
 </div>
@@ -2050,6 +2052,9 @@ setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.metadata</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 
@@ -2086,6 +2091,20 @@ setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>
         <span class="nb">print</span><span class="p">(</span><span class="s2">"Some optional packages have no compatible wheel or could not be downloaded. "</span>
               <span class="s2">"The affected cells will report what is missing; SMSD remains available."</span><span class="p">)</span>
     <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
+<span class="c1"># With an NVIDIA driver on Linux x86_64, such as a Colab GPU runtime, add the</span>
+<span class="c1"># smsd-cuda release that matches the installed SMSD.</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s2">"linux"</span> <span class="ow">and</span> <span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"x86_64"</span>
+        <span class="ow">and</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">"/proc/driver/nvidia/version"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"nvidia-smi"</span><span class="p">))</span>
+        <span class="ow">and</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"smsd_cuda"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="n">_cuda_requirement</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"smsd-cuda==</span><span class="si">{</span><span class="n">importlib</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="s1">'smsd'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--only-binary=:all:"</span><span class="p">,</span>
+             <span class="n">_cuda_requirement</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_cuda_requirement</span><span class="si">}</span><span class="s2"> could not be installed; the notebook will run on the CPU."</span><span class="p">)</span>
+    <span class="n">importlib</span><span class="o">.</span><span class="n">invalidate_caches</span><span class="p">()</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Using SMSD"</span><span class="p">,</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
 </pre></div>
@@ -2093,6 +2112,9 @@ setup. See <a href="https://asad.github.io/SMSD/HOWTO-INSTALL/">Installation</a>
 import importlib
 import importlib.metadata
 import importlib.util
+import os
+import platform
+import shutil
 import subprocess
 import sys
 
@@ -2128,6 +2150,20 @@ if _optional_requirements:
     except subprocess.CalledProcessError:
         print("Some optional packages have no compatible wheel or could not be downloaded. "
               "The affected cells will report what is missing; SMSD remains available.")
+    importlib.invalidate_caches()
+# With an NVIDIA driver on Linux x86_64, such as a Colab GPU runtime, add the
+# smsd-cuda release that matches the installed SMSD.
+if (sys.platform == "linux" and platform.machine() == "x86_64"
+        and (os.path.exists("/proc/driver/nvidia/version") or shutil.which("nvidia-smi"))
+        and importlib.util.find_spec("smsd_cuda") is None):
+    _cuda_requirement = f"smsd-cuda=={importlib.metadata.version('smsd')}"
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "--only-binary=:all:",
+             _cuda_requirement], check=True,
+        )
+    except subprocess.CalledProcessError:
+        print(f"{_cuda_requirement} could not be installed; the notebook will run on the CPU.")
     importlib.invalidate_caches()
 import smsd
 print("Using SMSD", smsd.__version__)
@@ -3038,9 +3074,15 @@ else:
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>prepared screen, CPU             0.0002 s
+<pre>prepared screen, CPU             0.0006 s
 Hits per query: [2, 9, 2]
-packed scan, CPU                 0.0003 s
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>packed scan, CPU                 0.0005 s
 Packed hits: 12
 </pre>
 </div>
