@@ -168,8 +168,16 @@ int main() {
         checkSmarts("C/N=c!/c", "C/N=c1/cccc[nH]1", false);
         // A ring bond between an aromatic carrier and a substituent's double bond.
         checkSmarts("C/N=c(\\[nH])c:c/C=C/C", "C/N=c1/cc(/C=C/C)cc[nH]1", true);
-        // Known limitation: an aromatic bond between two carriers fixed by double bonds.
-        checkSmarts("C/N=c1/cc(/C=C/C)cc[nH]1", "C/N=c1/cc(/C=C/C)cc[nH]1", false);
+        // An aromatic bond between two carriers fixed by double bonds needs no ?.
+        checkSmarts("C/N=c1/cc(/C=C/C)cc[nH]1", "C/N=c1/cc(/C=C/C)cc[nH]1", true);
+        checkSmarts("C/C=C/c1ccccc1/C=C/C", "C/C=C/c1ccccc1/C=C/C", true);
+        checkSmarts("C/C=C/c1ccccc1/C=C/C", "C/C=C/c1ccccc1/C=C\\C", false);
+        checkSmarts("C/N=c1/cc(/C=C/C)cc[nH]1", "C/N=c1/cc(/C=C\\C)cc[nH]1", false);
+        checkSmarts("C/N=c1/c:c(/F)cc[nH]1", "C/N=C1/C=C(F)C=CN1", true);
+        checkSmarts("C/?C=C/?c1ccccc1/C=C/C", "CC=Cc1ccccc1/C=C/C", true);
+        // Carriers that no configured double bond fixes still need ? across an aromatic bond.
+        checkSmarts("c/c:c/c", "c1ccccc1", false);
+        checkSmarts("c/c:c(/F)c", "Fc1ccccc1", false);
         checkSmarts("C/N=c!\\c", "C/N=c1/cccc[nH]1", true);
         checkSmarts("C/N=c!\\[nH]", "C/N=c1/cccc[nH]1", false);
         checkSmarts("C/N=c!/&!\\c", "C/N=c1/cccc[nH]1", false);

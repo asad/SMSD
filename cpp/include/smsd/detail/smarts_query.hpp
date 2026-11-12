@@ -202,6 +202,32 @@ inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std:
         constraints[secondVariable].push_back({firstVariable, relation});
     };
     auto outwardOrientation = [&](int bondIndex, int atom) { return bonds[bondIndex].from == atom ? 1 : -1; };
+    // The directional bonds at each end of a focus bond, other than the focus itself.
+    auto carriersOf = [&](const auto& focus) {
+        std::array<std::vector<int>, 2> carriers;
+        for (int end = 0; end < 2; ++end) {
+            const int atom = end == 0 ? focus.from : focus.to, other = end == 0 ? focus.to : focus.from;
+            for (size_t position = 0; position < neighbors[atom].size(); ++position) {
+                const int bondIndex = bondIndices[atom][position];
+                if (neighbors[atom][position] != other && variableForBond[bondIndex] >= 0)
+                    carriers[end].push_back(bondIndex);
+            }
+        }
+        return carriers;
+    };
+    // A carrier of a configured double bond takes its direction from that bond, so it says nothing
+    // about an aromatic bond beside it; such carriers are left out of the aromatic foci below.
+    std::vector<bool> fixedByDoubleBond(allowedDirections.size(), false);
+    for (const auto& focus : bonds) {
+        const int mappedFirst = mapping[focus.from], mappedSecond = mapping[focus.to];
+        if (target.bondOrder(mappedFirst, mappedSecond) != 2 || target.bondAromatic(mappedFirst, mappedSecond)
+            || target.dbStereo(mappedFirst, mappedSecond) == 0 || smarts_detail::hasDirectionalPrimitive(focus.expr))
+            continue;
+        const auto carriers = carriersOf(focus);
+        if (carriers[0].empty() || carriers[1].empty()) continue;
+        for (const auto& end : carriers)
+            for (int bondIndex : end) fixedByDoubleBond[variableForBond[bondIndex]] = true;
+    }
     // A pair of directional bonds constrains the bond between their atoms: a double bond takes the
     // configuration they give it, as in Daylight SMARTS, and an aromatic bond or a double bond
     // without a configuration matches only when either bond is written with ?. Free aromatic bonds
@@ -212,15 +238,12 @@ inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std:
         const int order = target.bondOrder(mappedFirst, mappedSecond);
         const bool aromatic = order == 4 || target.bondAromatic(mappedFirst, mappedSecond);
         if ((order != 2 && !aromatic) || smarts_detail::hasDirectionalPrimitive(focus.expr)) continue;
-        std::array<std::vector<int>, 2> carriers;
-        for (int end = 0; end < 2; ++end) {
-            const int atom = end == 0 ? first : second, other = end == 0 ? second : first;
-            for (size_t position = 0; position < neighbors[atom].size(); ++position) {
-                const int bondIndex = bondIndices[atom][position];
-                if (neighbors[atom][position] != other && variableForBond[bondIndex] >= 0)
-                    carriers[end].push_back(bondIndex);
-            }
-        }
+        auto carriers = carriersOf(focus);
+        if (aromatic)
+            for (auto& end : carriers)
+                end.erase(std::remove_if(end.begin(), end.end(),
+                                         [&](int bondIndex) { return fixedByDoubleBond[variableForBond[bondIndex]]; }),
+                          end.end());
         const int configuration = aromatic ? 0 : target.dbStereo(mappedFirst, mappedSecond);
         const bool configured = configuration != 0 && !carriers[0].empty() && !carriers[1].empty();
         for (int end = 0; end < 2; ++end) {
